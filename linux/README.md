@@ -108,6 +108,10 @@ UE4SS_EXTRA_MOD_DIRS=/path/to/FirstMod:/path/to/SecondMod \
   linux/tools/palworld_conformance.sh /path/to/palworld-server-root
 ```
 
+After the ready gate, the runner keeps PalServer alive for two additional
+seconds and fails on protected-load or Lua callback errors. Override this
+bounded window with `UE4SS_CONFORMANCE_SETTLE_SECONDS` (accepted range 0-60).
+
 The unchanged FullSphereSummon 0.10.2 Lua script passes this load gate and its
 native `AActor::BeginPlay` pre-hook is registered through the UE 5.1 Linux
 Itanium vtable path. The conformance mod separately spawns and destroys a

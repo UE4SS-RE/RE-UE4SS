@@ -79,6 +79,11 @@ server_sha=$(sha256sum "$server_binary" | cut -d' ' -f1)
 run_log="$state_dir/palserver.stdout.log"
 port=${UE4SS_CONFORMANCE_PORT:-18400}
 query_port=${UE4SS_CONFORMANCE_QUERY_PORT:-$((port + 10000))}
+settle_seconds=${UE4SS_CONFORMANCE_SETTLE_SECONDS:-2}
+if ! [[ "$settle_seconds" =~ ^(0|[1-9][0-9]*)$ ]] || (( settle_seconds > 60 )); then
+    echo "UE4SS_CONFORMANCE_SETTLE_SECONDS must be an integer between 0 and 60" >&2
+    exit 2
+fi
 
 server_pid=""
 cleanup() {
@@ -123,6 +128,7 @@ trap cleanup EXIT INT TERM
 server_pid=$!
 
 status_file="$state_dir/ue4ss.status.json"
+ready_since=-1
 # Keep the harness deadline above the core's default 120-second registry
 # readiness deadline so a slow server reports the actual UE4SS gate failure.
 for _ in {1..300}; do
@@ -143,11 +149,24 @@ for _ in {1..300}; do
        grep -Fq '"object_notifications": {"state": "available"' "$status_file" &&
        grep -Fq '"lua_mods": {"state": "available"' "$status_file" &&
        grep -Fq '[LinuxReadOnlyConformance] PASS:' "$run_log"; then
+        if (( ready_since < 0 )); then
+            ready_since=$SECONDS
+        fi
+        if (( SECONDS - ready_since < settle_seconds )); then
+            sleep 0.5
+            continue
+        fi
+        if grep -aEq '\[UE4SS Linux\].*callback failed:|failed during protected load:|\[UE4SS Linux\] Lua mod .* failed for ' "$run_log"; then
+            echo "a Lua mod reported a protected-load or callback failure during the settle window" >&2
+            grep -aE '\[UE4SS Linux\].*callback failed:|failed during protected load:|\[UE4SS Linux\] Lua mod .* failed for ' "$run_log" >&2 || true
+            exit 1
+        fi
         echo "PASS: native PalServer read-only Lua conformance completed"
         echo "server_sha256=$server_sha"
         echo "status=$status_file"
         exit 0
     fi
+    ready_since=-1
     sleep 0.5
 done
 
