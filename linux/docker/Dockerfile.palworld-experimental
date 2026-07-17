@@ -1,0 +1,50 @@
+FROM ubuntu:22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates libcurl4 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1000 palworld \
+    && useradd --uid 1000 --gid palworld --home-dir /palworld --shell /usr/sbin/nologin palworld
+
+COPY --chown=palworld:palworld server/ /palworld/
+COPY --chown=palworld:palworld ue4ss/ /palworld/Pal/Binaries/Linux/ue4ss/
+COPY --chown=palworld:palworld palserver.sha256 /palworld/.palserver.sha256
+COPY palserver-entrypoint.sh /usr/local/bin/palserver-entrypoint
+COPY ue4ss-healthcheck.sh /usr/local/bin/ue4ss-healthcheck
+
+RUN chmod 0755 \
+        /usr/local/bin/palserver-entrypoint \
+        /usr/local/bin/ue4ss-healthcheck \
+        /palworld/Pal/Binaries/Linux/PalServer-Linux-Shipping \
+        /palworld/Pal/Binaries/Linux/ue4ss/libue4ss_preload.so \
+    && find /palworld/Pal/Binaries/Linux/ue4ss -type f -exec chmod 0444 {} + \
+    && find /palworld/Pal/Binaries/Linux/ue4ss -type d -exec chmod 0555 {} + \
+    && chmod 0555 /palworld/Pal/Binaries/Linux/ue4ss/libue4ss_preload.so \
+    && mkdir -p \
+        /palworld/Pal/Saved \
+        /palworld/Pal/Binaries/Linux/ue4ss/Mods \
+        /palworld/ue4ss-state \
+    && chmod 0755 /palworld/Pal/Binaries/Linux/ue4ss/Mods \
+    && chown -R palworld:palworld \
+        /palworld/Pal/Saved \
+        /palworld/Pal/Binaries/Linux/ue4ss/Mods \
+        /palworld/ue4ss-state
+
+ENV UE4SS_ENABLED=false \
+    UE4SS_REQUIRED=false \
+    UE4SS_HEALTH_REQUIRE_READY=true \
+    UE4SS_ROOT=/palworld/Pal/Binaries/Linux/ue4ss \
+    UE4SS_STATE_DIR=/palworld/ue4ss-state
+
+WORKDIR /palworld
+USER palworld
+
+VOLUME ["/palworld/Pal/Saved", "/palworld/Pal/Binaries/Linux/ue4ss/Mods", "/palworld/ue4ss-state"]
+EXPOSE 8211/udp 27015/udp
+HEALTHCHECK --interval=30s --timeout=5s --start-period=180s --retries=3 CMD ["/usr/local/bin/ue4ss-healthcheck"]
+STOPSIGNAL SIGINT
+
+ENTRYPOINT ["/usr/local/bin/palserver-entrypoint"]
+CMD ["./Pal/Binaries/Linux/PalServer-Linux-Shipping", "Pal"]

@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <cstdint>
+#include <type_traits>
 
 namespace RC::Helper::Casting
 {
