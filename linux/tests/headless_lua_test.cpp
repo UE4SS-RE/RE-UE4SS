@@ -48,11 +48,19 @@ int main()
         const auto syntax_error = lua.execute_string("local broken = )");
         require(!syntax_error.success, "invalid Lua syntax was accepted");
 
-        const std::filesystem::path script = std::filesystem::temp_directory_path() /
-                                             ("ue4ss-headless-lua-" + std::to_string(getpid()) + ".lua");
-        std::ofstream{script} << "assert(type(package) == 'table')\n";
+        const std::filesystem::path fixture = std::filesystem::temp_directory_path() /
+                                              ("ue4ss-headless-lua-" + std::to_string(getpid()));
+        const std::filesystem::path scripts = fixture / "Scripts";
+        const std::filesystem::path script = scripts / "main.lua";
+        std::filesystem::create_directories(scripts);
+        std::ofstream{scripts / "config.lua"} << "return { value = 73 }\n";
+        std::ofstream{script}
+                << "assert(type(package) == 'table')\n"
+                << "package.path = '.\\\\Mods\\\\Example\\\\Scripts\\\\?.lua;' .. package.path\n"
+                << "local config = require('config')\n"
+                << "assert(config.value == 73)\n";
         const auto file_result = lua.execute_file(script);
-        std::filesystem::remove(script);
+        std::filesystem::remove_all(fixture);
         require(file_result.success, file_result.detail);
 
         std::cout << "headless Lua runtime tests passed\n";

@@ -41,26 +41,44 @@ cp "$preload" "$ue4ss_root/libue4ss_preload.so"
 cp "$repo_root/linux/packaging/Mods/LinuxReadOnlyConformance/Scripts/main.lua" "$mod_root/Scripts/main.lua"
 cp "$repo_root/linux/packaging/Mods/LinuxReadOnlyConformance/enabled.example" "$mod_root/enabled.txt"
 
+extra_mod_dirs=()
 if [[ -n "${UE4SS_EXTRA_MOD_DIR:-}" ]]; then
-    extra_mod_dir=$(realpath "$UE4SS_EXTRA_MOD_DIR")
+    extra_mod_dirs+=("$UE4SS_EXTRA_MOD_DIR")
+fi
+if [[ -n "${UE4SS_EXTRA_MOD_DIRS:-}" ]]; then
+    IFS=: read -r -a configured_extra_mod_dirs <<<"$UE4SS_EXTRA_MOD_DIRS"
+    for configured_extra_mod_dir in "${configured_extra_mod_dirs[@]}"; do
+        [[ -n "$configured_extra_mod_dir" ]] && extra_mod_dirs+=("$configured_extra_mod_dir")
+    done
+fi
+
+declare -A installed_extra_mod_names=()
+for configured_extra_mod_dir in "${extra_mod_dirs[@]}"; do
+    extra_mod_dir=$(realpath "$configured_extra_mod_dir")
     if [[ ! -f "$extra_mod_dir/Scripts/main.lua" ]]; then
-        echo "UE4SS_EXTRA_MOD_DIR must contain Scripts/main.lua" >&2
+        echo "extra mod directory must contain Scripts/main.lua: $extra_mod_dir" >&2
         exit 2
     fi
     extra_mod_name=$(basename "$extra_mod_dir")
     if [[ "$extra_mod_name" == "LinuxReadOnlyConformance" ]]; then
-        echo "UE4SS_EXTRA_MOD_DIR must use a distinct mod directory name" >&2
+        echo "extra mod directory must use a distinct mod directory name" >&2
         exit 2
     fi
+    normalized_extra_mod_name=${extra_mod_name,,}
+    if [[ -n "${installed_extra_mod_names[$normalized_extra_mod_name]:-}" ]]; then
+        echo "duplicate extra mod directory name: $extra_mod_name" >&2
+        exit 2
+    fi
+    installed_extra_mod_names[$normalized_extra_mod_name]=1
     mkdir -p "$ue4ss_root/Mods/$extra_mod_name"
     cp -a "$extra_mod_dir/." "$ue4ss_root/Mods/$extra_mod_name/"
     : >"$ue4ss_root/Mods/$extra_mod_name/enabled.txt"
-fi
+done
 
 server_sha=$(sha256sum "$server_binary" | cut -d' ' -f1)
 run_log="$state_dir/palserver.stdout.log"
 port=${UE4SS_CONFORMANCE_PORT:-18400}
-query_port=${UE4SS_CONFORMANCE_QUERY_PORT:-28400}
+query_port=${UE4SS_CONFORMANCE_QUERY_PORT:-$((port + 10000))}
 
 server_pid=""
 cleanup() {

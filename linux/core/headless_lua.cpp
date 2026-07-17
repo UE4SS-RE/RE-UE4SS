@@ -63,6 +63,38 @@ namespace
         return output;
     }
 
+    void prepend_script_module_paths(
+            lua_State* state,
+            const std::filesystem::path& script_path)
+    {
+        const int original_top = lua_gettop(state);
+        lua_getglobal(state, "package");
+        if (lua_type(state, -1) != LUA_TTABLE)
+        {
+            lua_settop(state, original_top);
+            return;
+        }
+
+        lua_getfield(state, -1, "path");
+        std::size_t existing_length{};
+        const char* existing_path = lua_tolstring(state, -1, &existing_length);
+        const std::string scripts_directory =
+                script_path.parent_path().lexically_normal().generic_string();
+        std::string package_path;
+        package_path.reserve(
+                scripts_directory.size() * 2u + existing_length + 24u);
+        package_path.append(scripts_directory).append("/?.lua;");
+        package_path.append(scripts_directory).append("/?/init.lua;");
+        if (existing_path != nullptr)
+        {
+            package_path.append(existing_path, existing_length);
+        }
+        lua_pop(state, 1);
+        lua_pushlstring(state, package_path.data(), package_path.size());
+        lua_setfield(state, -2, "path");
+        lua_settop(state, original_top);
+    }
+
     constexpr const char* k_runtime_registry_key = "UE4SS.ReadOnlyUnrealRuntime";
     constexpr const char* k_scheduler_registry_key = "UE4SS.GameThreadScheduler";
     constexpr const char* k_hooks_registry_key = "UE4SS.UFunctionHookManager";
@@ -11200,6 +11232,7 @@ namespace ue4ss::linux::core
             {
                 return {false, "Lua state allocation failed"};
             }
+            prepend_script_module_paths(m_state, path);
             const std::string utf8_path = path.string();
             return protected_call(m_state, luaL_loadfilex(m_state, utf8_path.c_str(), "t"));
         }

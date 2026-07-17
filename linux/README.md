@@ -101,6 +101,13 @@ UE4SS_EXTRA_MOD_DIR=/path/to/MyMod \
   linux/tools/palworld_conformance.sh /path/to/palworld-server-root
 ```
 
+Multiple unchanged mods can be tested together with a colon-separated list:
+
+```bash
+UE4SS_EXTRA_MOD_DIRS=/path/to/FirstMod:/path/to/SecondMod \
+  linux/tools/palworld_conformance.sh /path/to/palworld-server-root
+```
+
 The unchanged FullSphereSummon 0.10.2 Lua script passes this load gate and its
 native `AActor::BeginPlay` pre-hook is registered through the UE 5.1 Linux
 Itanium vtable path. The conformance mod separately spawns and destroys a
