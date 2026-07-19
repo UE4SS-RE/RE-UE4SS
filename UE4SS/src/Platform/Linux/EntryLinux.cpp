@@ -147,7 +147,20 @@ __attribute__((constructor(101))) static void ue4ss_so_attached()
         return;
     }
 
-    const auto startup_decision = LinuxStartup::evaluate();
+    std::filesystem::path loaded_module_path;
+    try
+    {
+        Dl_info dl_info{};
+        if (dladdr(reinterpret_cast<void*>(&ue4ss_so_attached), &dl_info) != 0 && dl_info.dli_fname)
+        {
+            loaded_module_path = dl_info.dli_fname;
+        }
+    }
+    catch (...)
+    {
+    }
+
+    const auto startup_decision = LinuxStartup::evaluate("/proc/self/exe", loaded_module_path);
     if (startup_decision.kind == LinuxStartup::DecisionKind::TargetMismatch)
     {
         if (LinuxDiagnostics::is_enabled())
@@ -156,6 +169,16 @@ __attribute__((constructor(101))) static void ue4ss_so_attached()
                          "DIAG: startup_skipped executable=%s expected=%s reason=target_mismatch\n",
                          startup_decision.current_executable.c_str(),
                          startup_decision.expected_executable.c_str());
+        }
+        return;
+    }
+    if (startup_decision.kind == LinuxStartup::DecisionKind::Box64OrphanedPreload)
+    {
+        if (LinuxDiagnostics::is_enabled())
+        {
+            std::fprintf(stderr,
+                         "DIAG: startup_skipped executable=%s reason=box64_target_missing\n",
+                         startup_decision.current_executable.c_str());
         }
         return;
     }
@@ -175,13 +198,12 @@ __attribute__((constructor(101))) static void ue4ss_so_attached()
         }
         else
         {
-            Dl_info dl_info{};
-            if (dladdr(reinterpret_cast<void*>(&ue4ss_so_attached), &dl_info) == 0 || !dl_info.dli_fname)
+            if (loaded_module_path.empty())
             {
                 std::fputs("UE4SS: failed to determine libUE4SS.so path; startup disabled\n", stderr);
                 return;
             }
-            module_path = dl_info.dli_fname;
+            module_path = loaded_module_path;
         }
     }
     catch (const std::exception& exception)

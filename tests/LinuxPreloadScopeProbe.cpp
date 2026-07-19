@@ -49,6 +49,18 @@ int main(int argc, char** argv)
         return 0;
     }
 
+    if (argc == 3 && std::string_view{argv[1]} == "--box64-orphan")
+    {
+        if (auto* ue4ss = dlopen(argv[2], RTLD_NOW | RTLD_NOLOAD))
+        {
+            dlclose(ue4ss);
+            std::this_thread::sleep_for(std::chrono::milliseconds{250});
+            std::puts("UE4SS_BOX64_ORPHAN_PROBE_CLEAN");
+            return 0;
+        }
+        return 21;
+    }
+
     if (argc != 3)
     {
         std::fprintf(stderr, "usage: %s <libUE4SS.so> <expected original LD_PRELOAD>\n", argv[0]);

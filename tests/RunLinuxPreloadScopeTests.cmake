@@ -38,6 +38,37 @@ function OnMatchFound(matchAddress)
 end
 ]=])
 
+set(staged_ue4ss "${STAGE_DIRECTORY}/libUE4SS.so")
+set(ue4ss_log "${STAGE_DIRECTORY}/UE4SS.log")
+file(REMOVE "${ue4ss_log}")
+execute_process(
+    COMMAND "${CMAKE_COMMAND}" -E env
+        --unset=UE4SS_LAUNCH_TARGET_EXE
+        --unset=UE4SS_LAUNCH_LD_PRELOAD_WAS_SET
+        --unset=UE4SS_LAUNCH_ORIGINAL_LD_PRELOAD
+        --unset=UE4SS_MODULE_PATH
+        "LD_PRELOAD=${staged_ue4ss}"
+        "BOX64_LD_PRELOAD=${staged_ue4ss}"
+        "UE4SS_DIAGNOSE=1"
+        "${PROBE_EXECUTABLE}" --box64-orphan "${staged_ue4ss}"
+    RESULT_VARIABLE orphan_result
+    OUTPUT_VARIABLE orphan_stdout
+    ERROR_VARIABLE orphan_stderr
+    TIMEOUT 4
+)
+if(NOT orphan_result EQUAL 0)
+    message(FATAL_ERROR "Box64 orphan probe exited with ${orphan_result}:\n${orphan_stdout}\n${orphan_stderr}")
+endif()
+if(NOT orphan_stdout MATCHES "UE4SS_BOX64_ORPHAN_PROBE_CLEAN")
+    message(FATAL_ERROR "Box64 orphan probe did not reach its clean marker:\n${orphan_stdout}\n${orphan_stderr}")
+endif()
+if(NOT orphan_stderr MATCHES "DIAG: startup_skipped executable=.* reason=box64_target_missing")
+    message(FATAL_ERROR "Box64 orphan preload did not fail closed:\n${orphan_stdout}\n${orphan_stderr}")
+endif()
+if(EXISTS "${ue4ss_log}")
+    message(FATAL_ERROR "Box64 orphan preload created UE4SS.log")
+endif()
+
 file(WRITE "${STAGE_DIRECTORY}/wrapper.sh"
     "#!/bin/bash\nset -euo pipefail\nexec \"${PROBE_EXECUTABLE}\" \"$@\"\n")
 file(CHMOD "${STAGE_DIRECTORY}/wrapper.sh"
@@ -87,7 +118,6 @@ if(process_output MATCHES "DIAG: inactive_reason=.*target_mismatch")
     message(FATAL_ERROR "Normal wrapper mismatch was reported as inactive:\n${process_output}")
 endif()
 
-set(ue4ss_log "${STAGE_DIRECTORY}/UE4SS.log")
 if(NOT EXISTS "${ue4ss_log}")
     message(FATAL_ERROR "Accepted host did not create UE4SS.log")
 endif()
