@@ -113,6 +113,8 @@ Windows does not need this policy: proxy DLL and manual DLL injection load UE4SS
 
 Setting `LD_PRELOAD` manually remains compatible, but it retains normal Linux child inheritance and is not process-scoped. Use `run_ue4ss.sh` for the supported scoped workflow. If the user's original `LD_PRELOAD` already contains UE4SS, exact preservation takes precedence and descendants may still load that user-supplied entry.
 
+Box64 is not a supported target. As a best-effort safety measure, UE4SS skips startup when the launcher target marker is absent and `BOX64_LD_PRELOAD` names the loaded UE4SS library. This prevents recognizable orphaned preloads from initializing in helpers, but it is not full Box64 support; marker-free UE4SS injection through `BOX64_LD_PRELOAD` is intentionally rejected.
+
 ## Diagnostics and logs
 
 Set `UE4SS_DIAGNOSE=1` for a support-oriented startup report:
@@ -126,7 +128,7 @@ UE4SS_CRASH_LOG_DIR="$stage/UE4SS-crashes" \
   "$wrapper"
 ```
 
-The diagnostic report includes the executable path and SHA-256, loaded ELF ranges, glibc version, highest detected GLIBCXX version, engine detection, per-signature status/address, and the reason UE4SS deactivated if startup failed. A wrapper interpreter may print `DIAG: startup_skipped executable=<path> expected=<path> reason=target_mismatch` to stderr. That message is normal and deliberately does not use `inactive_reason`; verify that `expected` names the game ELF. If only skip messages appear, the wrapper never reached the selected host or `--host-executable` points to the wrong file.
+The diagnostic report includes the executable path and SHA-256, loaded ELF ranges, glibc version, highest detected GLIBCXX version, engine detection, per-signature status/address, and the reason UE4SS deactivated if startup failed. A wrapper interpreter may print `DIAG: startup_skipped executable=<path> expected=<path> reason=target_mismatch` to stderr. A recognizable marker-free Box64 reinjection instead reports `DIAG: startup_skipped executable=<path> reason=box64_target_missing`. These messages are normal safety skips and deliberately do not use `inactive_reason`. For a target mismatch, verify that `expected` names the game ELF. If only skip messages appear, the wrapper never reached the selected host or `--host-executable` points to the wrong file.
 
 Share the diagnostic block together with:
 
