@@ -58,6 +58,17 @@ local CONFIG_TYPES = {
 }
 
 local PLATFORM_TYPES = {
+    ["Linux"] = {
+        ["defines"] = {
+            "PLATFORM_LINUX",
+            "PLATFORM_UNIX",
+            "LINUX",
+            "OVERRIDE_PLATFORM_HEADER_NAME=Linux",
+            "UBT_COMPILED_PLATFORM=Linux",
+            "printf_s=printf",
+            "wprintf_s=wprintf"
+        }
+    },
     ["Win64"] = {
         ["defines"] = {
             "PLATFORM_WINDOWS",
@@ -78,7 +89,6 @@ local PLATFORM_TYPES = {
 local CLANG_COMPILE_OPTIONS = {
     ["cxflags"] = {
         "-g",
-        "-gcodeview",
         "-fcolor-diagnostics",
         "-Wno-unknown-pragmas",
         "-Wno-unused-parameter",
@@ -90,6 +100,19 @@ local CLANG_COMPILE_OPTIONS = {
     },
     ["shflags"] = {
         "-g"
+    }
+}
+
+local CLANG_WINDOWS_COMPILE_OPTIONS = {
+    ["cxflags"] = {
+        "-gcodeview"
+    }
+}
+
+local CLANG_LINUX_COMPILE_OPTIONS = {
+    ["cxflags"] = {
+        "-gdwarf",
+        "-fPIC"
     }
 }
 
@@ -109,16 +132,14 @@ local MSVC_COMPILE_OPTIONS = {
         "/Zc:inline",
         "/Zc:strictStrings",
         "/Zc:preprocessor",
-        "/utf-8"  
+        "/utf-8",
+        "/D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR=1"
     },
     ["ldflags"] = {
         "/DEBUG:FULL"
     },
     ["shflags"] = {
         "/DEBUG:FULL"
-    },
-    ["defines"] = {
-        "_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR=1"
     }
 }
 
@@ -208,6 +229,11 @@ rule("ue4ss.base")
         -- Compiler flags are set in this rule since unreal modes currently do not change any compiler flags.
         mode_builder.apply_compiler_options(target, GNU_COMPILE_OPTIONS, {"gcc", "ld"})
         mode_builder.apply_compiler_options(target, CLANG_COMPILE_OPTIONS, {"clang", "lld"})
+        if target:is_plat("linux") then
+            mode_builder.apply_compiler_options(target, CLANG_LINUX_COMPILE_OPTIONS, {"clang", "lld"})
+        elseif target:is_plat("windows") then
+            mode_builder.apply_compiler_options(target, CLANG_WINDOWS_COMPILE_OPTIONS, {"clang", "lld"})
+        end
         mode_builder.apply_compiler_options(target, MSVC_COMPILE_OPTIONS, { "clang_cl", "cl", "link" })
     end)
 

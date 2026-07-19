@@ -47,6 +47,24 @@ rule("rust.link")
         end
     end)
 
+-- Translate Cargo-managed Rust dependencies into rustc flags without exporting
+-- them through xmake's Apple-framework abstraction to non-Rust consumers.
+rule("rust.cargo_deps")
+    after_load(function(target)
+        import("cargo.cargo_helpers")
+        for _, dep in pairs(target:deps()) do
+            if dep:rule("cargo.build") then
+                local project_name = dep:extraconf("rules", "cargo.build", "project_name")
+                local is_debug = dep:extraconf("rules", "cargo.build", "is_debug")
+                local _, cargo_output_dir, _ = cargo_helpers.get_cargo_context(dep, is_debug)
+                local crate_name = project_name:gsub("-", "_")
+
+                target:add("rcflags", "-L", "dependency=" .. path.join(cargo_output_dir, "deps"), {force = true})
+                target:add("rcflags", "--extern", crate_name .. "=" .. path.join(cargo_output_dir, dep:filename()), {force = true})
+            end
+        end
+    end)
+
 -- This rule allows for generic pure-rust Cargo.toml projects to have their building
 -- marshalled and managed entirely by the Cargo/rustc toolchain.
 rule("cargo.build")
@@ -61,19 +79,14 @@ rule("cargo.build")
         -- Convert the supplied project name to the rust output format.
         -- ex. patternsleuth.lib -> libpatternsleuth.rlib
         if target:is_static() then
-            target:set("basename", "lib" .. project_name:gsub("-", "_"))
+            local basename = project_name:gsub("-", "_")
+            if target:is_plat("windows") then
+                basename = "lib" .. basename
+            end
+            target:set("basename", basename)
             target:set("extension", ".rlib")
         end
 
-        local is_debug = target:extraconf("rules", "cargo.build", "is_debug")
-
-        local _, cargo_output_dir, _ = cargo_helpers.get_cargo_context(target, is_debug)
-
-        -- Add framework dirs so any projects that add_deps() this target can get the proper rust flags.
-        -- frameworks are in the format of `--extern cratename=dir/to/crate.rlib`
-        target:add("frameworks", path.join(cargo_output_dir, target:filename()), {public = true})
-        -- frameworkdirs are in the format of `-L dependency=dir/to/deps/`
-        target:add("frameworkdirs", path.join(cargo_output_dir, "deps"), {public = true})
     end)
 
     on_build_file(function (target, sourcefile, opt)

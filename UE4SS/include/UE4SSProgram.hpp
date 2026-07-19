@@ -10,8 +10,10 @@
 #include <Common.hpp>
 #include <CrashDumper.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
+#ifdef UE4SS_HAS_GUI
 #include <GUI/GUI.hpp>
 #include <GUI/GUITab.hpp>
+#endif
 #include <Input/Handler.hpp>
 #include <LuaLibrary.hpp>
 #include <MProgram.hpp>
@@ -24,7 +26,8 @@
 
 #include <String/StringType.hpp>
 
-// Used to set up ImGui context and allocator in DLL mods
+#ifdef UE4SS_HAS_GUI
+// Used to set up ImGui context and allocator in DLL mods.
 #define UE4SS_ENABLE_IMGUI()                                                                                                                                   \
     /* Wait for UE4SS to create the imgui context. */                                                                                                          \
     /* Without this, we're setting the context to nullptr and eventually crashing when we use any imgui functions. */                                          \
@@ -40,6 +43,7 @@
         UE4SSProgram::get_current_imgui_allocator_functions(&alloc_func, &free_func, &user_data);                                                              \
         ImGui::SetAllocatorFunctions(alloc_func, free_func, user_data);                                                                                        \
     }
+#endif
 
 namespace RC
 {
@@ -54,7 +58,9 @@ namespace RC
 
     namespace Output
     {
+#ifdef UE4SS_HAS_GUI
         class ConsoleDevice;
+#endif
     }
 
     struct RecognizableStruct
@@ -107,7 +113,9 @@ namespace RC
         std::jthread m_event_loop;
 
       public:
+#ifdef UE4SS_HAS_GUI
         std::jthread m_render_thread;
+#endif
 
       private:
         CrashDumper m_crash_dumper{};
@@ -126,8 +134,10 @@ namespace RC
         std::filesystem::path m_settings_path_and_file;
         std::filesystem::path m_legacy_root_directory;
         Output::DebugConsoleDevice* m_debug_console_device{};
+#ifdef UE4SS_HAS_GUI
         Output::ConsoleDevice* m_console_device{};
         GUI::DebuggingGUI m_debugging_gui{};
+#endif
 
         using EventCallable = std::function<void()>;
         // Legacy types for backward compatibility with C++ mods
@@ -139,10 +149,13 @@ namespace RC
         };
         std::vector<EventCallable> m_queued_events{};
         std::mutex m_event_queue_mutex{};
+#ifdef UE4SS_HAS_GUI
         std::mutex m_render_thread_mutex{};
+#endif
         std::thread::id m_event_loop_thread_id{};
 
       private:
+#ifdef _WIN32
         std::unique_ptr<PLH::IatHook> m_load_library_a_hook;
         uint64_t m_hook_trampoline_load_library_a;
 
@@ -154,6 +167,7 @@ namespace RC
 
         std::unique_ptr<PLH::IatHook> m_load_library_ex_w_hook;
         uint64_t m_hook_trampoline_load_library_ex_w;
+#endif
 
       public:
         std::vector<std::unique_ptr<Mod>> m_mods;
@@ -250,6 +264,7 @@ namespace RC
         RC_UE4SS_API auto generate_uht_compatible_headers() -> void;
         RC_UE4SS_API auto generate_cxx_headers(const std::filesystem::path& output_dir) -> void;
         RC_UE4SS_API auto generate_lua_types(const std::filesystem::path& output_dir) -> void;
+#ifdef UE4SS_HAS_GUI
         auto get_debugging_ui() -> GUI::DebuggingGUI&
         {
             return m_debugging_gui;
@@ -265,6 +280,7 @@ namespace RC
         {
             return ImGui::GetAllocatorFunctions(alloc_func, free_func, user_data);
         }
+#endif
         RC_UE4SS_API auto queue_event(EventCallable callable) -> void;
         // Legacy overload for backward compatibility with C++ mods
         RC_UE4SS_API auto queue_event(LegacyEventCallable callable, void* data) -> void;
@@ -365,10 +381,17 @@ namespace RC
         RC_UE4SS_API static auto parse_semicolon_separated_string(const StringType& string) -> std::vector<StringType>;
 
       private:
+#ifdef _WIN32
         friend void* HookedLoadLibraryA(const char* dll_name);
         friend void* HookedLoadLibraryExA(const char* dll_name, void* file, int32_t flags);
         friend void* HookedLoadLibraryW(const wchar_t* dll_name);
         friend void* HookedLoadLibraryExW(const wchar_t* dll_name, void* file, int32_t flags);
+#endif
+#ifdef __linux__
+        friend void notify_dlopen(const char* filename);
+#endif
+#ifdef UE4SS_HAS_GUI
         friend auto gui_render_thread_tick() -> void;
+#endif
     };
 } // namespace RC

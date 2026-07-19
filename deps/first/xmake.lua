@@ -31,7 +31,11 @@ if get_config("ue4ssCross") ~= "msvc-wine" then
     -- The patternsleuth target is managed by the cargo.build rule.
     target("patternsleuth")
         set_kind("static")
-        add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features = { "process-internal", "image-pe" }})
+        local patternsleuth_features = { "process-internal", "image-pe" }
+        if is_plat("linux") then
+            table.insert(patternsleuth_features, "image-elf")
+        end
+        add_rules("cargo.build", {project_name = "patternsleuth", is_debug = is_mode_debug(), features = patternsleuth_features})
         add_files("patternsleuth/Cargo.toml")
         -- Exposes the rust *.rs files to the Visual Studio project filters.
         add_extrafiles("patternsleuth/**.rs")

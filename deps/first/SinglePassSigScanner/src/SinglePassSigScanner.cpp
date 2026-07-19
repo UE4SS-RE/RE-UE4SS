@@ -1,10 +1,20 @@
+#include <algorithm>
+#include <bit>
+#include <cctype>
 #include <format>
 #include <future>
+#include <limits>
 #include <regex>
+#include <stdexcept>
 
+#ifdef _WIN32
 #define NOMINMAX
 #include <Windows.h>
 #include <Psapi.h>
+#else
+#include <elf.h>
+#include <link.h>
+#endif
 
 #include <fmt/core.h>
 #include <Profiler/Profiler.hpp>
@@ -20,6 +30,7 @@ namespace RC
     uint32_t SinglePassScanner::m_multithreading_module_size_threshold = 0x1000000;
     std::mutex SinglePassScanner::m_scanner_mutex{};
 
+#ifdef _WIN32
     auto WIN_MODULEINFO::operator=(MODULEINFO other) -> WIN_MODULEINFO&
     {
         lpBaseOfDll = other.lpBaseOfDll;
@@ -32,6 +43,160 @@ namespace RC
     {
         return *std::bit_cast<MODULEINFO*>(&array[static_cast<size_t>(index)]);
     }
+#else
+    auto ScanTargetArray::operator[](ScanTarget index) -> LINUX_MODULEINFO&
+    {
+        return array[static_cast<size_t>(index)];
+    }
+
+    auto SigScannerStaticData::populate_modules_from_dl_iterate_phdr() -> size_t
+    {
+        LINUX_MODULEINFO main_module{};
+        size_t modules_recorded{};
+        std::pair<LINUX_MODULEINFO*, size_t*> callback_state{&main_module, &modules_recorded};
+
+        dl_iterate_phdr(
+                [](dl_phdr_info* info, size_t, void* user_data) -> int {
+                    auto* state = static_cast<std::pair<LINUX_MODULEINFO*, size_t*>*>(user_data);
+                    const bool is_main_executable = !info->dlpi_name || info->dlpi_name[0] == '\0';
+                    if (!is_main_executable)
+                    {
+                        return 0;
+                    }
+
+                    auto& module = *state->first;
+                    uint8_t* lowest_address{};
+                    uint8_t* highest_address{};
+
+                    for (ElfW(Half) index = 0; index < info->dlpi_phnum; ++index)
+                    {
+                        const auto& program_header = info->dlpi_phdr[index];
+                        if (program_header.p_type != PT_LOAD || program_header.p_memsz == 0)
+                        {
+                            continue;
+                        }
+
+                        auto* segment_start = reinterpret_cast<uint8_t*>(info->dlpi_addr + program_header.p_vaddr);
+                        auto* segment_end = segment_start + static_cast<size_t>(program_header.p_memsz);
+                        if (!lowest_address || segment_start < lowest_address)
+                        {
+                            lowest_address = segment_start;
+                        }
+                        if (!highest_address || segment_end > highest_address)
+                        {
+                            highest_address = segment_end;
+                        }
+                        if ((program_header.p_flags & PF_R) != 0)
+                        {
+                            module.readable_segments.emplace_back(segment_start,
+                                                                  static_cast<size_t>(program_header.p_memsz),
+                                                                  static_cast<int>(program_header.p_flags));
+                        }
+                    }
+
+                    if (!lowest_address || !highest_address)
+                    {
+                        return 0;
+                    }
+
+                    module.lpBaseOfDll = lowest_address;
+                    const auto image_size = static_cast<size_t>(highest_address - lowest_address);
+                    module.SizeOfImage = static_cast<unsigned long>(std::min(image_size, static_cast<size_t>(std::numeric_limits<unsigned long>::max())));
+                    std::ranges::sort(module.readable_segments);
+                    ++*state->second;
+                    return 1;
+                },
+                &callback_state);
+
+        if (modules_recorded == 0)
+        {
+            return 0;
+        }
+
+        for (auto& module : m_modules_info.array)
+        {
+            module = main_module;
+        }
+        m_is_modular = false;
+        return modules_recorded;
+    }
+
+    using DWORD = unsigned long;
+
+    struct MEMORY_BASIC_INFORMATION
+    {
+        void* BaseAddress{};
+        size_t RegionSize{};
+        DWORD Protect{};
+        DWORD State{};
+    };
+
+    constexpr DWORD PAGE_NOACCESS = 1UL << 0;
+    constexpr DWORD PAGE_GUARD = 1UL << 1;
+    constexpr DWORD PAGE_READONLY = 1UL << 2;
+    constexpr DWORD PAGE_READWRITE = 1UL << 3;
+    constexpr DWORD PAGE_WRITECOPY = 1UL << 4;
+    constexpr DWORD PAGE_EXECUTE_READ = 1UL << 5;
+    constexpr DWORD PAGE_EXECUTE_READWRITE = 1UL << 6;
+    constexpr DWORD PAGE_EXECUTE_WRITECOPY = 1UL << 7;
+    constexpr DWORD MEM_COMMIT = 1UL << 8;
+
+    // Linux compatibility layer for the existing scanner loops. It presents ELF
+    // PT_LOAD segments with PF_R as committed readable regions and skips gaps.
+    static auto VirtualQuery(const void* address, MEMORY_BASIC_INFORMATION* memory_info, size_t) -> size_t
+    {
+        auto* query_address = const_cast<uint8_t*>(static_cast<const uint8_t*>(address));
+        const LINUX_MODULEINFO* selected_module{};
+
+        for (const auto& module : SigScannerStaticData::m_modules_info.array)
+        {
+            auto* module_start = static_cast<uint8_t*>(module.lpBaseOfDll);
+            if (!module_start || module.SizeOfImage == 0)
+            {
+                continue;
+            }
+            auto* module_end = module_start + module.SizeOfImage;
+            if (query_address >= module_start && query_address < module_end)
+            {
+                selected_module = &module;
+                break;
+            }
+        }
+
+        if (!selected_module)
+        {
+            return 0;
+        }
+
+        auto* module_end = static_cast<uint8_t*>(selected_module->lpBaseOfDll) + selected_module->SizeOfImage;
+        for (const auto& [segment_start, segment_size, flags] : selected_module->readable_segments)
+        {
+            auto* segment_end = segment_start + segment_size;
+            if (query_address < segment_start)
+            {
+                memory_info->BaseAddress = query_address;
+                memory_info->RegionSize = static_cast<size_t>(segment_start - query_address);
+                memory_info->Protect = PAGE_NOACCESS;
+                memory_info->State = 0;
+                return sizeof(*memory_info);
+            }
+            if (query_address < segment_end)
+            {
+                memory_info->BaseAddress = query_address;
+                memory_info->RegionSize = static_cast<size_t>(segment_end - query_address);
+                memory_info->Protect = (flags & PF_R) != 0 ? PAGE_READONLY : PAGE_NOACCESS;
+                memory_info->State = (flags & PF_R) != 0 ? MEM_COMMIT : 0;
+                return sizeof(*memory_info);
+            }
+        }
+
+        memory_info->BaseAddress = query_address;
+        memory_info->RegionSize = static_cast<size_t>(module_end - query_address);
+        memory_info->Protect = PAGE_NOACCESS;
+        memory_info->State = 0;
+        return sizeof(*memory_info);
+    }
+#endif
 
     auto ScanTargetToString(ScanTarget scan_target) -> std::string
     {
@@ -361,6 +526,7 @@ namespace RC
 
     auto SinglePassScanner::string_scan(std::wstring_view string_to_scan_for, ScanTarget scan_target) -> void*
     {
+#ifdef _WIN32
         auto module = SigScannerStaticData::m_modules_info[scan_target];
 
         auto start_address = static_cast<uint8_t*>(module.lpBaseOfDll);
@@ -387,9 +553,7 @@ namespace RC
                 {
                     // Check boundaries - string_to_scan_for.size() is character count, need to multiply by sizeof(wchar_t) for bytes
                     size_t string_size_bytes = string_to_scan_for.size() * sizeof(wchar_t);
-                    if (region_start > end_address || 
-                        region_start + string_size_bytes > end_address ||
-                        region_start + string_size_bytes > region_end)
+                    if (region_start > end_address || region_start + string_size_bytes > end_address || region_start + string_size_bytes > region_end)
                     {
                         break;
                     }
@@ -415,6 +579,9 @@ namespace RC
         }
 
         return address_found;
+#else
+        throw std::runtime_error{"[SinglePassSigScanner::string_scan] Not implemented on Linux"};
+#endif
     }
 
     struct PatternData
@@ -488,7 +655,7 @@ namespace RC
 
     auto SinglePassScanner::scanner_work_thread(uint8_t* start_address,
                                                 uint8_t* end_address,
-                                                SYSTEM_INFO& info,
+                                                SPSS_SYSTEM_INFO& info,
                                                 std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerSetThreadName("UE4SS-ScannerWorkThread");
@@ -507,7 +674,7 @@ namespace RC
 
     auto SinglePassScanner::scanner_work_thread_scalar(uint8_t* start_address,
                                                        uint8_t* end_address,
-                                                       SYSTEM_INFO& info,
+                                                       SPSS_SYSTEM_INFO& info,
                                                        std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerScope();
@@ -602,8 +769,8 @@ namespace RC
 
                             for (size_t sig_i = 0; sig_i < sig.size(); sig_i += 2)
                             {
-                                if (sig.at(sig_i) != -1 && sig.at(sig_i) != HI_NIBBLE(*(byte*)(region_start + (sig_i / 2))) ||
-                                    sig.at(sig_i + 1) != -1 && sig.at(sig_i + 1) != LO_NIBBLE(*(byte*)(region_start + (sig_i / 2))))
+                                if (sig.at(sig_i) != -1 && sig.at(sig_i) != HI_NIBBLE(*(uint8_t*)(region_start + (sig_i / 2))) ||
+                                    sig.at(sig_i + 1) != -1 && sig.at(sig_i + 1) != LO_NIBBLE(*(uint8_t*)(region_start + (sig_i / 2))))
                                 {
                                     break;
                                 }
@@ -697,7 +864,7 @@ namespace RC
 
     auto SinglePassScanner::scanner_work_thread_stdfind(uint8_t* start_address,
                                                         uint8_t* end_address,
-                                                        SYSTEM_INFO& info,
+                                                        SPSS_SYSTEM_INFO& info,
                                                         std::vector<SignatureContainer>& signature_containers) -> void
     {
         ProfilerScope();
@@ -722,8 +889,7 @@ namespace RC
         }
 
         MEMORY_BASIC_INFORMATION memory_info{};
-        DWORD readable_flags = PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY |
-                               PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
+        DWORD readable_flags = PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
 
         for (uint8_t* i = start_address; i < end_address;)
         {
@@ -741,10 +907,10 @@ namespace RC
 
             uint8_t* region_start = static_cast<uint8_t*>(memory_info.BaseAddress);
             uint8_t* region_end = region_start + memory_info.RegionSize;
-            
+
             auto scan_start = (region_start > start_address) ? region_start : start_address;
             auto scan_end = (region_end < end_address) ? region_end : end_address;
-        
+
             // Loop everything
             for (size_t container_index = 0; const auto& patterns : pattern_datas)
             {
@@ -826,8 +992,19 @@ namespace RC
 
     auto SinglePassScanner::start_scan(SignatureContainerMap& signature_containers) -> void
     {
-        SYSTEM_INFO info{};
+        SPSS_SYSTEM_INFO info{};
+#ifdef _WIN32
         GetSystemInfo(&info);
+#else
+        if (!SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)].lpBaseOfDll &&
+            SigScannerStaticData::populate_modules_from_dl_iterate_phdr() == 0)
+        {
+            throw std::runtime_error{"[SinglePassSigScanner::start_scan] Unable to enumerate the main ELF executable"};
+        }
+        const auto& main_module = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(ScanTarget::MainExe)];
+        info.lpMinimumApplicationAddress = main_module.lpBaseOfDll;
+        info.lpMaximumApplicationAddress = static_cast<uint8_t*>(main_module.lpBaseOfDll) + main_module.SizeOfImage;
+#endif
 
         // If not modular then the containers get merged into one scan target
         // That way there are no extra scans
@@ -835,12 +1012,12 @@ namespace RC
 
         if (!SigScannerStaticData::m_is_modular)
         {
-            MODULEINFO merged_module_info{};
+            OS_MODULEINFO merged_module_info{};
             std::vector<SignatureContainer> merged_containers;
 
             for (const auto& [scan_target, outer_container] : signature_containers)
             {
-                merged_module_info = *std::bit_cast<MODULEINFO*>(&SigScannerStaticData::m_modules_info[scan_target]);
+                merged_module_info = SigScannerStaticData::m_modules_info.array[static_cast<size_t>(scan_target)];
                 for (const auto& signature_container : outer_container)
                 {
                     merged_containers.emplace_back(signature_container);
@@ -912,7 +1089,7 @@ namespace RC
                 {
                     format_aob_strings(signature_container);
                 }
-                
+
                 uint8_t* module_start_address = static_cast<uint8_t*>(SigScannerStaticData::m_modules_info[scan_target].lpBaseOfDll);
                 uint8_t* module_end_address = static_cast<uint8_t*>(module_start_address + SigScannerStaticData::m_modules_info[scan_target].SizeOfImage);
 

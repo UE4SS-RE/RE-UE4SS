@@ -185,7 +185,9 @@ namespace RC::JSON::Parser
             {
                 do_comma_verification();
 
-                m_last_value = std::make_unique<JSON::Number>(std::stoll(to_string(data_no_spaces), nullptr));
+                // static_cast: std::stoll returns long long, which is a distinct type from
+                // int64_t (long) on LP64 Linux and would make the Number constructor ambiguous
+                m_last_value = std::make_unique<JSON::Number>(static_cast<int64_t>(std::stoll(to_string(data_no_spaces), nullptr)));
             }
             else if (!m_string_started)
             {

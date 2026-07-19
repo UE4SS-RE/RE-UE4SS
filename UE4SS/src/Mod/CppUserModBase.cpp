@@ -17,6 +17,7 @@ namespace RC
 
     CppUserModBase::~CppUserModBase()
     {
+#ifdef UE4SS_HAS_GUI
         for (const auto& tab : GUITabs)
         {
             if (tab)
@@ -25,6 +26,7 @@ namespace RC
             }
         }
         GUITabs.clear();
+#endif
 
 #ifdef HAS_INPUT
         UE4SSProgram::get_program().m_input_handler.get_events_safe([&](auto& key_set) {
@@ -53,11 +55,13 @@ namespace RC
 #endif
     }
 
+#ifdef UE4SS_HAS_GUI
     auto CppUserModBase::register_tab(StringViewType tab_name, GUI::GUITab::RenderFunctionType render_function) -> void
     {
         auto& tab = GUITabs.emplace_back(std::make_shared<GUI::GUITab>(tab_name, render_function, this));
         UE4SSProgram::get_program().add_gui_tab(tab);
     }
+#endif
 
     auto CppUserModBase::register_keydown_event(Input::Key key, const Input::EventCallbackCallable& callback, uint8_t custom_data) -> void
     {

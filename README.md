@@ -62,16 +62,15 @@ RE-UE4SS supports the following environment variables:
 
 ## Build requirements
 
-- A computer running Windows.
-  - Linux support might happen at some point but not soon.
-- A version of MSVC that supports C++23:
-  - MSVC toolset version >= 14.43.0
-  - MSVC version >= 19.43
-  - Visual Studio version >= 17.13
-  - More compilers will hopefully be supported in the future.
+- Windows, or x86-64 Linux for the native headless UE 5.1+ target.
+- A compiler with C++23 support:
+  - Windows: MSVC toolset version >= 14.43.0, MSVC version >= 19.43, Visual Studio version >= 17.13.
+  - Native Linux: clang, glibc >= 2.35, and GLIBCXX >= 3.4.32. GCC is not supported for the native port.
 - [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install)
 - [CMake >= 3.22](https://cmake.org/download/)
 - A build system: either [Ninja](https://ninja-build.org/) or MSVC (included with Visual Studio)
+
+See [Native Linux support](docs/linux.md) for the current headless scope, build commands, server staging, diagnostics, and known limitations.
 
 ## Build instructions
 
@@ -104,6 +103,7 @@ Currently supported options for these are:
 
 * `Platform`
   * `Win64` - 64-bit windows
+  * `Linux` - native 64-bit Linux (headless, clang)
 
 ### Basic Build Commands
 
@@ -122,6 +122,33 @@ cmake -B build_cmake_Game__Shipping__Win64 -G "Visual Studio 17 2022"
 # Build with MSVC (requires --config flag)
 cmake --build build_cmake_Game__Shipping__Win64 --config Game__Shipping__Win64
 ```
+
+### Native Linux (headless)
+
+```bash
+cmake -S . -B build_linux -G Ninja \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Game__Shipping__Linux \
+  -DUE4SS_GUI=OFF \
+  -DUE4SS_BUILD_TESTS=ON
+cmake --build build_linux --parallel
+ctest --test-dir build_linux --output-on-failure
+```
+
+The native Linux M1 target is intended for UE 5.1+ dedicated servers and other headless processes. Deployment uses `libUE4SS.so` with the provided `tools/linux/run_ue4ss.sh` launcher:
+
+```bash
+# Direct ELF
+run_ue4ss.sh /path/to/PalServer-Linux-Shipping Pal -port=8211
+
+# Shell wrapper: identify the ELF that should initialize UE4SS
+run_ue4ss.sh \
+  --host-executable /path/to/PalServer-Linux-Shipping \
+  /path/to/PalServer.sh -port=8211
+```
+
+The Linux launcher restores the user's original `LD_PRELOAD` before the selected host starts helpers, preventing the launcher-added UE4SS preload from spreading through the process tree. Raw manual `LD_PRELOAD` remains compatible but keeps normal Linux child inheritance. Windows proxy/manual DLL injection is already process-scoped. See [docs/linux.md](docs/linux.md) for staging, diagnostics, and troubleshooting.
 
 ### Configuration Options
 

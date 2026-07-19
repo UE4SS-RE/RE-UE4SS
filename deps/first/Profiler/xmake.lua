@@ -4,9 +4,9 @@ add_requires("Tracy", { optional = true, debug = is_mode_debug(), configs = {run
 add_requires("Superluminal", { system = true, optional = true, debug = is_mode_debug(), configs = {runtimes = get_mode_runtimes()} })
 
 option("profilerFlavor")
-    set_default("Tracy")
+    set_default("Auto")
     set_showmenu(true)
-    set_values("Tracy", "Superluminal", "None")
+    set_values("Auto", "Tracy", "Superluminal", "None")
 
 target(projectName)
     set_kind("headeronly")
@@ -20,6 +20,9 @@ target(projectName)
 
     on_load(function (target)
         local flavor = get_config("profilerFlavor")
+        if flavor == "Auto" then
+            flavor = target:is_plat("linux") and "None" or "Tracy"
+        end
 
         if flavor == "Tracy" then
             target:add("packages", "Tracy", { public = true })
@@ -31,4 +34,3 @@ target(projectName)
             target:add("defines", "IS_TRACY=0", "IS_SUPERLUMINAL=0", "DISABLE_PROFILER", { public = true })
         end
     end)
-    

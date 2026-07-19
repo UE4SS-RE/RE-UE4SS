@@ -8,10 +8,19 @@ include(Utilities)  # For string manipulation functions
 # NOTE: The build mode lists below are referenced by CI workflows for dynamic matrix generation.
 # Keep these declarations on single lines to enable automated parsing via grep/regex.
 # Format: set(VAR_NAME "val1" "val2" ... CACHE STRING "description")
-set(UE4SS_PROJECTS "UE4SS" "UVTD" CACHE STRING "List of main project targets")
+if(WIN32)
+    set(UE4SS_PROJECTS "UE4SS" "UVTD" CACHE STRING "List of main project targets")
+else()
+    # UVTD depends on raw_pdb/dbghelp (Windows PDB tooling); Linux layout dumping is DWARF-based (M2)
+    set(UE4SS_PROJECTS "UE4SS" CACHE STRING "List of main project targets")
+endif()
 set(UE4SS_TARGET_TYPES "Game" "CasePreserving" "LessEqual421" CACHE STRING "UE4-style target types")
 set(UE4SS_CONFIGURATION_TYPES "Debug" "Dev" "Shipping" "Test" CACHE STRING "UE4-style configuration types")
-set(UE4SS_PLATFORM_TYPES "Win64" CACHE STRING "Supported platform types")
+if(WIN32)
+    set(UE4SS_PLATFORM_TYPES "Win64" CACHE STRING "Supported platform types")
+else()
+    set(UE4SS_PLATFORM_TYPES "Linux" CACHE STRING "Supported platform types")
+endif()
 
 # Feature toggles
 option(MAKE_DEPENDENCIES_SHARED "Make dependencies shared" OFF)
@@ -55,6 +64,10 @@ set(UE4SS_Test_DEFINITIONS UE_BUILD_TEST STATS UE4SS_PROFILERS)
 # Platform definitions (UE4-style)
 set(UE4SS_Win64_DEFINITIONS PLATFORM_WINDOWS PLATFORM_MICROSOFT OVERRIDE_PLATFORM_HEADER_NAME=Windows UBT_COMPILED_PLATFORM=Win64)
 set(UE4SS_Win64_VARS CMAKE_SYSTEM_PROCESSOR=x86_64)
+# printf_s=printf: the codebase has ~110 printf_s call sites (MSVC secure CRT);
+# glibc has no printf_s, and its printf covers the same usage (approach from PR #384)
+set(UE4SS_Linux_DEFINITIONS PLATFORM_LINUX PLATFORM_UNIX LINUX OVERRIDE_PLATFORM_HEADER_NAME=Linux UBT_COMPILED_PLATFORM=Linux printf_s=printf wprintf_s=wprintf)
+set(UE4SS_Linux_VARS CMAKE_SYSTEM_PROCESSOR=x86_64)
 
 # Initializes the project configuration
 #
@@ -80,8 +93,10 @@ function(ue4ss_initialize_project)
         list(APPEND TARGET_COMPILE_DEFINITIONS HAS_INPUT)
     endif()
     
-    # Unicode support
-    list(APPEND TARGET_COMPILE_DEFINITIONS _UNICODE UNICODE)
+    # Unicode support (Windows APIs); Linux uses char16_t via FORCE_U16 in String/StringType.hpp
+    if(WIN32)
+        list(APPEND TARGET_COMPILE_DEFINITIONS _UNICODE UNICODE)
+    endif()
 
     # Windows version targeting (Windows 10 and above)
     if(WIN32)

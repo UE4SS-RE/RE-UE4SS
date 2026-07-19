@@ -548,6 +548,6 @@ namespace RC::OutTheShade
         FileOutput.Write(UsmapData.data(), UsmapData.size());
 
         Output::send(STR("Mappings Generation Completed Successfully!\n"));
-        Output::send(STR("Output file: {}\n"), to_wstring(usmap_filename));
+        Output::send(STR("Output file: {}\n"), ensure_str(usmap_filename));
     }
 } // namespace RC::OutTheShade

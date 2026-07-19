@@ -9,34 +9,24 @@
 #include <File/FileType/FileBase.hpp>
 #include <File/Macros.hpp>
 
-// NOTE: This file is effectively a stub.
-//       The LinuxFile class has not been implemented!
-//       File operations through the Output::* system doesn't work, for example FileDevice and NewFileDevice.
-
 namespace RC::File
 {
     class LinuxFile : public FileInterface<LinuxFile>
     {
       private:
-        using HANDLE = void*;
-
         struct IdentifyingProperties
         {
-            unsigned long volume_serial_number{};
-            unsigned long file_index_low{};
-            unsigned long file_index_high{};
-            unsigned long creation_time_low{};
-            unsigned long creation_time_high{};
-            unsigned long last_write_time_high{};
-            unsigned long last_write_time_low{};
-            unsigned long file_size_low{};
-            unsigned long file_size_high{};
+            uint64_t device{};
+            uint64_t inode{};
+            int64_t mtime_sec{};
+            int64_t mtime_nsec{};
+            uint64_t file_size{};
         };
 
       private:
-        HANDLE m_file{};
-        HANDLE m_map_handle{};
+        int m_fd{-1};
         uint8_t* m_memory_map{};
+        size_t m_map_size{};
         OpenProperties m_open_properties{};
         std::filesystem::path m_file_path_and_name{};
         std::filesystem::path m_serialization_file_path_and_name{};
@@ -61,9 +51,9 @@ namespace RC::File
         [[nodiscard]] auto is_file_open() const -> bool;
 
       public:
-        RC_FILE_API auto set_file(HANDLE new_file) -> void;
+        RC_FILE_API auto set_file(int new_fd) -> void;
         RC_FILE_API auto set_is_file_open(bool new_is_open) -> void;
-        RC_FILE_API auto get_file() -> HANDLE;
+        RC_FILE_API auto get_file() -> int;
         RC_FILE_API auto serialization_file_exists() -> bool;
 
         // File Interface -> START
@@ -89,7 +79,7 @@ namespace RC::File
         // File Interface -> END
     };
 
-    // This file is automatically included ONLY if Windows is detected
+    // This file is automatically included ONLY if Linux is detected
     // Therefore, it's not necessary to do any checks here
     template <ImplementsFileInterface UnderlyingAbstraction>
     class HandleTemplate;

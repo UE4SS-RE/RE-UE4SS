@@ -1,16 +1,14 @@
 #define NOMINMAX
 
 #include <filesystem>
-#include <Windows.h>
 
 #include <DynamicOutput/DynamicOutput.hpp>
-#include <Helpers/SysError.hpp>
 #include <Helpers/String.hpp>
 #include <Mod/CppMod.hpp>
 
 namespace RC
 {
-    CppMod::CppMod(UE4SSProgram& program, StringType&& mod_name, StringType&& mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
+    CppMod::CppMod(UE4SSProgram& program, StringType&& mod_name, std::filesystem::path mod_path) : Mod(program, std::move(mod_name), std::move(mod_path))
     {
         m_dlls_path = m_mod_path / STR("dlls");
 
@@ -21,14 +19,22 @@ namespace RC
             return;
         }
 
-        auto dll_path = m_dlls_path / STR("main.dll");
+        std::filesystem::path dll_path{};
+#ifdef _WIN32
+        dll_path = m_dlls_path / STR("main.dll");
         if (!std::filesystem::exists(dll_path))
         {
-            dll_path = m_dlls_path / fmt::format(STR("{}.dll"), mod_name);
+            dll_path = m_dlls_path / fmt::format(STR("{}.dll"), m_mod_name);
+#else
+        dll_path = m_dlls_path / "main.so";
+        if (!std::filesystem::exists(dll_path))
+        {
+            dll_path = m_dlls_path / ("lib" + to_utf8_string(m_mod_name) + ".so");
+#endif
 
             if (!std::filesystem::exists(dll_path))
             {
-                Output::send<LogLevel::Warning>(STR("Failed to load C++ mod {}, dlls folder must contain either main.dll or {}\n"),
+                Output::send<LogLevel::Warning>(STR("Failed to load C++ mod {}, library folder must contain either the default library or {}\n"),
                                                 m_mod_name, ensure_str(dll_path.filename()));
                 set_installable(false);
                 return;
@@ -37,27 +43,22 @@ namespace RC
 
         m_dll_filename = ensure_str(dll_path.filename());
 
-        // Add mods dlls directory to search path for dynamic/shared linked libraries in mods
-        m_dlls_path_cookie = AddDllDirectory(m_dlls_path.c_str());
-        m_main_dll_module = LoadLibraryExW(dll_path.c_str(), NULL, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-
-        if (!m_main_dll_module)
+        if (!m_main_dll.open(dll_path))
         {
-            Output::send<LogLevel::Warning>(STR("Failed to load dll <{}> for mod {}, error: {}\n"),
-                                            ensure_str(dll_path), m_mod_name, SysError(GetLastError()).c_str());
+            Output::send<LogLevel::Warning>(
+                    STR("Failed to load shared library <{}> for mod {}, error: {}\n"), ensure_str(dll_path), m_mod_name, ensure_str(m_main_dll.error()));
             set_installable(false);
             return;
         }
 
-        m_start_mod_func = reinterpret_cast<start_type>(GetProcAddress(m_main_dll_module, "start_mod"));
-        m_uninstall_mod_func = reinterpret_cast<uninstall_type>(GetProcAddress(m_main_dll_module, "uninstall_mod"));
+        m_start_mod_func = reinterpret_cast<start_type>(m_main_dll.resolve("start_mod"));
+        m_uninstall_mod_func = reinterpret_cast<uninstall_type>(m_main_dll.resolve("uninstall_mod"));
 
         if (!m_start_mod_func || !m_uninstall_mod_func)
         {
             Output::send<LogLevel::Warning>(STR("Failed to find exported mod lifecycle functions for mod {}\n"), m_mod_name);
 
-            FreeLibrary(m_main_dll_module);
-            m_main_dll_module = NULL;
+            m_main_dll.close();
 
             set_installable(false);
             return;
@@ -223,12 +224,5 @@ namespace RC
         }
     }
 
-    CppMod::~CppMod()
-    {
-        if (m_main_dll_module)
-        {
-            FreeLibrary(m_main_dll_module);
-            RemoveDllDirectory(m_dlls_path_cookie);
-        }
-    }
+    CppMod::~CppMod() = default;
 } // namespace RC

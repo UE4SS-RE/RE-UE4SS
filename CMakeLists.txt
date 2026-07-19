@@ -7,7 +7,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-enable_language(CXX ASM_MASM)
+if(WIN32)
+    enable_language(CXX ASM_MASM)
+else()
+    enable_language(CXX)
+endif()
 include(CheckIPOSupported)
 include(GNUInstallDirs)
 
@@ -87,7 +91,16 @@ setup_build_configuration()
 
 # Add subdirectories for dependencies and projects
 add_subdirectory("deps")
-add_subdirectory("cppmods")
+if(WIN32)
+    # cppmods link against the full UE4SS target; enable on Linux once libUE4SS.so links
+    add_subdirectory("cppmods")
+endif()
+
+option(UE4SS_BUILD_TESTS "Build native unit tests" OFF)
+if(UE4SS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory("tests")
+endif()
 
 foreach(project ${PROJECTS})
     add_subdirectory(${project})

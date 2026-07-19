@@ -38,6 +38,12 @@ namespace RC::ObjectDumper
         return to_address(std::bit_cast<uintptr_t>(address));
     }
 
+    template <typename ReturnType, typename... Args>
+    static auto to_address(ReturnType (*address)(Args...)) -> uintptr_t
+    {
+        return to_address(std::bit_cast<uintptr_t>(address));
+    }
+
     auto get_to_string(size_t hash) -> ObjectToStringDecl
     {
         return object_to_string_functions[hash];

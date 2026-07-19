@@ -81,22 +81,22 @@ namespace RC::LuaLibrary
     {
         // TODO: Make helper functions inside LuaMadeSimple so that the Lua C api doesn't need to be used in these functions
 
-        __declspec(dllexport) auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*;
-        __declspec(dllexport) auto execute_lua_in_mod(const char* mod_name, const char* script, char* output_buffer) -> const char*;
+        RC_UE4SS_API auto get_lua_state_by_mod_name(const char* mod_name) -> lua_State*;
+        RC_UE4SS_API auto execute_lua_in_mod(const char* mod_name, const char* script, char* output_buffer) -> const char*;
 
         using SetScriptVariableInt32Signature = void (*)(const char*, const char*, int32_t, ReturnValue&);
-        __declspec(dllexport) auto set_script_variable_int32(const char* mod_name, const char* variable_name, int32_t new_value, ReturnValue&) -> void;
+        RC_UE4SS_API auto set_script_variable_int32(const char* mod_name, const char* variable_name, int32_t new_value, ReturnValue&) -> void;
 
         using SetScriptVariableDefaultDataSignature = void (*)(const char*, const char*, DefaultDataStruct&, ReturnValue&);
-        __declspec(dllexport) auto set_script_variable_default_data(const char* mod_name,
-                                                                    const char* variable_name,
-                                                                    DefaultDataStruct& external_data,
-                                                                    ReturnValue&) -> void;
+        RC_UE4SS_API auto set_script_variable_default_data(const char* mod_name,
+                                                           const char* variable_name,
+                                                           DefaultDataStruct& external_data,
+                                                           ReturnValue&) -> void;
 
         using CallScriptFunctionSignature = void (*)(const char*, const char*, ReturnValue&, ScriptFuncReturnValue&);
-        __declspec(dllexport) auto call_script_function(const char* mod_name, const char* function_name, ReturnValue&, ScriptFuncReturnValue&) -> void;
+        RC_UE4SS_API auto call_script_function(const char* mod_name, const char* function_name, ReturnValue&, ScriptFuncReturnValue&) -> void;
 
         using IsUE4SSInitializedSignature = bool (*)();
-        __declspec(dllexport) auto is_ue4ss_initialized() -> bool;
+        RC_UE4SS_API auto is_ue4ss_initialized() -> bool;
     }
 }; // namespace RC::LuaLibrary
