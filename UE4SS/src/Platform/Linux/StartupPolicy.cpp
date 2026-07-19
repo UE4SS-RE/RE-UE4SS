@@ -5,14 +5,75 @@
 #include <cstdlib>
 #include <cstring>
 #include <initializer_list>
+#include <string_view>
 
 namespace RC::LinuxStartup
 {
-    auto evaluate(const std::filesystem::path& current_executable) noexcept -> Decision
+    namespace
+    {
+        auto box64_preload_contains_module(const char* preload_value,
+                                           const std::filesystem::path& loaded_module) noexcept -> bool
+        {
+            if (!preload_value || preload_value[0] == '\0' || loaded_module.empty())
+            {
+                return false;
+            }
+
+            try
+            {
+                std::string_view remaining{preload_value};
+                while (!remaining.empty())
+                {
+                    const auto separator = remaining.find(':');
+                    const auto token = remaining.substr(0, separator);
+                    if (!token.empty())
+                    {
+                        const std::filesystem::path candidate{token};
+                        if (candidate == loaded_module ||
+                            (!candidate.filename().empty() && candidate.filename() == loaded_module.filename()))
+                        {
+                            return true;
+                        }
+
+                        std::error_code equivalent_error;
+                        const bool equivalent = std::filesystem::equivalent(candidate, loaded_module, equivalent_error);
+                        if (!equivalent_error && equivalent)
+                        {
+                            return true;
+                        }
+                    }
+
+                    if (separator == std::string_view::npos)
+                    {
+                        break;
+                    }
+                    remaining.remove_prefix(separator + 1);
+                }
+            }
+            catch (...)
+            {
+                return false;
+            }
+            return false;
+        }
+    } // namespace
+
+    auto evaluate(const std::filesystem::path& current_executable,
+                  const std::filesystem::path& loaded_module) noexcept -> Decision
     {
         const auto* expected_value = std::getenv(TargetExecutableEnv);
         if (!expected_value)
         {
+            if (box64_preload_contains_module(std::getenv(Box64PreloadEnv), loaded_module))
+            {
+                Decision result{
+                        .kind = DecisionKind::Box64OrphanedPreload,
+                        .reason = "box64_target_missing",
+                };
+                std::error_code current_error;
+                result.current_executable = std::filesystem::canonical(current_executable, current_error);
+                return result;
+            }
             return {.kind = DecisionKind::LegacyStart};
         }
         if (expected_value[0] == '\0')

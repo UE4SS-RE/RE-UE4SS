@@ -17,6 +17,7 @@ namespace
 {
     constexpr std::array EnvironmentNames{
             std::string_view{"LD_PRELOAD"},
+            std::string_view{RC::LinuxStartup::Box64PreloadEnv},
             std::string_view{RC::LinuxStartup::TargetExecutableEnv},
             std::string_view{RC::LinuxStartup::OriginalPreloadWasSetEnv},
             std::string_view{RC::LinuxStartup::OriginalPreloadEnv},
@@ -135,6 +136,38 @@ int main(int argc, char** argv)
         expect(RC::LinuxStartup::evaluate(self).kind == RC::LinuxStartup::DecisionKind::LegacyStart,
                "marker-free startup was not legacy");
 
+        set_environment(RC::LinuxStartup::Box64PreloadEnv, "");
+        expect(RC::LinuxStartup::evaluate(self, self).kind == RC::LinuxStartup::DecisionKind::LegacyStart,
+               "empty Box64 preload disabled legacy startup");
+
+        set_environment(RC::LinuxStartup::Box64PreloadEnv, ":unrelated.so::");
+        expect(RC::LinuxStartup::evaluate(self, self).kind == RC::LinuxStartup::DecisionKind::LegacyStart,
+               "unrelated Box64 preload disabled legacy startup");
+
+        set_environment(RC::LinuxStartup::Box64PreloadEnv, self.string());
+        auto box64_decision = RC::LinuxStartup::evaluate(self, self);
+        expect(box64_decision.kind == RC::LinuxStartup::DecisionKind::Box64OrphanedPreload &&
+                       box64_decision.reason == "box64_target_missing",
+               "exact orphaned Box64 preload was not rejected");
+
+        set_environment(RC::LinuxStartup::Box64PreloadEnv, self.filename().string());
+        expect(RC::LinuxStartup::evaluate(self, self).kind == RC::LinuxStartup::DecisionKind::Box64OrphanedPreload,
+               "basename-only orphaned Box64 preload was not rejected");
+
+        set_environment(RC::LinuxStartup::Box64PreloadEnv,
+                        "first.so:" + symlink_path.string() + ":last.so");
+        expect(RC::LinuxStartup::evaluate(self, self).kind == RC::LinuxStartup::DecisionKind::Box64OrphanedPreload,
+               "symlinked orphaned Box64 preload was not rejected");
+
+        set_environment(RC::LinuxStartup::Box64PreloadEnv, hard_link_path.string());
+        expect(RC::LinuxStartup::evaluate(self, self).kind == RC::LinuxStartup::DecisionKind::Box64OrphanedPreload,
+               "hard-linked orphaned Box64 preload was not rejected");
+
+        set_environment(RC::LinuxStartup::TargetExecutableEnv, self.string());
+        expect(RC::LinuxStartup::evaluate(self, self).kind == RC::LinuxStartup::DecisionKind::LauncherStart,
+               "valid launcher target did not take precedence over Box64 guard");
+
+        clear_environment();
         set_environment(RC::LinuxStartup::TargetExecutableEnv, "");
         auto decision = RC::LinuxStartup::evaluate(self);
         expect(decision.kind == RC::LinuxStartup::DecisionKind::InvalidLauncherState && decision.reason == "empty_target",

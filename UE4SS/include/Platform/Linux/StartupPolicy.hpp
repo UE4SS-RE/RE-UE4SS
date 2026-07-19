@@ -8,6 +8,7 @@
 
 namespace RC::LinuxStartup
 {
+    inline constexpr char Box64PreloadEnv[] = "BOX64_LD_PRELOAD";
     inline constexpr char TargetExecutableEnv[] = "UE4SS_LAUNCH_TARGET_EXE";
     inline constexpr char OriginalPreloadWasSetEnv[] = "UE4SS_LAUNCH_LD_PRELOAD_WAS_SET";
     inline constexpr char OriginalPreloadEnv[] = "UE4SS_LAUNCH_ORIGINAL_LD_PRELOAD";
@@ -18,6 +19,7 @@ namespace RC::LinuxStartup
         LegacyStart,
         LauncherStart,
         TargetMismatch,
+        Box64OrphanedPreload,
         InvalidLauncherState,
     };
 
@@ -29,7 +31,8 @@ namespace RC::LinuxStartup
         std::string reason{};
     };
 
-    auto evaluate(const std::filesystem::path& current_executable = "/proc/self/exe") noexcept -> Decision;
+    auto evaluate(const std::filesystem::path& current_executable = "/proc/self/exe",
+                  const std::filesystem::path& loaded_module = {}) noexcept -> Decision;
     auto restore_original_environment() noexcept -> std::optional<std::string>;
 } // namespace RC::LinuxStartup
 
