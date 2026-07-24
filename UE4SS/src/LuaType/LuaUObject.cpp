@@ -148,7 +148,7 @@ namespace RC::LuaType
             if (num_supplied_params != num_expected_params_with_return_value)
             {
                 lua.throw_error(fmt::format("[UFunction::setup_metamethods -> __call] UFunction expected {} parameters, received {}",
-                                            num_expected_params,
+                                            num_expected_params_with_return_value,
                                             num_supplied_params));
             }
 
