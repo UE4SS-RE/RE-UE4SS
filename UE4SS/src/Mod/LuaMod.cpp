@@ -756,11 +756,12 @@ namespace RC
         {
             // First use - create new thread and anchor it in the registry
             mod->m_hook_lua = &mod->lua().new_thread();
-            int thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
-            return thread_ref;
+            luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
         }
 
-        // Thread already exists and is already anchored
+        // The thread is shared by every hook of the mod, so it stays anchored for the mod's
+        // lifetime. Giving the anchor's ref away would let one callback unref it on teardown
+        // and GC a state the other hooks still use.
         return LUA_REFNIL;
     }
 
