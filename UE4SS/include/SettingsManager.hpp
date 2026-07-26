@@ -5,7 +5,9 @@
 
 #include <Common.hpp>
 #include <File/File.hpp>
+#ifdef UE4SS_HAS_GUI
 #include <GUI/GUI.hpp>
+#endif
 #include <Input/KeyDef.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
@@ -80,8 +82,10 @@ namespace RC
             bool DebugConsoleEnabled{true};
             bool DebugConsoleVisible{true};
             float DebugGUIFontScaling{1.0};
+#ifdef UE4SS_HAS_GUI
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
             GUI::RenderMode RenderMode{GUI::RenderMode::ExternalThread};
+#endif
         } Debug;
 
         struct SectionCrashDump

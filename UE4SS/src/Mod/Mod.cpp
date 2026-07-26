@@ -14,7 +14,6 @@
 #include <Mod/LuaMod.hpp>
 #include <Mod/Mod.hpp>
 #pragma warning(disable : 4005)
-#include <GUI/Dumpers.hpp>
 #include <UE4SSProgram.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <Unreal/Core/HAL/Platform.hpp>

@@ -7,6 +7,7 @@ option(UE4SS_${TARGET}_BUILD_SHARED "Build as a shared lib" OFF)
 
 set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/FileType/WinFile.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/FileType/LinuxFile.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/File.cpp"
         )
 

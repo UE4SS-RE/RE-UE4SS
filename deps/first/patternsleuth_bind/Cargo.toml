@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-pe"] }
+patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-pe", "image-elf"] }
 
 [lib]
 crate-type = ["staticlib"]

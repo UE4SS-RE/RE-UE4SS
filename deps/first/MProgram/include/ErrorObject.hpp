@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdio>
+#include <cstring>
 
 namespace RC
 {
@@ -49,7 +50,12 @@ namespace RC
             // The default message will be used which can't be too small since it's calculated at compile-time
             if (msg_len < sizeof(m_message))
             {
+#ifdef _WIN32
                 strncpy_s(m_message, message, msg_len);
+#else
+                std::memcpy(m_message, message, msg_len);
+                m_message[msg_len] = '\0';
+#endif
             }
         }
 
@@ -69,7 +75,11 @@ namespace RC
             // The default message will be used which can't be too small since it's calculated at compile-time
             if (msg_len < sizeof(m_message))
             {
+#ifdef _WIN32
                 sprintf_s(m_message, sizeof(m_message), fmt, args...);
+#else
+                std::snprintf(m_message, sizeof(m_message), fmt, args...);
+#endif
             }
         }
 

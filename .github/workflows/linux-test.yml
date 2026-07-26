@@ -1,0 +1,98 @@
+name: Native Linux
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cmake-tests:
+    name: CMake / clang / ctest
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.UEPSEUDO_PAT || github.token }}
+
+      - name: Install native build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang lld ninja-build
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure
+        run: |
+          cmake -S . -B build_linux_ci -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_BUILD_TYPE=Game__Shipping__Linux \
+            -DUE4SS_GUI=OFF \
+            -DUE4SS_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build_linux_ci --parallel 2
+
+      - name: Check unresolved dynamic symbols
+        run: |
+          output="$(ldd -r build_linux_ci/Game__Shipping__Linux/lib/libUE4SS.so 2>&1)"
+          printf '%s\n' "$output"
+          if grep -q 'undefined symbol' <<<"$output"; then
+            exit 1
+          fi
+
+      - name: Test
+        run: ctest --test-dir build_linux_ci --output-on-failure
+
+  xmake-build:
+    name: xmake / clang
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.UEPSEUDO_PAT || github.token }}
+
+      - name: Install native build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clang lld cmake ninja-build
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install xmake
+        uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: '2.9.3'
+
+      - name: Configure
+        run: xmake f -p linux -a x86_64 -m Game__Shipping__Linux -y
+
+      - name: Build UE4SS
+        run: xmake build -j 2 -y UE4SS
+
+      - name: Check unresolved dynamic symbols
+        run: |
+          output="$(ldd -r Binaries/Game__Shipping__Linux/UE4SS/libUE4SS.so 2>&1)"
+          printf '%s\n' "$output"
+          if grep -q 'undefined symbol' <<<"$output"; then
+            exit 1
+          fi

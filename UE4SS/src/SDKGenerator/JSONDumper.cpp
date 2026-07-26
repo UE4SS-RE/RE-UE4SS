@@ -353,7 +353,7 @@ namespace RC::UEGenerator::JSONDumper
         glz::generic json_root{std::move(json_array)};
         if (auto result = glz::write<glz::opts{.prettify = true}>(json_root); result.has_value())
         {
-            json_file.write_string_to_file(to_wstring(result.value()));
+            json_file.write_string_to_file(ensure_str(result.value()));
         }
         json_file.close();
 

@@ -66,7 +66,7 @@ namespace RC::UEGenerator
                         {
                             continue;
                         }
-                        Output::send(STR("Found Relevant TMap Property: {} in Class: {}\n"), to_wstring(property_name), object->GetName());
+                        Output::send(STR("Found Relevant TMap Property: {} in Class: {}\n"), ensure_str(property_name), object->GetName());
 
                         auto& fm_json_object = fm_object[property_name] = glz::generic::object_t{};
                         glz::generic::array_t uaapi_arr{};
@@ -119,11 +119,11 @@ namespace RC::UEGenerator
 
         if (auto uaapi_result = glz::write<glz::opts{.prettify = true}>(uaapi_object); uaapi_result.has_value())
         {
-            uaapifile.write_string_to_file(to_wstring(uaapi_result.value()));
+            uaapifile.write_string_to_file(ensure_str(uaapi_result.value()));
         }
         if (auto fm_result = glz::write<glz::opts{.prettify = true}>(fm_object); fm_result.has_value())
         {
-            fmodelfile.write_string_to_file(to_wstring(fm_result.value()));
+            fmodelfile.write_string_to_file(ensure_str(fm_result.value()));
         }
 
         Output::send(STR("Finished Dumping {} TMap Properties\n"), num_objects_generated);

@@ -6,6 +6,14 @@ set(FETCHCONTENT_QUIET OFF)
 # Third-Party Dependencies
 # ------------------------------------------------------------------------------
 
+# GUI stack gate: the ImGui debugging GUI (ImGui/GLFW/glad) is Windows-only for now.
+# The Linux M1 target is headless (dedicated servers); the GLFW GUI backend is an M2 follow-up.
+if(WIN32)
+    option(UE4SS_GUI "Build the ImGui debugging GUI" ON)
+else()
+    option(UE4SS_GUI "Build the ImGui debugging GUI" OFF)
+endif()
+
 # glaze JSON library
 FetchContent_Declare(
     glaze
@@ -17,37 +25,39 @@ FetchContent_MakeAvailable(glaze)
 # Uses suppress_third_party_warnings() from cmake/modules/ThirdPartyWarnings.cmake
 suppress_third_party_warnings(glaze)
 
-# GLFW
-add_subdirectory("GLFW")
+if(UE4SS_GUI)
+    # GLFW
+    add_subdirectory("GLFW")
 
-# glad (OpenGL loader)
-add_subdirectory("glad")
+    # glad (OpenGL loader)
+    add_subdirectory("glad")
 
-# ImGui and related libraries
-FetchContent_Declare(
-    ImGui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.1
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS ON
-)
-    
-FetchContent_Declare(
-    ImGuiTextEdit
-    GIT_REPOSITORY https://github.com/UE4SS-RE/ImGuiColorTextEdit.git
-    GIT_TAG v1.2.0
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS ON
-)
-    
-FetchContent_Declare(
-    IconFontCppHeaders
-    GIT_REPOSITORY https://github.com/juliettef/IconFontCppHeaders.git
-    GIT_TAG main
-    GIT_SHALLOW TRUE
-    GIT_PROGRESS ON
-)
-add_subdirectory("imgui")
+    # ImGui and related libraries
+    FetchContent_Declare(
+        ImGui
+        GIT_REPOSITORY https://github.com/ocornut/imgui.git
+        GIT_TAG v1.92.1
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS ON
+    )
+
+    FetchContent_Declare(
+        ImGuiTextEdit
+        GIT_REPOSITORY https://github.com/UE4SS-RE/ImGuiColorTextEdit.git
+        GIT_TAG v1.2.0
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS ON
+    )
+
+    FetchContent_Declare(
+        IconFontCppHeaders
+        GIT_REPOSITORY https://github.com/juliettef/IconFontCppHeaders.git
+        GIT_TAG main
+        GIT_SHALLOW TRUE
+        GIT_PROGRESS ON
+    )
+    add_subdirectory("imgui")
+endif()
 
 # Zydis
 FetchContent_Declare(
@@ -68,14 +78,16 @@ FetchContent_Declare(
 )
 add_subdirectory("PolyHook_2_0")
 
-# raw_pdb
-FetchContent_Declare(
-    raw_pdb
-    GIT_REPOSITORY https://github.com/MolecularMatters/raw_pdb.git
-    GIT_TAG 8c6a7146393c83d27fa101e8bc8017f2a7f151df
-    GIT_PROGRESS ON
-)
-add_subdirectory("raw_pdb")
+# raw_pdb (Windows PDB parsing; used by UVTD which is Windows-only)
+if(WIN32)
+    FetchContent_Declare(
+        raw_pdb
+        GIT_REPOSITORY https://github.com/MolecularMatters/raw_pdb.git
+        GIT_TAG 8c6a7146393c83d27fa101e8bc8017f2a7f151df
+        GIT_PROGRESS ON
+    )
+    add_subdirectory("raw_pdb")
+endif()
 
 # Corrosion (Rust integration)
 FetchContent_Declare(

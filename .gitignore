@@ -39,6 +39,9 @@ Intermediates/
 # standard cmake build directory
 /build
 
+# Superpowers isolated feature worktrees
+/.worktrees/
+
 # Others
 *.tlog
 *.log

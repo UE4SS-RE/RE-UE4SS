@@ -548,9 +548,7 @@ namespace RC::UEGenerator
                     m_file_names.emplace(package_name_all_lower, FileName{});
                 }
 
-                // The '\\?\' at the beginning of the string unlocks path size restriction from MAX_PATH to 32k
-                std::filesystem::path directory_to_generate_in = std::filesystem::path("\\\\?\\");
-                directory_to_generate_in += (m_directory_to_generate_in);
+                const auto directory_to_generate_in = resolve_output_directory(m_directory_to_generate_in);
 
                 File::StringType ext = specification.get_file_extension();
                 std::filesystem::path primary_file_path_and_name = directory_to_generate_in;

@@ -1,24 +1,33 @@
 #define NOMINMAX
 
+#ifdef _WIN32
 #include <Windows.h>
+#endif
 
 #ifdef TEXT
 #undef TEXT
 #endif
 
 #include <algorithm>
+#include <array>
 #include <cwctype>
 #include <format>
 #include <fstream>
 #include <limits>
 #include <unordered_set>
+#ifdef __linux__
+#include <Platform/Linux/Diagnostics.hpp>
+#include <unistd.h>
+#endif
 #include <fmt/chrono.h>
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
+#ifdef UE4SS_HAS_GUI
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/LiveView.hpp>
+#endif
 #include <Helpers/ASM.hpp>
 #include <Helpers/Format.hpp>
 #include <Helpers/Integer.hpp>
@@ -60,7 +69,9 @@
 #include <Unreal/BitfieldProxy.hpp>
 #include <UnrealDef.hpp>
 
+#ifdef _WIN32
 #include <polyhook2/PE/IatHook.hpp>
+#endif
 
 #include <FilesystemWatcher.hpp>
 
@@ -97,6 +108,42 @@ namespace RC
     //*/
 
     SettingsManager UE4SSProgram::settings_manager{};
+
+    static auto read_mods_txt_lines(const std::filesystem::path& path) -> std::vector<StringType>
+    {
+        std::vector<StringType> lines{};
+#ifdef _WIN32
+        std::ifstream bom_check(path, std::ios::binary);
+        char bom[3]{};
+        bom_check.read(bom, 3);
+        const bool has_bom = bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF';
+        bom_check.close();
+
+        StreamIType stream{path};
+        if (has_bom)
+        {
+            wchar_t discard{};
+            stream.get(discard);
+        }
+        for (StringType line; std::getline(stream, line);)
+        {
+            lines.emplace_back(std::move(line));
+        }
+#else
+        std::ifstream stream{path, std::ios::binary};
+        bool first_line = true;
+        for (std::string line; std::getline(stream, line);)
+        {
+            if (first_line && line.starts_with("\xEF\xBB\xBF"))
+            {
+                line.erase(0, 3);
+            }
+            first_line = false;
+            lines.emplace_back(ensure_str(line));
+        }
+#endif
+        return lines;
+    }
 
 #define OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
@@ -157,6 +204,7 @@ namespace RC
         Output::send(STR("\n##### MEMBER OFFSETS END ({}) #####\n\n"), is_coalesced == IsCoalesced::No ? STR("MemberVariableLayout") : STR("Coalesced"));
     }
 
+#ifdef _WIN32
     void* HookedLoadLibraryA(const char* dll_name)
     {
         UE4SSProgram& program = UE4SSProgram::get_program();
@@ -188,6 +236,7 @@ namespace RC
         program.fire_dll_load_for_cpp_mods(ToCharTypePtr(dll_name));
         return lib;
     }
+#endif
 
     UE4SSProgram::UE4SSProgram(const std::filesystem::path& moduleFilePath, std::initializer_list<BinaryOptions> options) : MProgram(options)
     {
@@ -223,7 +272,9 @@ namespace RC
 
             m_crash_dumper.set_full_memory_dump(settings_manager.CrashDump.FullMemoryDump);
 
+#ifdef UE4SS_HAS_GUI
             m_debugging_gui.set_gfx_backend(settings_manager.Debug.GraphicsAPI);
+#endif
 
             // Setup the log file
             auto& file_device = Output::set_default_devices<Output::NewFileDevice>();
@@ -242,6 +293,7 @@ namespace RC
 
             create_simple_console();
 
+#ifdef UE4SS_HAS_GUI
             if (settings_manager.Debug.DebugConsoleEnabled)
             {
                 m_console_device = &Output::set_default_devices<Output::ConsoleDevice>();
@@ -263,6 +315,7 @@ namespace RC
                     }
                 }
             }
+#endif
 
             // This is experimental code that's here only for future reference
             /*
@@ -315,6 +368,7 @@ namespace RC
 
             Output::send(STR("UE4SS Build Configuration: {} ({})\n"), ensure_str(UE4SS_CONFIGURATION), UE4SS_COMPILER);
 
+#ifdef _WIN32
             m_load_library_a_hook = std::make_unique<PLH::IatHook>("kernel32.dll",
                                                                    "LoadLibraryA",
                                                                    std::bit_cast<uint64_t>(&HookedLoadLibraryA),
@@ -342,8 +396,12 @@ namespace RC
                                                                       &m_hook_trampoline_load_library_ex_w,
                                                                       L"");
             m_load_library_ex_w_hook->hook();
+#endif
 
             Unreal::UnrealInitializer::SetupUnrealModules();
+#ifdef __linux__
+            LinuxDiagnostics::output_environment(m_game_path_and_exe_name);
+#endif
 
             setup_mod_directory_path();
 
@@ -462,9 +520,20 @@ namespace RC
         // At that point, the working directory will be "root/<GameName>"
         m_working_directory = m_root_directory;
 
+#ifdef _WIN32
         wchar_t exe_path_buffer[1024];
         GetModuleFileNameW(GetModuleHandle(nullptr), exe_path_buffer, 1023);
         std::filesystem::path game_exe_path = exe_path_buffer;
+#else
+        std::array<char, 4096> exe_path_buffer{};
+        const auto exe_path_length = readlink("/proc/self/exe", exe_path_buffer.data(), exe_path_buffer.size() - 1);
+        if (exe_path_length <= 0)
+        {
+            throw std::runtime_error{"Unable to resolve /proc/self/exe"};
+        }
+        exe_path_buffer[static_cast<size_t>(exe_path_length)] = '\0';
+        std::filesystem::path game_exe_path = exe_path_buffer.data();
+#endif
         std::filesystem::path game_directory_path = game_exe_path.parent_path();
         m_legacy_root_directory = game_directory_path;
 
@@ -475,7 +544,9 @@ namespace RC
         m_object_dumper_output_directory = m_working_directory;
 
         // Allow loading of DLLs from the game directory
+#ifdef _WIN32
         AddDllDirectory(game_exe_path.c_str());
+#endif
 
         for (const auto& item : std::filesystem::directory_iterator(m_root_directory))
         {
@@ -510,7 +581,11 @@ namespace RC
     {
         settings_manager.Debug.SimpleConsoleEnabled = true;
         create_simple_console();
+#ifdef _WIN32
         printf_s("%S\n", FromCharTypePtr<wchar_t>(error_message.data()));
+#else
+        fprintf(stderr, "%s\n", to_utf8_string(error_message).c_str());
+#endif
     }
 
     auto UE4SSProgram::setup_mod_directory_path() -> void
@@ -549,6 +624,7 @@ namespace RC
                 return fmt::format(STR("[{}] {}"), get_now_as_string(STR("{:%X}")), string);
             });
 
+#ifdef _WIN32
             if (AllocConsole())
             {
                 FILE* stdin_filename;
@@ -558,6 +634,7 @@ namespace RC
                 freopen_s(&stdout_filename, "CONOUT$", "w", stdout);
                 freopen_s(&stderr_filename, "CONOUT$", "w", stderr);
             }
+#endif
         }
     }
 
@@ -926,6 +1003,7 @@ namespace RC
         Output::send(STR("m_shared_functions: {}\n"), static_cast<void*>(&m_shared_functions));
     }
 
+#ifdef UE4SS_HAS_GUI
     static bool s_gui_initialized_for_game_thread{};
     static bool s_gui_initializing_for_game_thread{};
     auto gui_render_thread_tick() -> void
@@ -956,6 +1034,7 @@ namespace RC
         }
         UE4SSProgram::get_program().get_debugging_ui().main_loop_internal();
     }
+#endif
 
     auto UE4SSProgram::on_program_start() -> void
     {
@@ -967,6 +1046,7 @@ namespace RC
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
         //*/
 
+#ifdef UE4SS_HAS_GUI
         if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
         {
             Hook::RegisterEngineTickPostCallback([](auto&,...){gui_render_thread_tick(); }, {false, false, STR("UE4SS"), STR("ImGuiRenderHook")});
@@ -1016,6 +1096,7 @@ namespace RC
                 });
             });
         }
+#endif
 
 #ifdef TIME_FUNCTION_MACRO_ENABLED
         register_keydown_event(Input::Key::Y, {Input::ModifierKey::CONTROL}, [&]() {
@@ -1306,10 +1387,12 @@ namespace RC
                 {
                     auto mod_name = ensure_str(sub_directory.path().stem());
                     // Create the mod but don't install it yet
-                    if (!find_mod_by_name<LuaMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "scripts"))
-                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                    const auto has_lua_scripts = std::filesystem::exists(sub_directory.path() / "Scripts") ||
+                                                 std::filesystem::exists(sub_directory.path() / "scripts");
+                    if (!find_mod_by_name<LuaMod>(mod_name) && has_lua_scripts)
+                        m_mods.emplace_back(std::make_unique<LuaMod>(*this, std::move(mod_name), sub_directory.path()));
                     if (!find_mod_by_name<CppMod>(mod_name) && std::filesystem::exists(sub_directory.path() / "dlls"))
-                        m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), ensure_str(sub_directory.path())));
+                        m_mods.emplace_back(std::make_unique<CppMod>(*this, std::move(mod_name), sub_directory.path()));
                 }
             }
         }
@@ -1495,25 +1578,7 @@ namespace RC
                 // 'mods.txt' exists, lets parse it
                 Output::send(STR("Starting mods (from mods.txt ({}) load order)...\n"), ensure_str(enabled_mods_file));
 
-                // First, check for BOM using a byte stream
-                std::ifstream bom_check(enabled_mods_file, std::ios::binary);
-                char bom[3] = {0};
-                bom_check.read(bom, 3);
-                bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
-                bom_check.close();
-
-                // Now open the actual stream
-                StreamIType mods_stream{enabled_mods_file};
-
-                // If BOM was detected, skip the first "character" (which will be the BOM interpreted as a wide char)
-                if (has_bom)
-                {
-                    wchar_t discard;
-                    mods_stream.get(discard);
-                }
-
-                StringType current_line;
-                while (std::getline(mods_stream, current_line))
+                for (auto current_line : read_mods_txt_lines(enabled_mods_file))
                 {
                     // Don't parse any lines with ';'
                     if (current_line.find(STR(";")) != current_line.npos)
@@ -1632,10 +1697,12 @@ namespace RC
         // This isn't completely accurate since the UI will usually have started a while ago.
         // However, we can't immediately notify mods of this because no mods have been started at that point.
         // We only need to do this for the initial start of UE4SS because after that, more accurate notifications will happen when the UI is closed an reopened.
+#ifdef UE4SS_HAS_GUI
         if (is_initial_startup == IsInitialStartup::Yes && m_render_thread.get_id() != std::this_thread::get_id())
         {
             fire_ui_init_for_cpp_mods();
         }
+#endif
         fire_on_cpp_mods_loaded_for_cpp_mods();
     }
 
@@ -2049,22 +2116,7 @@ namespace RC
 
         for (const auto& mods_txt_path : mods_txt_files)
         {
-            std::ifstream bom_check(mods_txt_path, std::ios::binary);
-            char bom[3] = {0};
-            bom_check.read(bom, 3);
-            bool has_bom = (bom[0] == '\xEF' && bom[1] == '\xBB' && bom[2] == '\xBF');
-            bom_check.close();
-
-            StreamIType mods_stream{mods_txt_path};
-
-            if (has_bom)
-            {
-                wchar_t discard;
-                mods_stream.get(discard);
-            }
-
-            StringType current_line;
-            while (std::getline(mods_stream, current_line))
+            for (auto current_line : read_mods_txt_lines(mods_txt_path))
             {
                 if (current_line.find(STR(";")) != current_line.npos)
                 {
@@ -2210,6 +2262,7 @@ namespace RC
         Output::send(STR("SDK generated in {} seconds.\n"), generator_duration);
     }
 
+#ifdef UE4SS_HAS_GUI
     auto UE4SSProgram::stop_render_thread() -> void
     {
         if (!get_debugging_ui().is_open())
@@ -2236,6 +2289,7 @@ namespace RC
     {
         m_debugging_gui.remove_tab(tab);
     }
+#endif
 
     auto UE4SSProgram::queue_event(EventCallable callable) -> void
     {

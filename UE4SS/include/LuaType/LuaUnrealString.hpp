@@ -197,7 +197,7 @@ namespace RC::LuaType
         // FString specializations
         static void push_string_to_lua(const LuaMadeSimple::Lua& lua, const Unreal::FString& str)
         {
-            const TCHAR* string_data = *str;
+            const Unreal::TCHAR* string_data = *str;
             if (string_data)
             {
                 std::string utf8_string = to_utf8_string(string_data);

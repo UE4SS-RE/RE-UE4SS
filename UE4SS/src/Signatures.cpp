@@ -57,7 +57,7 @@ namespace RC
             }
             else if (lua.is_nil())
             {
-                throw std::runtime_error{fmt::format("Lua file returned nil (symbol not found): {}", to_string(script_file_path_and_name))};
+                throw std::runtime_error{fmt::format("Lua file returned nil (symbol not found): {}", script_file_path_and_name.string())};
             }
         }
 

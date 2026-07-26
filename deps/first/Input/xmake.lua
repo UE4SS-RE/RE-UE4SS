@@ -12,6 +12,8 @@ target(projectName)
 
     if get_config("ue4ssInput") then
         add_files("src/**.cpp|Platform/**.cpp")
+        add_files("src/Platform/GLFW3InputSource.cpp")
+        add_files("src/Platform/QueueInputSource.cpp")
     end
 
     add_deps("DynamicOutput")
@@ -19,7 +21,5 @@ target(projectName)
     if is_plat("windows") then
         if get_config("ue4ssInput") then
             add_files("src/Platform/Win32AsyncInputSource.cpp")
-            add_files("src/Platform/GLFW3InputSource.cpp")
-            add_files("src/Platform/QueueInputSource.cpp")
         end
     end

@@ -1,8 +1,12 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <mutex>
+#include <string>
+#include <tuple>
+#include <unordered_map>
 #include <vector>
 
 #include <SigScanner/Common.hpp>
@@ -10,14 +14,17 @@
 #define HI_NIBBLE(b) (((b) >> 4) & 0x0F)
 #define LO_NIBBLE(b) ((b) & 0x0F)
 
+#ifdef _WIN32
 // Windows.h forward declarations
 struct _SYSTEM_INFO;
 typedef _SYSTEM_INFO SYSTEM_INFO;
 struct _MODULEINFO;
 typedef _MODULEINFO MODULEINFO;
+#endif
 
 namespace RC
 {
+#ifdef _WIN32
     // Windows structs, to prevent the need to include Windows.h in this header
     struct WIN_MODULEINFO
     {
@@ -27,6 +34,29 @@ namespace RC
 
         RC_SPSS_API auto operator=(MODULEINFO) -> WIN_MODULEINFO&;
     };
+
+    using OS_MODULEINFO = WIN_MODULEINFO;
+    using SPSS_SYSTEM_INFO = SYSTEM_INFO;
+#else
+    struct LINUX_MODULEINFO
+    {
+        void* lpBaseOfDll{};
+        unsigned long SizeOfImage{};
+        void* EntryPoint{};
+
+        // Absolute start, size, and ELF p_flags for each readable PT_LOAD segment.
+        std::vector<std::tuple<uint8_t*, size_t, int>> readable_segments{};
+    };
+
+    struct LINUX_SYSTEM_INFO
+    {
+        void* lpMinimumApplicationAddress{};
+        void* lpMaximumApplicationAddress{};
+    };
+
+    using OS_MODULEINFO = LINUX_MODULEINFO;
+    using SPSS_SYSTEM_INFO = LINUX_SYSTEM_INFO;
+#endif
 
     enum class ScanTarget
     {
@@ -175,9 +205,13 @@ namespace RC
     class RC_SPSS_API ScanTargetArray
     {
       public:
-        std::array<WIN_MODULEINFO, static_cast<size_t>(ScanTarget::Max)> array{};
+        std::array<OS_MODULEINFO, static_cast<size_t>(ScanTarget::Max)> array{};
 
+#ifdef _WIN32
         auto operator[](ScanTarget index) -> MODULEINFO&;
+#else
+        auto operator[](ScanTarget index) -> LINUX_MODULEINFO&;
+#endif
     };
 
     // Static storage to be used across all sig scanner types
@@ -190,6 +224,12 @@ namespace RC
         // Can a vector of something non-windows be stored here and then a static MODULEINFO can be created in the cpp file ?
         static ScanTargetArray m_modules_info;
         static bool m_is_modular;
+
+#ifdef __linux__
+        // Populate the main executable's loadable ELF segments. Monolithic games use
+        // this image for every ScanTarget, matching the Windows fallback behavior.
+        RC_SPSS_API static auto populate_modules_from_dl_iterate_phdr() -> size_t;
+#endif
     };
 
     struct RC_SPSS_API SignatureContainerLight
@@ -324,15 +364,15 @@ namespace RC
       public:
         RC_SPSS_API auto static scanner_work_thread(uint8_t* start_address,
                                                     uint8_t* end_address,
-                                                    SYSTEM_INFO& info,
+                                                    SPSS_SYSTEM_INFO& info,
                                                     std::vector<SignatureContainer>& signature_containers) -> void;
         RC_SPSS_API auto static scanner_work_thread_scalar(uint8_t* start_address,
                                                            uint8_t* end_address,
-                                                           SYSTEM_INFO& info,
+                                                           SPSS_SYSTEM_INFO& info,
                                                            std::vector<SignatureContainer>& signature_containers) -> void;
         RC_SPSS_API auto static scanner_work_thread_stdfind(uint8_t* start_address,
                                                             uint8_t* end_address,
-                                                            SYSTEM_INFO& info,
+                                                            SPSS_SYSTEM_INFO& info,
                                                             std::vector<SignatureContainer>& signature_containers) -> void;
 
         using SignatureContainerMap = std::unordered_map<ScanTarget, std::vector<SignatureContainer>>;

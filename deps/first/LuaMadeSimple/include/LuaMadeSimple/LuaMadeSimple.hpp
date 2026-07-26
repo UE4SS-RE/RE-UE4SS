@@ -2,6 +2,7 @@
 
 #include <format>
 #include <functional>
+#include <memory>
 #include <optional>
 
 #include <LuaMadeSimple/Common.hpp>
@@ -272,9 +273,10 @@ namespace RC::LuaMadeSimple
                 {
                     lua_pushboolean(get_lua_instance().get_lua_state(), value);
                 }
-                else if constexpr (std::is_same_v<ValueType, int> || std::is_same_v<ValueType, long long>)
+                else if constexpr (std::is_integral_v<ValueType> && std::is_signed_v<ValueType>)
                 {
-                    lua_pushinteger(get_lua_instance().get_lua_state(), value);
+                    static_assert(sizeof(ValueType) <= sizeof(lua_Integer));
+                    lua_pushinteger(get_lua_instance().get_lua_state(), static_cast<lua_Integer>(value));
                 }
                 else if constexpr (std::is_same_v<ValueType, unsigned int>)
                 {
@@ -292,13 +294,21 @@ namespace RC::LuaMadeSimple
                 {
                     add_function_value_internal(value);
                 }
-                else if constexpr (std::is_same_v<ValueType, Userdata<typename ValueType::InnerType>>)
+                else if constexpr (requires { typename ValueType::InnerType; })
                 {
-                    get_lua_instance().transfer_stack_object<typename ValueType::InnerType>(std::move(value.inner_object), std::nullopt, value.table_metamethods);
-                }
-                else if constexpr (std::is_same_v<ValueType, SharedUserdata<typename ValueType::InnerType>>)
-                {
-                    get_lua_instance().share_heap_object(value.inner_object, value.table_metamethods);
+                    if constexpr (std::is_same_v<ValueType, Userdata<typename ValueType::InnerType>>)
+                    {
+                        get_lua_instance().transfer_stack_object<typename ValueType::InnerType>(
+                                std::move(value.inner_object), std::nullopt, value.table_metamethods);
+                    }
+                    else if constexpr (std::is_same_v<ValueType, SharedUserdata<typename ValueType::InnerType>>)
+                    {
+                        get_lua_instance().share_heap_object(value.inner_object, value.table_metamethods);
+                    }
+                    else
+                    {
+                        throw std::runtime_error{"Unsupported type for 'ValueType'"};
+                    }
                 }
                 else
                 {

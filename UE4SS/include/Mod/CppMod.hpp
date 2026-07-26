@@ -2,10 +2,9 @@
 
 #include <vector>
 
-#include <Unreal/Core/Windows/MinimalWindowsApi.hpp>
-
 #include <Mod/CppUserModBase.hpp>
 #include <Mod/Mod.hpp>
+#include <Platform/SharedLibrary.hpp>
 
 #include <String/StringType.hpp>
 
@@ -26,15 +25,14 @@ namespace RC
         StringType m_dll_filename{};
         std::filesystem::path m_dlls_path;
 
-        Unreal::Windows::HMODULE m_main_dll_module = NULL;
-        void* m_dlls_path_cookie = NULL;
+        Platform::SharedLibrary m_main_dll{};
         start_type m_start_mod_func = nullptr;
         uninstall_type m_uninstall_mod_func = nullptr;
 
         CppUserModBase* m_mod = nullptr;
 
       public:
-        CppMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
+        CppMod(UE4SSProgram&, StringType&& mod_name, std::filesystem::path mod_path);
         CppMod(CppMod&) = delete;
         CppMod(CppMod&&) = delete;
         ~CppMod() override;

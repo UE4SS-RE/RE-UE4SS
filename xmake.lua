@@ -36,12 +36,18 @@ add_rules("ue4ss.core")
 -- Restrict the compilation modes/configs.
 -- These restrictions are inherited upstream and downstream.
 -- Any project that `includes("UE4SS")` will inherit these global restrictions.
-set_allowedplats("windows")
-set_allowedarchs("x64")
+set_allowedplats("windows", "linux")
+set_allowedarchs("x64", "x86_64")
 set_allowedmodes(modes)
 
 if is_host("windows") then
     set_defaultmode("Game__Shipping__Win64")
+elseif is_host("linux") then
+    set_defaultmode("Game__Shipping__Linux")
+end
+
+if is_plat("linux") then
+    set_toolchains("clang", "rust")
 end
 
 -- Override the `xmake install` behavior for all targets.
@@ -50,10 +56,12 @@ on_install(function(target) end)
 
 includes("deps")
 includes("UE4SS")
-if get_config("ue4ssCross") ~= "msvc-wine" then
+if is_plat("windows") and get_config("ue4ssCross") ~= "msvc-wine" then
     includes("UVTD")
 end
-includes("cppmods")
+if is_plat("windows") then
+    includes("cppmods")
+end
 
 -- TODO: Remove this before the next release. It only exists to maintain backwards compat
 -- warnings for older mod templates.

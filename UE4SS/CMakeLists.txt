@@ -3,8 +3,10 @@ project(UE4SS)
 
 message("Configuring UE4SS")
 
-# Add proxy generator subproject
-add_subdirectory("proxy_generator")
+# Add proxy generator subproject (generates Windows proxy DLLs; PE-format specific)
+if(WIN32)
+    add_subdirectory("proxy_generator")
+endif()
 
 # Release settings
 option(UE4SS_LIB_BETA_IS_STARTED "Have beta releases started for the current major version" ON)
@@ -54,6 +56,19 @@ message("UE4SS Version: ${UE4SS_LIB_VERSION_MAJOR}.${UE4SS_LIB_VERSION_MINOR}.${
 # Find source files
 file(GLOB_RECURSE UE4SS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/**.cpp")
 file(GLOB_RECURSE UE4SS_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/include/**.hpp")
+
+# Platform-specific entry/bootstrap sources: compile only the current platform's directory.
+list(FILTER UE4SS_SOURCES EXCLUDE REGEX "/src/Platform/")
+if(WIN32)
+    file(GLOB_RECURSE UE4SS_PLATFORM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Win32/**.cpp")
+else()
+    file(GLOB_RECURSE UE4SS_PLATFORM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Linux/**.cpp")
+endif()
+list(APPEND UE4SS_SOURCES ${UE4SS_PLATFORM_SOURCES})
+
+if(NOT UE4SS_GUI)
+    list(FILTER UE4SS_SOURCES EXCLUDE REGEX "/src/GUI/")
+endif()
 
 # Create the main library
 add_library(UE4SS SHARED ${UE4SS_SOURCES})
@@ -132,10 +147,25 @@ target_link_libraries(UE4SS PUBLIC
 
 # Link third-party dependencies
 target_link_libraries(UE4SS PUBLIC
-    fmt ImGui PolyHook_2 
-    d3d11 glfw glad opengl32 
-    dbghelp psapi ws2_32 ntdll userenv
+    fmt PolyHook_2
 )
+if(WIN32)
+    target_link_libraries(UE4SS PUBLIC
+        d3d11 opengl32
+        dbghelp psapi ws2_32 ntdll userenv
+    )
+else()
+    target_link_libraries(UE4SS PUBLIC dl pthread)
+    target_link_options(UE4SS PRIVATE
+        -static-libstdc++
+        -Wl,-Bsymbolic
+        -Wl,-Bgroup
+    )
+endif()
+if(UE4SS_GUI)
+    target_link_libraries(UE4SS PUBLIC ImGui glfw glad)
+    target_compile_definitions(UE4SS PUBLIC UE4SS_HAS_GUI)
+endif()
 
 # ---------------------------------------------------------------------------
 # Output Configuration

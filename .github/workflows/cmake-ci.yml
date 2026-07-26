@@ -50,7 +50,9 @@ jobs:
           # Use sed to isolate values before CACHE, remove quotes, and trim whitespace
           TARGET_TYPES=$(grep 'set(UE4SS_TARGET_TYPES' cmake/modules/ProjectConfig.cmake | sed 's/.*set(UE4SS_TARGET_TYPES//' | sed 's/CACHE.*//' | sed 's/"//g' | xargs)
           CONFIG_TYPES=$(grep 'set(UE4SS_CONFIGURATION_TYPES' cmake/modules/ProjectConfig.cmake | sed 's/.*set(UE4SS_CONFIGURATION_TYPES//' | sed 's/CACHE.*//' | sed 's/"//g' | xargs)
-          PLATFORM_TYPES=$(grep 'set(UE4SS_PLATFORM_TYPES' cmake/modules/ProjectConfig.cmake | sed 's/.*set(UE4SS_PLATFORM_TYPES//' | sed 's/CACHE.*//' | sed 's/"//g' | xargs)
+          # -m1: the file declares Win64 (Windows branch) first and Linux (non-Windows branch) second;
+          # this Windows CI matrix must only pick up the Win64 line.
+          PLATFORM_TYPES=$(grep -m1 'set(UE4SS_PLATFORM_TYPES' cmake/modules/ProjectConfig.cmake | sed 's/.*set(UE4SS_PLATFORM_TYPES//' | sed 's/CACHE.*//' | sed 's/"//g' | xargs)
 
           # Generate all combinations of Target__Config__Platform
           MODES=()

@@ -1,7 +1,13 @@
 #![allow(unused)]
 
-use std::{error::Error, sync::Arc, time::Instant};
+use std::{
+    error::Error,
+    ffi::{c_char, CStr},
+    sync::Arc,
+    time::Instant,
+};
 
+use patternsleuth::{image::Image, scanner::Pattern, PatternConfig};
 use patternsleuth::resolvers::{
     futures::join,
     impl_collector,
@@ -66,10 +72,33 @@ macro_rules! verbose { ($ctx:ident $($arg:tt)*) => { _log_level!(verbose, $ctx $
 macro_rules! warning { ($ctx:ident $($arg:tt)*) => { _log_level!(warning, $ctx $($arg)*) }; }
 macro_rules! error { ($ctx:ident $($arg:tt)*) => { _log_level!(error, $ctx $($arg)*) }; }
 
+#[derive(Default)]
 #[repr(C)]
 pub struct PsEngineVersion {
     major: u16,
     minor: u16,
+}
+
+#[repr(C)]
+pub struct PsFileScanResults {
+    engine_version: PsEngineVersion,
+    pattern_address: u64,
+}
+
+#[derive(Default)]
+#[repr(C)]
+pub struct PsFileResolutionResults {
+    engine_version: PsEngineVersion,
+    guobject_array: u64,
+    fname_tostring: u64,
+    fname_ctor_wchar: u64,
+    gmalloc: u64,
+    static_construct_object_internal: u64,
+    ftext_fstring: u64,
+    fuobject_hash_tables_get: u64,
+    gnatives: u64,
+    console_manager_singleton: u64,
+    gameengine_tick: u64,
 }
 
 #[repr(C)]
@@ -230,5 +259,117 @@ pub extern "C" fn ps_scan(ctx: &PsCtx, results: &mut PsScanResults) -> bool {
         false
     } else {
         true
+    }
+}
+
+fn ps_scan_file_internal(path: &str, pattern: &str) -> Result<PsFileScanResults, Box<dyn Error>> {
+    let data = std::fs::read(path)?;
+    let image = Image::read(None, &data, Some(path), false)?;
+    let engine_version = image.resolve(EngineVersion::resolver())?;
+    let pattern_config = [PatternConfig::new(
+        (),
+        "offline fixture pattern".to_string(),
+        None,
+        Pattern::new(pattern)?,
+    )];
+    let pattern_address = image.scan(&pattern_config)?.get_unique_sig_address(())?;
+
+    Ok(PsFileScanResults {
+        engine_version: PsEngineVersion {
+            major: engine_version.major,
+            minor: engine_version.minor,
+        },
+        pattern_address,
+    })
+}
+
+fn ps_scan_file_ue4ss_internal(path: &str) -> Result<PsFileResolutionResults, Box<dyn Error>> {
+    let data = std::fs::read(path)?;
+    let image = Image::read(None, &data, Some(path), false)?;
+    let resolution = image.resolve(UE4SSResolution::resolver())?;
+
+    let engine_version = resolution
+        .engine_version
+        .map(|version| PsEngineVersion {
+            major: version.major,
+            minor: version.minor,
+        })
+        .unwrap_or_default();
+
+    Ok(PsFileResolutionResults {
+        engine_version,
+        guobject_array: resolution.guobject_array.map(|value| value.0).unwrap_or_default(),
+        fname_tostring: resolution.fname_tostring.map(|value| value.0).unwrap_or_default(),
+        fname_ctor_wchar: resolution
+            .fname_ctor_wchar
+            .map(|value| value.0)
+            .unwrap_or_default(),
+        gmalloc: resolution.gmalloc.map(|value| value.0).unwrap_or_default(),
+        static_construct_object_internal: resolution
+            .static_construct_object_internal
+            .map(|value| value.0)
+            .unwrap_or_default(),
+        ftext_fstring: resolution.ftext_fstring.map(|value| value.0).unwrap_or_default(),
+        fuobject_hash_tables_get: resolution
+            .fuobject_hash_tables_get
+            .map(|value| value.0)
+            .unwrap_or_default(),
+        gnatives: resolution.gnatives.map(|value| value.0).unwrap_or_default(),
+        console_manager_singleton: resolution
+            .console_manager_singleton
+            .map(|value| value.0)
+            .unwrap_or_default(),
+        gameengine_tick: resolution.gameengine_tick.map(|value| value.0).unwrap_or_default(),
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ps_scan_file(
+    path: *const c_char,
+    pattern: *const c_char,
+    results: *mut PsFileScanResults,
+) -> bool {
+    if path.is_null() || pattern.is_null() || results.is_null() {
+        return false;
+    }
+
+    let path = match unsafe { CStr::from_ptr(path) }.to_str() {
+        Ok(path) => path,
+        Err(_) => return false,
+    };
+    let pattern = match unsafe { CStr::from_ptr(pattern) }.to_str() {
+        Ok(pattern) => pattern,
+        Err(_) => return false,
+    };
+
+    match ps_scan_file_internal(path, pattern) {
+        Ok(file_results) => {
+            unsafe { results.write(file_results) };
+            true
+        }
+        Err(_) => false,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn ps_scan_file_ue4ss(
+    path: *const c_char,
+    results: *mut PsFileResolutionResults,
+) -> bool {
+    if path.is_null() || results.is_null() {
+        return false;
+    }
+
+    let path = match unsafe { CStr::from_ptr(path) }.to_str() {
+        Ok(path) => path,
+        Err(_) => return false,
+    };
+
+    match ps_scan_file_ue4ss_internal(path) {
+        Ok(file_results) => {
+            unsafe { results.write(file_results) };
+            true
+        }
+        Err(_) => false,
     }
 }
