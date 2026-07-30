@@ -533,8 +533,9 @@ namespace RC::OutTheShade
         sanitize_for_filename(engine_version);
         sanitize_for_filename(game_name);
 
-        std::string usmap_filename = game_name + "-" + engine_version + "-" + commit_sha + ".usmap";
-        auto filename = to_string(UE4SSProgram::get_program().get_working_directory()) + "//" + usmap_filename;
+        std::string usmap_filename_ascii = game_name + "-" + engine_version + "-" + commit_sha + ".usmap";
+        StringType usmap_filename = ensure_str(usmap_filename_ascii);
+        auto filename = UE4SSProgram::get_program().get_working_directory() + STR("//") + usmap_filename;
         auto FileOutput = FileWriter(filename.c_str());
 
         FileOutput.Write<uint16_t>(0x30C4); // magic
@@ -548,6 +549,6 @@ namespace RC::OutTheShade
         FileOutput.Write(UsmapData.data(), UsmapData.size());
 
         Output::send(STR("Mappings Generation Completed Successfully!\n"));
-        Output::send(STR("Output file: {}\n"), to_wstring(usmap_filename));
+        Output::send(STR("Output file: {}\n"), usmap_filename);
     }
 } // namespace RC::OutTheShade
