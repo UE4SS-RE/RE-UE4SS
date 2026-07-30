@@ -80,12 +80,12 @@ class FileWriter : IBufferWriter
 
 public:
 
-    FileWriter(const char* FileName)
+    FileWriter(const wchar_t* FileName)
     {
-        auto fopen_r = fopen_s(&m_File, FileName, "wb");
+        auto fopen_r = _wfopen_s(&m_File, FileName, L"wb");
         if (fopen_r != 0)
         {
-            RC::Output::send<RC::LogLevel::Error>(STR("Unable to open file for writing: '{}': {}\n"), RC::ensure_str(FileName), RC::ensure_str(std::strerror(fopen_r)));
+            RC::Output::send<RC::LogLevel::Error>(STR("Unable to open file for writing: '{}': {}\n"), FileName, RC::ensure_str(std::strerror(fopen_r)));
         }
         printf("");
     }
