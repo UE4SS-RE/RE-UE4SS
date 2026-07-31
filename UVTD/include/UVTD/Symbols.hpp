@@ -162,6 +162,9 @@ namespace RC::UVTD
     struct MethodBody
     {
         File::StringType name;
+        // Plain (unmangled) base name. Emitted as an extra VTableLayoutMap entry when it is
+        // unambiguous within the class, so old call sites and user inis keep working.
+        File::StringType alias;
         MethodSignature signature;
         uint32_t offset;
         bool is_overload;
