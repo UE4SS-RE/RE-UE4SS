@@ -161,11 +161,7 @@ namespace RC::UVTD
 
         auto fields = tpi_stream.GetTypeRecord(class_record->data.LF_CLASS.field);
 
-        auto list_size = fields->header.size - sizeof(uint16_t);
-        for (size_t i = 0; i < list_size; i++)
-        {
-            auto field_record = (PDB::CodeView::TPI::FieldList*)((uint8_t*)&fields->data.LF_FIELD.list + i);
-
+        Symbols::for_each_field(tpi_stream, fields, [&](const PDB::CodeView::TPI::FieldList* field_record) {
             switch (field_record->kind)
             {
             case PDB::CodeView::TPI::TypeRecordKind::LF_METHOD:
@@ -175,7 +171,7 @@ namespace RC::UVTD
                 process_onemethod(tpi_stream, field_record, class_entry);
                 break;
             }
-        }
+        });
     }
 
     struct MethodListEntry

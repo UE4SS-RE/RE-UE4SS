@@ -73,6 +73,13 @@ inline bool is_virtual_method(uint16_t mprop) {
            mprop == static_cast<uint16_t>(PDB::CodeView::TPI::MethodProperty::Virtual);
 }
 
+// Only introducing virtuals carry a vtable offset in LF_ONEMETHOD/METHOD records.
+// Plain 'Virtual' (an override) does not, so it must not be counted when sizing records.
+inline bool method_has_vtable_offset(uint16_t mprop) {
+    return mprop == static_cast<uint16_t>(PDB::CodeView::TPI::MethodProperty::Intro) ||
+           mprop == static_cast<uint16_t>(PDB::CodeView::TPI::MethodProperty::PureIntro);
+}
+
 inline bool is_static_method(uint16_t mprop) {
     return mprop == static_cast<uint16_t>(PDB::CodeView::TPI::MethodProperty::Static);
 }
@@ -182,6 +189,12 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
         : pdb_file_path(pdb_file_path), pdb_file_handle(std::move(File::open(pdb_file_path))), pdb_file_map(std::move(pdb_file_handle.memory_map())),
           pdb_file(pdb_file_map.data())
     {
+        if (type_size_cache_source != this->pdb_file_path)
+        {
+            type_size_cache.clear();
+            type_size_cache_source = this->pdb_file_path;
+        }
+
         // Parse PDB name using standardized format: Major_Minor[-Suffix1][-Suffix2]
         auto pdb_stem = this->pdb_file_path.filename().stem().wstring();
         auto name_info = PDBNameInfo::parse(pdb_stem);
@@ -465,20 +478,40 @@ auto Symbols::get_field_record_size(const PDB::CodeView::TPI::FieldList* field) 
         case PDB::CodeView::TPI::TypeRecordKind::LF_ONEMETHOD:
         {
             const auto& record = field->data.LF_ONEMETHOD;
-            const size_t fixed_size = reinterpret_cast<const uint8_t*>(&record.vbaseoff) - 
+            const size_t fixed_size = reinterpret_cast<const uint8_t*>(&record.vbaseoff) -
                                      reinterpret_cast<const uint8_t*>(&record);
-            
-            // Check if method is virtual (has vtable offset)
-            const uint32_t vtable_offset_size = is_virtual_method(record.attributes.mprop) ? 
+
+            const uint32_t vtable_offset_size = method_has_vtable_offset(record.attributes.mprop) ?
                                                 Constants::VTABLE_OFFSET_SIZE : 0;
-            
+
             // Name follows the optional vtable offset
             const uint8_t* name_ptr = reinterpret_cast<const uint8_t*>(record.vbaseoff) + vtable_offset_size;
             const uint32_t name_len = safe_strlen(reinterpret_cast<const char*>(name_ptr));
-            
+
             if (name_len == 0) return Constants::INVALID_RECORD_SIZE;
-            
+
             return static_cast<uint32_t>(fixed_size) + vtable_offset_size + name_len;
+        }
+
+        case PDB::CodeView::TPI::TypeRecordKind::LF_VBCLASS:
+        case PDB::CodeView::TPI::TypeRecordKind::LF_IVBCLASS:
+        {
+            // Layout after kind: attributes(2), btype(4), vbtype(4), then two numeric leaves (vbpoff, vbind)
+            const uint8_t* data = reinterpret_cast<const uint8_t*>(&field->data);
+            const size_t fixed_size = sizeof(uint16_t) + sizeof(uint32_t) + sizeof(uint32_t);
+
+            const uint8_t* first_leaf = data + fixed_size;
+            const uint32_t first_leaf_size = get_numeric_leaf_size(first_leaf) + Constants::NUMERIC_LEAF_PREFIX_SIZE;
+            const uint8_t* second_leaf = first_leaf + first_leaf_size;
+            const uint32_t second_leaf_size = get_numeric_leaf_size(second_leaf) + Constants::NUMERIC_LEAF_PREFIX_SIZE;
+
+            return static_cast<uint32_t>(fixed_size) + first_leaf_size + second_leaf_size;
+        }
+
+        case PDB::CodeView::TPI::TypeRecordKind::LF_INDEX:
+        {
+            // Layout after kind: pad0(2), continuation type index(4)
+            return sizeof(uint16_t) + sizeof(uint32_t);
         }
         
         case PDB::CodeView::TPI::TypeRecordKind::LF_MEMBER:
@@ -517,7 +550,55 @@ auto Symbols::get_field_record_size(const PDB::CodeView::TPI::FieldList* field) 
     }
 }
 
-auto Symbols::get_class_inheritance_model(const PDB::TPIStream& tpi_stream, uint32_t class_type_index) 
+auto Symbols::for_each_field(const PDB::TPIStream& tpi_stream,
+                             const PDB::CodeView::TPI::Record* field_list_record,
+                             const std::function<void(const PDB::CodeView::TPI::FieldList*)>& callback) -> void
+{
+    if (!field_list_record || field_list_record->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_FIELDLIST)
+    {
+        return;
+    }
+
+    const uint8_t* list_data = reinterpret_cast<const uint8_t*>(&field_list_record->data.LF_FIELD.list);
+    const uint8_t* list_end = list_data + field_list_record->header.size - Constants::PDB_TYPE_RECORD_HEADER_SIZE;
+
+    while (list_data < list_end)
+    {
+        // Sub-records are 4-byte aligned; LF_PAD bytes (0xF0 | count) fill the gap
+        if (*list_data >= 0xF0)
+        {
+            const uint32_t padding = *list_data & 0x0F;
+            if (padding == 0 || list_data + padding > list_end) break;
+            list_data += padding;
+            continue;
+        }
+
+        if (list_data + sizeof(uint16_t) > list_end) break;
+
+        const auto* field = reinterpret_cast<const PDB::CodeView::TPI::FieldList*>(list_data);
+
+        // A split field list ends with LF_INDEX pointing at the continuation list
+        if (field->kind == PDB::CodeView::TPI::TypeRecordKind::LF_INDEX)
+        {
+            const uint32_t continuation_index = *reinterpret_cast<const uint32_t*>(list_data + sizeof(uint16_t) + sizeof(uint16_t));
+            for_each_field(tpi_stream, tpi_stream.GetTypeRecord(continuation_index), callback);
+            return;
+        }
+
+        const uint32_t record_size = get_field_record_size(field);
+        if (record_size == Constants::INVALID_RECORD_SIZE)
+        {
+            Output::send(STR("Warning: unknown field record kind 0x{:X}, stopping field list walk early\n"), static_cast<uint32_t>(field->kind));
+            break;
+        }
+
+        callback(field);
+
+        list_data += sizeof(field->kind) + record_size;
+    }
+}
+
+auto Symbols::get_class_inheritance_model(const PDB::TPIStream& tpi_stream, uint32_t class_type_index)
     -> ClassInheritanceModel
 {
     // Validate and retrieve the class record
@@ -550,72 +631,25 @@ auto Symbols::get_class_inheritance_model(const PDB::TPIStream& tpi_stream, uint
 
     // Parse the field list to count base classes and check for virtual inheritance
     int base_class_count = 0;
-    
-    const uint8_t* list_data = reinterpret_cast<const uint8_t*>(&field_list_record->data.LF_FIELD.list);
-    const uint8_t* list_end = list_data + field_list_record->header.size - Constants::PDB_TYPE_RECORD_HEADER_SIZE;
+    bool has_virtual_base = false;
 
-    // Iterate through all fields in the field list
-    while (list_data < list_end)
-    {
-        // Ensure we have at least enough space for the kind field
-        if (!is_valid_pointer_range(list_data, list_end, sizeof(uint16_t))) {
-            break; // Corrupted data, stop parsing
-        }
-        
-        const auto* field = reinterpret_cast<const PDB::CodeView::TPI::FieldList*>(list_data);
-        const auto kind_val = static_cast<uint16_t>(field->kind);
-
-        // Handle padding records (used for alignment in the PDB format)
-        if (is_padding_record(kind_val)) {
-            const uint32_t padding_size = get_padding_size(kind_val);
-            
-            // Validate that we won't go out of bounds
-            if (!is_valid_pointer_range(list_data, list_end, padding_size)) {
-                break; // Invalid padding, stop parsing
-            }
-            
-            list_data += padding_size;
-            continue;
-        }
-
-        // Check for virtual base classes (immediately determines Virtual inheritance)
-        if (field->kind == PDB::CodeView::TPI::TypeRecordKind::LF_VBCLASS || 
+    for_each_field(tpi_stream, field_list_record, [&](const PDB::CodeView::TPI::FieldList* field) {
+        if (field->kind == PDB::CodeView::TPI::TypeRecordKind::LF_VBCLASS ||
             field->kind == PDB::CodeView::TPI::TypeRecordKind::LF_IVBCLASS) {
-
-            // We can return immediately since virtual inheritance is the "highest" model
-            return ClassInheritanceModel::Virtual;
+            has_virtual_base = true;
         }
-        
-        // Count direct base classes
-        if (field->kind == PDB::CodeView::TPI::TypeRecordKind::LF_BCLASS) {
+        else if (field->kind == PDB::CodeView::TPI::TypeRecordKind::LF_BCLASS) {
             base_class_count++;
         }
+    });
 
-        // Calculate the size of this field record to advance to the next one
-        const uint32_t record_size = get_field_record_size(field);
-        if (record_size == 0) {
-            // Unknown field type or error in parsing - stop processing
-            // This is safer than potentially reading garbage data
-            break;
-        }
-        
-        // Move to the next field record
-        const size_t total_field_size = sizeof(field->kind) + record_size;
-        
-        // Validate before advancing
-        if (!is_valid_pointer_range(list_data, list_end, total_field_size)) {
-            break; // Would go out of bounds
-        }
-        
-        list_data += total_field_size;
+    if (has_virtual_base) {
+        return ClassInheritanceModel::Virtual;
     }
-
-    // Determine inheritance model based on what we found
-    // Note: We've already returned Virtual if we found virtual bases
     if (base_class_count > 1) {
         return ClassInheritanceModel::Multiple;
     }
-    
+
     return ClassInheritanceModel::Single;
 }
 

@@ -27,16 +27,12 @@ namespace RC::UVTD
 
         auto fields = tpi_stream.GetTypeRecord(class_record->data.LF_CLASS.field);
 
-        auto list_size = fields->header.size - sizeof(uint16_t);
-        for (size_t i = 0; i < list_size; i++)
-        {
-            auto field_record = (PDB::CodeView::TPI::FieldList*)((uint8_t*)&fields->data.LF_FIELD.list + i);
-
+        Symbols::for_each_field(tpi_stream, fields, [&](const PDB::CodeView::TPI::FieldList* field_record) {
             if (field_record->kind == PDB::CodeView::TPI::TypeRecordKind::LF_MEMBER)
             {
                 process_member(tpi_stream, field_record, class_entry);
             }
-        }
+        });
     }
 
     auto MemberVarsDumper::process_member(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* field_record, Class& class_entry) -> void
@@ -65,24 +61,29 @@ namespace RC::UVTD
         // Extract bitfield information if applicable
         auto bitfield_info = Symbols::get_bitfield_info(tpi_stream, field_record->data.LF_MEMBER.index);
 
+        // The offset is a variable-length numeric leaf, not a plain uint16
+        const uint8_t* offset_data = reinterpret_cast<const uint8_t*>(field_record->data.LF_MEMBER.offset);
+        uint32_t member_offset = static_cast<uint32_t>(Symbols::read_numeric(offset_data));
+
+        uint32_t member_size = Symbols::get_type_size(tpi_stream, field_record->data.LF_MEMBER.index, symbols.is_x64());
+
         if (existing != class_entry.variables.end())
         {
             // Update existing variable
             existing->type = type_name;
-            existing->offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+            existing->offset = member_offset;
+            existing->type_index = field_record->data.LF_MEMBER.index;
+            existing->size = member_size;
             existing->is_bitfield = bitfield_info.is_bitfield;
             existing->bit_position = bitfield_info.bit_position;
             existing->bit_length = bitfield_info.bit_length;
         }
         else
         {
-            // Calculate the size of this member
-            uint32_t member_size = Symbols::get_type_size(tpi_stream, field_record->data.LF_MEMBER.index, symbols.is_x64());
-
             MemberVariable variable;
             variable.type = type_name;
             variable.name = member_name;
-            variable.offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+            variable.offset = member_offset;
             variable.type_index = field_record->data.LF_MEMBER.index;
             variable.size = member_size;
             variable.is_bitfield = bitfield_info.is_bitfield;
