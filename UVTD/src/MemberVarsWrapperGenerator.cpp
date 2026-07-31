@@ -35,82 +35,8 @@ namespace RC::UVTD
         return type.find(STR("::*)(")) != File::StringType::npos;
     }
 
-    // Normalize a type for comparison purposes
-    // This handles equivalent types that should be considered the same:
-    // - FDefaultAllocator == TSizedDefaultAllocator<32>
-    // - T* in TArray/TSet/TMap == TObjectPtr<T> in TArray/TSet/TMap
-    // - Whitespace differences (e.g., "TArray<T >" vs "TArray<T>")
-    static auto normalize_type_for_comparison(const File::StringType& type) -> File::StringType
-    {
-        File::StringType normalized = type;
-
-        // Normalize allocator types: TSizedDefaultAllocator<32> -> FDefaultAllocator
-        // These are equivalent in UE (TSizedDefaultAllocator<32> was introduced later but is the same)
-        size_t pos = 0;
-        while ((pos = normalized.find(STR("TSizedDefaultAllocator<32>"), pos)) != File::StringType::npos)
-        {
-            normalized.replace(pos, 26, STR("FDefaultAllocator"));
-            // Don't increment pos - the replacement is shorter, so we're already past it
-        }
-
-        // Normalize whitespace: remove spaces before > (e.g., "TArray<T >" -> "TArray<T>")
-        pos = 0;
-        while ((pos = normalized.find(STR(" >"), pos)) != File::StringType::npos)
-        {
-            normalized.erase(pos, 1);
-            // Don't increment - we removed a char, check same position again
-        }
-
-        // Also normalize " >" at the very end
-        while (!normalized.empty() && normalized.back() == ' ')
-        {
-            normalized.pop_back();
-        }
-
-        // For container types (TArray, TSet, TMap), normalize TObjectPtr<T> to T*
-        // This allows us to treat TArray<AActor*> and TArray<TObjectPtr<AActor>> as equivalent
-        if (normalized.starts_with(STR("TArray<")) ||
-            normalized.starts_with(STR("TSet<")) ||
-            normalized.starts_with(STR("TMap<")))
-        {
-            // Find TObjectPtr<X> and replace with X*
-            size_t tobj_pos = 0;
-            while ((tobj_pos = normalized.find(STR("TObjectPtr<"), tobj_pos)) != File::StringType::npos)
-            {
-                // Find the matching closing >
-                size_t start = tobj_pos + 11; // after "TObjectPtr<"
-                int depth = 1;
-                size_t end = start;
-                while (end < normalized.size() && depth > 0)
-                {
-                    if (normalized[end] == '<') depth++;
-                    else if (normalized[end] == '>') depth--;
-                    if (depth > 0) end++;
-                }
-
-                if (depth == 0)
-                {
-                    // Extract the inner type
-                    File::StringType inner_type = normalized.substr(start, end - start);
-                    // Replace TObjectPtr<X> with X*
-                    normalized.replace(tobj_pos, end - tobj_pos + 1, inner_type + STR("*"));
-                }
-                else
-                {
-                    tobj_pos++; // Move past to avoid infinite loop
-                }
-            }
-        }
-
-        // Normalize pointer spacing: "T *" -> "T*"
-        pos = 0;
-        while ((pos = normalized.find(STR(" *"), pos)) != File::StringType::npos)
-        {
-            normalized.erase(pos, 1);
-        }
-
-        return normalized;
-    }
+    // Type normalization lives in Helpers (normalize_type_for_comparison), shared with
+    // TypeContainer's type-change detection.
 
     // Check if a type should be skipped because a better version exists
     // Returns true if this type should be skipped

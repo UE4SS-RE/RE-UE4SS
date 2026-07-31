@@ -42,14 +42,6 @@ inline bool is_valid_pointer_range(const uint8_t* current, const uint8_t* end, s
     return current && end && current + required_size <= end && required_size <= Constants::MAX_STRING_LENGTH;
 }
 
-inline bool is_padding_record(uint16_t kind_value) {
-    return kind_value >= Constants::PADDING_MARKER && kind_value < 0xF10;
-}
-
-inline uint32_t get_padding_size(uint16_t kind_value) {
-    return kind_value & Constants::PADDING_SIZE_MASK;
-}
-
 // ============= Safe String Operations =============
 inline uint32_t safe_strlen(const char* str, size_t max_len = Constants::MAX_STRING_LENGTH) {
     if (!str) return 0;
@@ -191,7 +183,7 @@ inline NumericValue read_numeric_safe(const uint8_t* data, const uint8_t* data_e
     {
         if (type_size_cache_source != this->pdb_file_path)
         {
-            type_size_cache.clear();
+            clear_per_pdb_caches();
             type_size_cache_source = this->pdb_file_path;
         }
 
@@ -694,64 +686,65 @@ inline uint32_t get_pointer_size(PDB::CodeView::TPI::TypeIndexKind type, bool is
     return is_64bit ? 8 : 4;
 }
 
+    // Name -> complete (non-fwdref) class/struct record index for the current PDB.
+    // Built once per PDB on first use; invalidated together with type_size_cache.
+    static std::unordered_map<std::string, uint32_t> s_complete_type_index;
+    static bool s_complete_type_index_built = false;
+
+    auto Symbols::clear_per_pdb_caches() -> void
+    {
+        type_size_cache.clear();
+        s_complete_type_index.clear();
+        s_complete_type_index_built = false;
+    }
+
+    static auto get_class_record_name(const PDB::CodeView::TPI::Record* record) -> const char*
+    {
+        const uint8_t* data = reinterpret_cast<const uint8_t*>(record->data.LF_CLASS.data);
+        Symbols::read_numeric(data); // skip the size numeric leaf, advances data
+        return reinterpret_cast<const char*>(data);
+    }
+
     static auto find_complete_type_definition(const PDB::TPIStream& tpi_stream, uint32_t forward_decl_index) -> uint32_t
 {
     const PDB::CodeView::TPI::Record* forward_record = tpi_stream.GetTypeRecord(forward_decl_index);
     if (!forward_record) return forward_decl_index;
-    
+
     // Only search for class/struct types
     if (forward_record->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_CLASS &&
         forward_record->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE) {
         return forward_decl_index;
     }
-    
+
     // If it's not a forward declaration, return as-is
     if (!forward_record->data.LF_CLASS.property.fwdref) {
         return forward_decl_index;
     }
-    
-    // Get the name of the forward declaration
-    const uint8_t* data = reinterpret_cast<const uint8_t*>(forward_record->data.LF_CLASS.data);
-    
-    // Skip the numeric leaf (size, which is 0 for forward decl)
-    const uint8_t* temp_data = data;
-    Symbols::read_numeric(temp_data);  // This advances temp_data
-    
-    // Now temp_data points to the name
-    std::string forward_name(reinterpret_cast<const char*>(temp_data));
-    
-    // Search through all type records
-    uint32_t first_index = tpi_stream.GetFirstTypeIndex();
-    uint32_t last_index = tpi_stream.GetLastTypeIndex();
-    
-    for (uint32_t i = first_index; i <= last_index; ++i) {
-        // Skip the forward declaration itself
-        if (i == forward_decl_index) continue;
-        
-        const PDB::CodeView::TPI::Record* candidate = tpi_stream.GetTypeRecord(i);
-        if (!candidate) continue;
-        
-        // Must be the same kind (class or struct)
-        if (candidate->header.kind != forward_record->header.kind) continue;
-        
-        // Check if this is NOT a forward declaration
-        if (candidate->data.LF_CLASS.property.fwdref) continue;
-        
-        // Get the candidate's name
-        const uint8_t* candidate_data = reinterpret_cast<const uint8_t*>(candidate->data.LF_CLASS.data);
-        
-        // Skip the size numeric leaf
-        const uint8_t* temp_candidate_data = candidate_data;
-        Symbols::read_numeric(temp_candidate_data);
-        
-        // Compare names
-        std::string candidate_name(reinterpret_cast<const char*>(temp_candidate_data));
-        if (candidate_name == forward_name) {
-            // Found the complete definition!
-            return i;
+
+    if (!s_complete_type_index_built)
+    {
+        s_complete_type_index_built = true;
+
+        const uint32_t first_index = tpi_stream.GetFirstTypeIndex();
+        const uint32_t last_index = tpi_stream.GetLastTypeIndex();
+        for (uint32_t i = first_index; i <= last_index; ++i)
+        {
+            const PDB::CodeView::TPI::Record* candidate = tpi_stream.GetTypeRecord(i);
+            if (!candidate) continue;
+            if (candidate->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_CLASS &&
+                candidate->header.kind != PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE) continue;
+            if (candidate->data.LF_CLASS.property.fwdref) continue;
+
+            // First complete definition wins, matching the previous linear-scan behavior
+            s_complete_type_index.try_emplace(get_class_record_name(candidate), i);
         }
     }
-    
+
+    if (auto it = s_complete_type_index.find(get_class_record_name(forward_record)); it != s_complete_type_index.end())
+    {
+        return it->second;
+    }
+
     // No complete definition found, return the original
     return forward_decl_index;
 }
@@ -1091,9 +1084,8 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
         case PDB::CodeView::TPI::TypeIndexKind::T_PUINT4:
             return STR("uint32*");
         default:
-            __debugbreak();
+            Output::send(STR("Warning: unknown built-in type index 0x{:X}\n"), record_index);
             return STR("<UNKNOWN TYPE>");
-            break;
         }
     }
 
@@ -1267,7 +1259,9 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
         }
     }
     default:
-        __debugbreak();
+        Output::send(STR("Warning: unhandled type record kind 0x{:X} for type index 0x{:X}\n"),
+                     static_cast<uint32_t>(record->header.kind),
+                     record_index);
         return STR("<UNKNOWN TYPE>");
     }
 }

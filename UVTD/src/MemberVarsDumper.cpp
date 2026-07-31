@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <format>
 #include <unordered_map>
 
@@ -212,17 +213,24 @@ namespace RC::UVTD
             // Track variables we've already processed to avoid duplicates
             std::unordered_set<File::StringType> processed_variables;
 
+            // Padding calculation requires offset order; PDB declaration order usually matches
+            // but is not guaranteed, so sort explicitly
+            auto sorted_variables = class_entry.variables;
+            std::stable_sort(sorted_variables.begin(), sorted_variables.end(), [](const MemberVariable& a, const MemberVariable& b) {
+                return a.offset < b.offset;
+            });
+
             // Iterate through sorted variables with formatted type info
-            for (size_t i = 0; i < class_entry.variables.size(); ++i)
+            for (size_t i = 0; i < sorted_variables.size(); ++i)
             {
-                const auto& variable = class_entry.variables[i];
+                const auto& variable = sorted_variables[i];
 
                 // Calculate padding to next member
                 uint32_t padding = 0;
-                if (i + 1 < class_entry.variables.size())
+                if (i + 1 < sorted_variables.size())
                 {
                     uint32_t current_end = variable.offset + variable.size;
-                    uint32_t next_start = class_entry.variables[i + 1].offset;
+                    uint32_t next_start = sorted_variables[i + 1].offset;
                     if (next_start > current_end)
                     {
                         padding = next_start - current_end;

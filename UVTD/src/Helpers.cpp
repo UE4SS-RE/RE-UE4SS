@@ -41,6 +41,69 @@ namespace RC::UVTD
         return input;
     }
 
+    auto normalize_type_for_comparison(const File::StringType& type) -> File::StringType
+    {
+        File::StringType normalized = type;
+
+        // TSizedDefaultAllocator<32> replaced FDefaultAllocator but is the same thing
+        size_t pos = 0;
+        while ((pos = normalized.find(STR("TSizedDefaultAllocator<32>"), pos)) != File::StringType::npos)
+        {
+            normalized.replace(pos, 26, STR("FDefaultAllocator"));
+        }
+
+        // Remove spaces before '>' (e.g. "TArray<T >" vs "TArray<T>")
+        pos = 0;
+        while ((pos = normalized.find(STR(" >"), pos)) != File::StringType::npos)
+        {
+            normalized.erase(pos, 1);
+        }
+
+        while (!normalized.empty() && normalized.back() == ' ')
+        {
+            normalized.pop_back();
+        }
+
+        // Inside containers, TObjectPtr<T> is layout-equivalent to T*
+        if (normalized.starts_with(STR("TArray<")) ||
+            normalized.starts_with(STR("TSet<")) ||
+            normalized.starts_with(STR("TMap<")))
+        {
+            size_t tobj_pos = 0;
+            while ((tobj_pos = normalized.find(STR("TObjectPtr<"), tobj_pos)) != File::StringType::npos)
+            {
+                size_t start = tobj_pos + 11;
+                int depth = 1;
+                size_t end = start;
+                while (end < normalized.size() && depth > 0)
+                {
+                    if (normalized[end] == '<') depth++;
+                    else if (normalized[end] == '>') depth--;
+                    if (depth > 0) end++;
+                }
+
+                if (depth == 0)
+                {
+                    File::StringType inner_type = normalized.substr(start, end - start);
+                    normalized.replace(tobj_pos, end - tobj_pos + 1, inner_type + STR("*"));
+                }
+                else
+                {
+                    tobj_pos++;
+                }
+            }
+        }
+
+        // Normalize pointer spacing: "T *" -> "T*"
+        pos = 0;
+        while ((pos = normalized.find(STR(" *"), pos)) != File::StringType::npos)
+        {
+            normalized.erase(pos, 1);
+        }
+
+        return normalized;
+    }
+
     auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool
     {
         static constexpr StringViewType fixed_uobject_array_string = STR("FFixedUObjectArray");
