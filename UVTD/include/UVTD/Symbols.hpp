@@ -216,10 +216,13 @@ namespace RC::UVTD
         std::unordered_map<File::StringType, EnumEntry> enum_entries;
         std::unordered_map<File::StringType, Class> class_entries;
         // Cache keys are raw TPI type indices, which are only meaningful within a single PDB.
-        // type_size_cache_source tracks which PDB the cache belongs to so it can be invalidated
+        // type_size_cache_source tracks which PDB the caches belong to so they can be invalidated
         // when a different PDB is opened; entries must never survive across PDBs.
         static inline std::unordered_map<uint32_t, uint32_t> type_size_cache;
         static inline std::filesystem::path type_size_cache_source;
+
+        // Clears every cache keyed by PDB-local data (type sizes, complete-type name index)
+        auto static clear_per_pdb_caches() -> void;
 
 
         Symbols() = delete;

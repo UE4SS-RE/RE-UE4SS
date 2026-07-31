@@ -4,15 +4,15 @@
 
 namespace RC::UVTD
 {
-    // Helper to check if two types are meaningfully different
-    // Ignores whitespace differences and normalizes some common variations
+    // Helper to check if two types are meaningfully different.
+    // Equivalent spellings across versions (allocator renames, TObjectPtr inside containers,
+    // whitespace) are not changes; recording them would generate churn in types_by_version
+    // that the wrapper generator only filters back out later.
     static auto types_are_different(const File::StringType& type1, const File::StringType& type2) -> bool
     {
         if (type1 == type2) return false;
 
-        // TODO: Add more sophisticated type comparison if needed
-        // For now, simple string comparison
-        return true;
+        return normalize_type_for_comparison(type1) != normalize_type_for_comparison(type2);
     }
 
     auto TypeContainer::join(const TypeContainer& other) -> void
@@ -118,7 +118,11 @@ namespace RC::UVTD
                     }
                     else
                     {
-                        // Same type - just update offset and bitfield info if needed
+                        // Same type after normalization. Adopt the incoming spelling too:
+                        // PDBs are processed oldest to newest, so the last equivalent spelling
+                        // (e.g. TObjectPtr / TSizedDefaultAllocator) wins for generated getters.
+                        existing->type = variable.type;
+                        existing->size = variable.size;
                         existing->offset = variable.offset;
                         existing->is_bitfield = variable.is_bitfield;
                         existing->bit_position = variable.bit_position;
@@ -154,7 +158,9 @@ namespace RC::UVTD
             auto symbol_name_final = symbol_name;
             auto symbol_name_clean_final = symbol_name_clean;
             unify_uobject_array_if_needed(symbol_name_final);
-            if (auto it = class_entries.find(symbol_name_final); it != class_entries.end())
+            unify_uobject_array_if_needed(symbol_name_clean_final);
+            // The map is keyed by the cleaned name; look up with the same key that emplace uses
+            if (auto it = class_entries.find(symbol_name_clean_final); it != class_entries.end())
             {
                 return it->second;
             }

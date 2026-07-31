@@ -66,27 +66,41 @@ namespace RC::UVTD
                 return std::nullopt;
             }
 
-            // Parse minor version (second part)
+            // Parse minor version (second part). A suffix glued onto the digits
+            // (e.g. "5_04abiotic") is split off and treated as a regular suffix.
             if (parts[1].empty()) return std::nullopt;
+            size_t minor_digit_count = 0;
+            while (minor_digit_count < parts[1].size() && parts[1][minor_digit_count] >= '0' && parts[1][minor_digit_count] <= '9')
+            {
+                minor_digit_count++;
+            }
+            if (minor_digit_count == 0) return std::nullopt;
+
+            File::StringType minor_digits = parts[1].substr(0, minor_digit_count);
+            File::StringType glued_suffix = parts[1].substr(minor_digit_count);
             try
             {
-                info.minor_version = std::stoi(to_string(parts[1]));
+                info.minor_version = std::stoi(to_string(minor_digits));
             }
             catch (...)
             {
                 return std::nullopt;
             }
 
-            // Base version is Major_Minor
-            info.base_version = std::format(STR("{}_{}"), parts[0], parts[1]);
+            // Base version is Major_Minor, digits only
+            info.base_version = std::format(STR("{}_{}"), parts[0], minor_digits);
 
             // Generate version_no_separator (for class names like UnrealVirtual427)
             info.version_no_separator = std::format(STR("{}{}"),
                 info.major_version,
                 info.minor_version < 10 ? std::format(STR("0{}"), info.minor_version) : std::format(STR("{}"), info.minor_version));
 
-            // Collect suffixes (parts 2+ are suffixes, max 2)
+            // Collect suffixes (anything glued to the minor version, then parts 2+, max 2)
             info.suffix_count = 0;
+            if (!glued_suffix.empty())
+            {
+                info.suffixes[info.suffix_count++] = glued_suffix;
+            }
             for (size_t i = 2; i < parts.size() && info.suffix_count < 2; ++i)
             {
                 if (!parts[i].empty())
