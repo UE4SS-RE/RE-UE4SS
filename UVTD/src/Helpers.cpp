@@ -41,6 +41,27 @@ namespace RC::UVTD
         return input;
     }
 
+    auto is_inactive_uobject_array_variant(const File::StringType& class_name, const PDBNameInfo& pdb_info) -> bool
+    {
+        static constexpr StringViewType chunked = STR("FChunkedFixedUObjectArray");
+        static constexpr StringViewType non_chunked = STR("FFixedUObjectArray");
+        static constexpr StringViewType indirect_410_and_earlier = STR("TStaticIndirectArrayThreadSafeRead<UObjectBase,8388608,16384>");
+
+        if (class_name == chunked)
+        {
+            return !pdb_info.is_at_least(4, 20);
+        }
+        if (class_name == non_chunked)
+        {
+            return pdb_info.is_at_least(4, 20) || !pdb_info.is_at_least(4, 11);
+        }
+        if (class_name == indirect_410_and_earlier)
+        {
+            return pdb_info.is_at_least(4, 11);
+        }
+        return false;
+    }
+
     auto normalize_type_for_comparison(const File::StringType& type) -> File::StringType
     {
         File::StringType normalized = type;
