@@ -109,6 +109,8 @@ namespace RC::UVTD
                 if (type_record->data.LF_CLASS.property.fwdref) continue;
 
                 const File::StringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
+                if (is_inactive_uobject_array_variant(class_name, symbols.get_pdb_name_info())) continue;
+
                 auto class_name_final = class_name;
                 unify_uobject_array_if_needed(class_name_final);
                 if (!names.contains(class_name_final)) continue;

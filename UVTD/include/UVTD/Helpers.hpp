@@ -55,4 +55,10 @@ namespace RC::UVTD
 
     // Workaround that lets us have a unified 'TUObjectArray' struct regardless if the engine version uses a chunked or non-chunked variant of TUObjectArray.
     auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool;
+
+    // Every PDB contains all UObject-array container variants, but only one is live per engine
+    // version (TStaticIndirectArray <= 4.10, FFixedUObjectArray 4.11 to 4.19, chunked 4.20+).
+    // Dumping an inactive variant would overwrite the unified TUObjectArray section with the
+    // wrong layout, with last-record-wins deciding arbitrarily.
+    auto is_inactive_uobject_array_variant(const File::StringType& class_name, const PDBNameInfo& pdb_info) -> bool;
 } // namespace RC::UVTD
