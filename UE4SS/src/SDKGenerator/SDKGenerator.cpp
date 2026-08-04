@@ -409,6 +409,7 @@ namespace RC::UEGenerator
             generate_cmakelists();
             generate_master_header();
             generate_runtime_sdk_test();
+            generate_layout_asserts();
 
             Output::send<LogLevel::Verbose>(
                     STR("Structs/classes not memory accurate because of hidden padding at the end of base being used by this struct/class:\n"));
@@ -832,6 +833,56 @@ namespace RC::UEGenerator
             }
             namespace_to_use.append(STR("::"));
             return namespace_to_use;
+        }
+
+        // Compile-time counterpart to the runtime SDK test. Emitted into its own header which nothing
+        // includes by default: a layout bug then shows up as a failed assert on the exact struct/member
+        // when the user opts in, instead of making the whole generated SDK fail to compile.
+        auto generate_layout_asserts() -> void
+        {
+            new_file(STR("src/UE4SS_SDK/LayoutAsserts"), STR("hpp"));
+            current_file().set_has_non_boilerplate_content(true);
+            write_line(STR("// Compile-time verification that the generated types match the layouts observed at dump time."));
+            write_line(STR("// Not included by any generated header; include it explicitly to verify an SDK against a build."));
+            write_line();
+            for (const auto& file : m_files)
+            {
+                if (!file->related_uobject() || !file->related_uobject()->IsA<UStruct>() || file->is_class_banned())
+                {
+                    continue;
+                }
+                auto as_ustruct = static_cast<UStruct*>(file->related_uobject());
+                StringType namespace_to_use = std::format(STR("{}"), get_namespace(as_ustruct, as_ustruct->IsA<UScriptStruct>(), file.get()));
+                StringType struct_name = namespace_to_use + file->runtime_sdk_test_data().struct_name;
+                if (file->runtime_sdk_test_data().struct_name.empty())
+                {
+                    continue;
+                }
+
+                write_line(std::format(STR("static_assert(sizeof({}) == 0x{:X}, \"Wrong size on {}\");"),
+                                       struct_name,
+                                       as_ustruct->GetStructureSize(),
+                                       struct_name));
+
+                for (const auto& property_data : file->runtime_sdk_test_data().properties)
+                {
+                    // offsetof is not valid on bitfield members
+                    if (auto as_bool_property = CastField<FBoolProperty>(property_data.property); as_bool_property)
+                    {
+                        if (as_bool_property->GetFieldMask() != 255)
+                        {
+                            continue;
+                        }
+                    }
+                    write_line(std::format(STR("static_assert(offsetof({}, {}) == 0x{:X}, \"Wrong offset on {}::{}\");"),
+                                           struct_name,
+                                           property_data.property_name,
+                                           property_data.property->GetOffset_Internal(),
+                                           struct_name,
+                                           property_data.property_name));
+                }
+                write_line();
+            }
         }
 
         auto generate_runtime_sdk_test() -> void
