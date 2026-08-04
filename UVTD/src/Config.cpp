@@ -326,6 +326,33 @@ namespace RC::UVTD
                 Output::send(STR("uprefix_to_fprefix.json not found\n"));
             }
             
+            // Load class_rename_map.json
+            std::filesystem::path class_rename_path = config_dir / "class_rename_map.json";
+            if (std::filesystem::exists(class_rename_path))
+            {
+                std::ifstream file(class_rename_path);
+                std::string json_str((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+                auto result = glz::read_json<std::unordered_map<std::string, std::string>>(json_str);
+                if (result.has_value())
+                {
+                    class_rename_map.clear();
+                    for (const auto& [from, to] : result.value())
+                    {
+                        class_rename_map.emplace(to_wstring(from), to_wstring(to));
+                    }
+                    Output::send(STR("Loaded {} class renames\n"), class_rename_map.size());
+                }
+                else
+                {
+                    Output::send(STR("Failed to parse class_rename_map.json\n"));
+                }
+            }
+            else
+            {
+                Output::send(STR("class_rename_map.json not found\n"));
+            }
+
             // Load member_rename_map.json
             std::filesystem::path rename_path = config_dir / "member_rename_map.json";
             if (std::filesystem::exists(rename_path))

@@ -27,6 +27,15 @@ namespace RC::UVTD
 
     auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>
     {
+        // An outright class rename wins over the prefix swap: the old and new classes have the same
+        // layout, so emitting the old one under the new name gives every engine version a single set
+        // of member offsets. Only pre-rename PDBs contain these names, so this never fires on a build
+        // that already uses the new one.
+        if (auto it = ConfigUtil::GetClassRenameMap().find(input); it != ConfigUtil::GetClassRenameMap().end())
+        {
+            return it->second;
+        }
+
         // Use ConfigUtil instead of hardcoded list
         for (const auto& prefixed : ConfigUtil::GetUPrefixToFPrefix())
         {

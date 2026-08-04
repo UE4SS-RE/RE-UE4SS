@@ -73,6 +73,13 @@ namespace RC::UVTD
         
         std::unordered_set<File::StringType> valid_udt_names;
         std::vector<File::StringType> uprefix_to_fprefix;
+
+        // Maps a PDB class name onto the name it should be emitted as. Used where the engine renamed
+        // a class outright rather than just swapping its prefix, e.g. UAssetClassProperty became
+        // USoftClassProperty in 4.18 with an identical layout. Emitting the old class under the new
+        // name keeps a single set of member offsets covering every engine version, so consumers never
+        // have to branch on which name the running engine happens to use.
+        std::unordered_map<File::StringType, File::StringType> class_rename_map;
         
         // Enhanced member rename map - outer key is class name, inner key is member name
         std::unordered_map<File::StringType, std::unordered_map<File::StringType, MemberRenameInfo>> member_rename_map;
