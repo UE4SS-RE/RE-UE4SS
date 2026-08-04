@@ -15,6 +15,7 @@
 #undef TEXT
 #endif
 #include <SDKGenerator/TMapOverrideGen.hpp>
+#include <SDKGenerator/SDKGenerator.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/NameTypes.hpp>
@@ -474,6 +475,70 @@ namespace RC::GUI::Dumpers
         Output::send(STR("Finished dumping object as JSON\n"));
     }
 
+    using SDKGeneratorBackends = std::vector<std::pair<std::string, UEGenerator::SDKBackendSettings>>;
+
+    // Loads every backend description file from <working_dir>/UE4SS_SDK_Backends into 'backends'.
+    // The entry at index 0 is the "no backend selected" placeholder and is always kept.
+    static auto load_sdk_generator_backends(SDKGeneratorBackends& backends) -> void
+    {
+        const auto backends_path = std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK_Backends";
+        if (!std::filesystem::exists(backends_path))
+        {
+            return;
+        }
+
+        static constexpr auto glz_opts = glz::opts{
+                .format = glz::JSON,
+                .comments = false,              // Support reading in JSONC style comments
+                .error_on_unknown_keys = false, // Error when an unknown key is encountered
+                .skip_null_members = true,      // Skip writing out params in an object if the value is null
+                .prettify = true,               // Write out prettified JSON
+                .indentation_char = ' ',        // Prettified JSON indentation char
+                .indentation_width = 3,         // Prettified JSON indentation size
+                // Require all non nullable keys to be present in the object.
+                .error_on_missing_keys = false,
+                .quoted_num = false, // treat numbers as quoted or array-like types as having quoted numbers
+                .number = false,     // read numbers as strings and write these string as numbers
+                .raw = false,        // write out string like values without quotes
+        };
+
+        for (const auto& item : std::filesystem::directory_iterator(backends_path))
+        {
+            if (item.is_directory())
+            {
+                continue;
+            }
+
+            UEGenerator::SDKBackendSettings_ASCII settings_ascii{};
+            settings_ascii.ExcludedTypes.value.clear();    // Defaults are only used during dev to keep track. Remove this and the defaults later!
+            settings_ascii.UnreflectedTypes.value.clear(); // Defaults are only used during dev to keep track. Remove this and the defaults later!
+            std::string settings_buffer{};
+            auto ec = glz::read_file_json<glz_opts, UEGenerator::SDKBackendSettings_ASCII>(settings_ascii, item.path().string(), settings_buffer);
+            if (ec)
+            {
+                Output::send<LogLevel::Error>(STR("Error '{}' while trying to read JSON: '{}'\n"),
+                                              to_wstring(glz::format_error(ec, settings_buffer)),
+                                              item.path().wstring());
+                continue;
+            }
+
+            UEGenerator::SDKBackendSettings settings{};
+            settings.IncludePrefix = to_wstring(settings_ascii.IncludePrefix.value);
+            settings.HeaderFileExtension = to_wstring(settings_ascii.HeaderFileExtension.value);
+            settings.UnrealImplementationNamespace = to_wstring(settings_ascii.UnrealImplementationNamespace.value);
+            settings.SDKNamespace = to_wstring(settings_ascii.SDKNamespace.value);
+            for (const auto& setting : settings_ascii.ExcludedTypes.value)
+            {
+                settings.ExcludedTypes.emplace(to_wstring(setting));
+            }
+            for (const auto& [key, value] : settings_ascii.UnreflectedTypes.value)
+            {
+                settings.UnreflectedTypes.emplace(to_wstring(key), to_wstring(value));
+            }
+            backends.emplace_back(item.path().stem().string(), settings);
+        }
+    }
+
     auto render() -> void
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
@@ -571,5 +636,45 @@ namespace RC::GUI::Dumpers
                 UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
             });
         }
+
+        static SDKGeneratorBackends s_sdk_generator_backends{{"Select Backend", {}}};
+        static bool s_has_cached_cxx_sdk_backends{};
+        static size_t s_selected_backend_index{};
+
+        if (!s_has_cached_cxx_sdk_backends)
+        {
+            s_has_cached_cxx_sdk_backends = true;
+            TRY([] {
+                load_sdk_generator_backends(s_sdk_generator_backends);
+            });
+        }
+
+        ImGui::SetNextItemWidth(260.0f);
+        if (ImGui::BeginCombo("##cxx_sdk_generator_backend_combo", s_sdk_generator_backends[s_selected_backend_index].first.c_str()))
+        {
+            for (const auto& [backend, i] : s_sdk_generator_backends | views::enumerate)
+            {
+                const auto is_selected = s_selected_backend_index == i;
+                if (ImGui::Selectable(backend.first.c_str(), is_selected))
+                {
+                    s_selected_backend_index = i;
+                }
+                if (is_selected)
+                {
+                    ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::BeginDisabled(s_selected_backend_index == 0);
+        if (ImGui::Button("Generate BP SDK"))
+        {
+            TRY([] {
+                auto& selected_backend = s_sdk_generator_backends[s_selected_backend_index];
+                UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK", selected_backend.second);
+            });
+        }
+        ImGui::EndDisabled();
     }
 } // namespace RC::GUI::Dumpers
