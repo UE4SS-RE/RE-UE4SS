@@ -13,11 +13,13 @@ Added CMake build system alongside Xmake - ([UE4SS #1067](https://github.com/UE4
 - Documentation updated to reference CMake build instructions
 - xmake may be deprecated in the future. Meanwhile, we cannot guarantee ABI compatability
 
-Added support for UE Version 5.7
-
 Added a `.jmap` dumper: dumps the full UObject reflection graph (classes, structs, enums, functions, property types, class default object property values and approximate vtable layouts) to the JSON-based `.jmap` format by trumank (https://github.com/trumank/jmap). Available via the GUI `Dumpers` tab, the `DumpJMAP()` Lua function and `CTRL + Numpad 5`.
 
 Added the option to include Blueprint-generated classes, structs and enums in `.usmap` and `.jmap` dumps (enabled by default). Toggle via the checkbox in the GUI `Dumpers` tab or the optional boolean parameter of `DumpUSMAP()` / `DumpJMAP()`.
+
+Added an SDK generator that produces memory-accurate C++ headers for reflected classes, structs and enums, intended to be dropped into a UE4SS C++ mod (`add_subdirectory(UE4SS_SDK)`). Types that UE4SS already provides are referenced from the Unreal module rather than redefined, so a generated SDK composes with an existing mod instead of colliding with it. Leading, inter-member and trailing padding, static arrays, bitfields, computed alignment and base-class trailing-padding reuse are all handled. Generated SDKs can be verified against a build at compile time via `UE4SS_SDK/LayoutAsserts.hpp` or at runtime via `UE4SS_SDK/RuntimeSDKTest.hpp`.
+
+Added support for UE Version 5.7
 
 Added support for UE Version 5.6 - ([UE4SS #977](https://github.com/UE4SS-RE/RE-UE4SS/pull/977)) 
 
