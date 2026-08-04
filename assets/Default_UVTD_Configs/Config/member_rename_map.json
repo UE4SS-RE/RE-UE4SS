@@ -48,5 +48,22 @@
       "generate_alias_setter": true,
       "description": "Special handling for GetName to avoid conflicts"
     }
+  },
+  "TUObjectArray": {
+    "AllocatorInstance": {
+      "mapped_name": "Objects",
+      "generate_alias_setter": true,
+      "description": "4.7 and earlier: ObjObjects is TArray<UObjectBase*>; the allocator data pointer plays the role of Objects"
+    },
+    "ArrayNum": {
+      "mapped_name": "NumElements",
+      "generate_alias_setter": true,
+      "description": "4.7 and earlier TArray member, unified with the 4.11+ FFixedUObjectArray naming"
+    },
+    "ArrayMax": {
+      "mapped_name": "MaxElements",
+      "generate_alias_setter": true,
+      "description": "4.7 and earlier TArray member, unified with the 4.11+ FFixedUObjectArray naming"
+    }
   }
 }
