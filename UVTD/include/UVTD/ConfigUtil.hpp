@@ -54,7 +54,12 @@ namespace RC::UVTD
         }
 
         // UPrefix to FPrefix access
-        inline const std::vector<File::StringType>& GetUPrefixToFPrefix() 
+        inline const std::unordered_map<File::StringType, File::StringType>& GetClassRenameMap()
+        {
+            return UVTDConfig::Get().class_rename_map;
+        }
+
+        inline const std::vector<File::StringType>& GetUPrefixToFPrefix()
         {
             return UVTDConfig::Get().uprefix_to_fprefix;
         }
