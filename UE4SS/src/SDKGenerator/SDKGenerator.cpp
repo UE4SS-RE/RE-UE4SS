@@ -373,6 +373,10 @@ namespace RC::UEGenerator
       public:
         auto generate() -> void
         {
+            // Must run before any emission: every struct's padding depends on the cut sizes and
+            // alignments of structs that may not have been emitted yet.
+            compute_struct_layouts();
+
             std::vector<UEnum*> enums{};
 
             UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
@@ -859,9 +863,14 @@ namespace RC::UEGenerator
                     continue;
                 }
 
+                auto& layout = get_struct_layout(as_ustruct);
+                write_line(std::format(STR("static_assert(alignof({}) == 0x{:X}, \"Wrong alignment on {}\");"),
+                                       struct_name,
+                                       layout.alignment,
+                                       struct_name));
                 write_line(std::format(STR("static_assert(sizeof({}) == 0x{:X}, \"Wrong size on {}\");"),
                                        struct_name,
-                                       as_ustruct->GetStructureSize(),
+                                       std::max(align_up(layout.unaligned_size, layout.alignment), 1),
                                        struct_name));
 
                 for (const auto& property_data : file->runtime_sdk_test_data().properties)
@@ -958,19 +967,8 @@ namespace RC::UEGenerator
                             STR("// The class/struct cannot exist until these types are support or the class/struct would not be memory accurate."));
                     write_line_internal(file->prologue(), file->prologue_scope_level(), STR("/*"));
                 }
-                if (file->end_of_struct_padding() && file->end_of_struct_padding() - file->end_of_struct_padding_incursion() > 0)
-                {
-                    StringType buffer{file->might_need_namespace() ? STR("        ") : STR("    ")};
-                    if (!file->namespace_suffix().empty())
-                    {
-                        buffer.append(STR("    "));
-                    }
-                    buffer.append(std::format(STR("uint8 padding_{}[0x{:X}]{{}}; // 0x{:X}"),
-                                              ++file->last_unique_padding_number(),
-                                              file->end_of_struct_padding() - file->end_of_struct_padding_incursion(),
-                                              file->end_of_struct_padding_offset()));
-                    file->contents().insert(file->end_of_struct_padding_start_pos(), std::format(STR("{}\n"), buffer));
-                }
+                // Trailing padding used to be spliced into the buffer here after the fact; it is now
+                // emitted inline by generate_end_of_struct_padding() against the struct's cut size.
                 if (file->might_need_namespace())
                 {
                     start_namespace(file.get());
@@ -1479,6 +1477,169 @@ namespace RC::UEGenerator
             }
         }
 
+        // Reflection reports a struct's padded sizeof, but MSVC lets a derived struct place its members
+        // inside a non-POD base's trailing padding, so a child's first property can start *below* the
+        // parent's reported size. Emitting the parent at its padded size would then push every child
+        // member out of place. We therefore track two sizes per struct: the reflected size, and an
+        // "unaligned" size cut down to the lowest offset any derived struct was observed to intrude to.
+        // The parent is emitted packed (so the compiler doesn't re-add the padding) with an explicit
+        // alignas to restore its real alignment, and children start their member cursor at the cut size.
+        struct StructLayoutInfo
+        {
+            // Cut size, i.e. where a derived struct is allowed to start. Equals the reflected size
+            // when nothing intrudes into this struct's trailing padding.
+            int32_t unaligned_size{};
+            // max(UStruct min alignment, highest member alignment), with a pointer floor for classes
+            int32_t alignment{1};
+            // Alignment exceeds what the members alone would give the compiler, so it must be stated.
+            bool use_explicit_alignment{};
+            // Some derived struct starts inside this struct's trailing padding.
+            bool has_reused_trailing_padding{};
+        };
+        std::unordered_map<UStruct*, StructLayoutInfo> s_struct_layouts{};
+
+        auto align_up(int32_t value, int32_t alignment) -> int32_t
+        {
+            if (alignment <= 1)
+            {
+                return value;
+            }
+            return (value + alignment - 1) & ~(alignment - 1);
+        }
+
+        auto get_struct_layout(UStruct* ustruct) -> StructLayoutInfo&
+        {
+            if (auto it = s_struct_layouts.find(ustruct); it != s_struct_layouts.end())
+            {
+                return it->second;
+            }
+            // Fallback for anything the pre-pass didn't visit: trust reflection as-is.
+            auto& info = s_struct_layouts[ustruct];
+            info.unaligned_size = ustruct->GetPropertiesSize();
+            info.alignment = std::max(static_cast<int32_t>(ustruct->GetMinAlignment()), 1);
+            return info;
+        }
+
+        // Offset at which a struct's own members begin, i.e. where the compiler will place them
+        // given how we emit the super.
+        auto get_struct_start_offset(UStruct* ustruct) -> int32_t
+        {
+            auto super_struct = ustruct->GetSuperStruct();
+            if (!super_struct)
+            {
+                return 0;
+            }
+            auto& super_layout = get_struct_layout(const_cast<UStruct*>(super_struct));
+            return super_layout.has_reused_trailing_padding ? super_layout.unaligned_size
+                                                            : align_up(super_layout.unaligned_size, super_layout.alignment);
+        }
+
+        auto compute_struct_layouts() -> void
+        {
+            std::vector<UStruct*> all_structs{};
+
+            // Pass 1: per-struct alignment, seeded with the reflected size.
+            UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
+                if (!object->IsA<UStruct>() || object->IsA<UFunction>())
+                {
+                    return LoopAction::Continue;
+                }
+                auto ustruct = static_cast<UStruct*>(object);
+                all_structs.push_back(ustruct);
+
+                auto& info = s_struct_layouts[ustruct];
+                info.unaligned_size = ustruct->GetPropertiesSize();
+
+                int32_t highest_member_alignment = 1;
+                for (FProperty* property : TFieldRange<FProperty>(ustruct, EFieldIterationFlags::IncludeDeprecated))
+                {
+                    highest_member_alignment = std::max(highest_member_alignment, static_cast<int32_t>(property->GetMinAlignment()));
+                }
+
+                auto min_alignment = std::max(static_cast<int32_t>(ustruct->GetMinAlignment()), 1);
+                constexpr int32_t default_class_alignment = static_cast<int32_t>(sizeof(void*));
+                if (object->IsA<UClass>() && ustruct->GetSuperStruct() && highest_member_alignment < default_class_alignment)
+                {
+                    // Every UClass ultimately carries a vtable pointer, so its real alignment is at
+                    // least pointer-sized even when reflection reports less. The compiler infers that
+                    // on its own, so no explicit alignas is needed.
+                    info.use_explicit_alignment = false;
+                    info.alignment = default_class_alignment;
+                }
+                else
+                {
+                    info.use_explicit_alignment = min_alignment > highest_member_alignment;
+                    info.alignment = std::max(min_alignment, highest_member_alignment);
+                }
+                return LoopAction::Continue;
+            });
+
+            // Pass 2: drop explicit alignment that an ancestor already guarantees.
+            for (auto* ustruct : all_structs)
+            {
+                std::vector<UStruct*> chain{};
+                for (UStruct* current = ustruct; current; current = const_cast<UStruct*>(current->GetSuperStruct()))
+                {
+                    chain.push_back(current);
+                }
+                int32_t highest_so_far = 1;
+                for (auto it = chain.rbegin(); it != chain.rend(); ++it)
+                {
+                    auto& info = get_struct_layout(*it);
+                    if (info.alignment > highest_so_far)
+                    {
+                        highest_so_far = info.alignment;
+                    }
+                    else
+                    {
+                        info.use_explicit_alignment = false;
+                        info.alignment = highest_so_far;
+                    }
+                }
+            }
+
+            // Pass 3: cut each super's size down to the lowest offset a derived struct intrudes to.
+            for (auto* ustruct : all_structs)
+            {
+                auto super_struct = ustruct->GetSuperStruct();
+                if (!super_struct)
+                {
+                    continue;
+                }
+
+                int32_t lowest_offset = std::numeric_limits<int32_t>::max();
+                for (FProperty* property : TFieldRange<FProperty>(ustruct, EFieldIterationFlags::IncludeDeprecated))
+                {
+                    lowest_offset = std::min(lowest_offset, property->GetOffset_Internal());
+                }
+                if (lowest_offset == std::numeric_limits<int32_t>::max())
+                {
+                    continue;
+                }
+
+                // Propagate through empty intermediate supers: an empty super contributes no members
+                // of its own, so the intrusion really lands in the first ancestor that has members.
+                for (UStruct* current = const_cast<UStruct*>(super_struct); current; current = const_cast<UStruct*>(current->GetSuperStruct()))
+                {
+                    auto& info = get_struct_layout(current);
+                    if (align_up(info.unaligned_size, info.alignment) > lowest_offset)
+                    {
+                        if (info.unaligned_size > lowest_offset)
+                        {
+                            info.unaligned_size = lowest_offset;
+                        }
+                        info.has_reused_trailing_padding = true;
+                    }
+                    if (current->GetFirstProperty())
+                    {
+                        break;
+                    }
+                }
+            }
+
+            Output::send(STR("Computed layouts for {} structs\n"), s_struct_layouts.size());
+        }
+
         struct StructContext
         {
             StructContext* super_context{};
@@ -1488,6 +1649,9 @@ namespace RC::UEGenerator
             size_t unique_padding_number{};
             int32_t last_offset{-1};
             int32_t last_size{-1};
+            // Absolute offset just past everything emitted so far for this struct, including its
+            // super. Drives all byte-level padding decisions.
+            int32_t cursor{0};
 
             auto get_last_property() -> FProperty*
             {
@@ -2137,52 +2301,50 @@ namespace RC::UEGenerator
             return last_property;
         }
 
+        // Size this property will actually occupy in the generated type. For struct-typed members this
+        // is the size *we* emit for that struct, which differs from reflection's when the struct's
+        // trailing padding was cut. Advancing the cursor by anything else would leave the tail padding
+        // (and therefore sizeof) wrong.
+        auto get_property_emitted_size(FProperty* property) -> int32_t
+        {
+            if (auto as_struct_property = CastField<FStructProperty>(property); as_struct_property)
+            {
+                UScriptStruct* inner_script_struct = as_struct_property->GetStruct();
+                if (inner_script_struct)
+                {
+                    if (auto it = s_struct_layouts.find(static_cast<UStruct*>(inner_script_struct)); it != s_struct_layouts.end())
+                    {
+                        auto element_size = align_up(it->second.unaligned_size, it->second.alignment);
+                        if (element_size > 0)
+                        {
+                            return element_size * std::max(property->GetArrayDim(), 1);
+                        }
+                    }
+                }
+            }
+            return property->GetSize();
+        }
+
+        // Fill the gap between wherever we've emitted up to and where this property actually starts.
+        // The gap is unreflected native data (or padding the compiler inserted in the original type).
         auto generate_member_variable_padding(StructContext& struct_context, FProperty* current_property) -> void
         {
-            auto last_property_in_this_struct = struct_context.get_last_property();
-            auto [last_property, found_property_in_sub_struct] = [&] {
-                auto last_property_context = last_property_in_this_struct;
-                if (auto as_struct_property = CastField<FStructProperty>(last_property_context); as_struct_property)
-                {
-                    auto last_property_in_struct = get_last_property_in_chain(as_struct_property->GetStruct());
-                    return std::pair{last_property_in_struct ? last_property_in_struct : last_property_context, true};
-                }
-                else
-                {
-                    return std::pair{last_property_context, false};
-                }
-            }();
-            int32_t current_member_offset_if_all_reflected{};
-            int32_t num_bytes_to_pad_by{};
-            if (!last_property)
+            auto current_property_offset = current_property->GetOffset_Internal();
+            // Bitfield members share a byte with the preceding member, and overlapping/duplicate
+            // offsets must never produce negative padding.
+            if (current_property_offset <= struct_context.cursor)
             {
-                num_bytes_to_pad_by =
-                        struct_context.current_struct->GetFirstProperty() && struct_context.current_struct->GetFirstProperty()->GetOffset_Internal() > 0
-                                ? struct_context.current_struct->GetFirstProperty()->GetOffset_Internal()
-                                : 0;
+                return;
             }
-            else
-            {
-                auto current_property_offset = current_property->GetOffset_Internal();
-                auto last_member_offset = found_property_in_sub_struct ? last_property_in_this_struct->GetOffset_Internal() +
-                                                                                 last_property->GetOffset_Internal() + last_property->GetSize()
-                                                                       : last_property->GetOffset_Internal();
-                auto last_member_size = last_property->IsA<FStructProperty>() && !std::bit_cast<FStructProperty*>(last_property)->GetStruct()->GetFirstProperty()
-                                                ? 1
-                                                : last_property_in_this_struct->GetSize();
-                current_member_offset_if_all_reflected = found_property_in_sub_struct ? last_member_offset : last_member_offset + last_member_size;
-                num_bytes_to_pad_by = current_property_offset - current_member_offset_if_all_reflected;
-            }
-            num_bytes_to_pad_by -= num_bytes_to_pad_by % current_property->GetMinAlignment();
-            if (num_bytes_to_pad_by > 0)
-            {
-                write_line(std::format(STR("uint8 padding_{}[0x{:X}]{{}}; // 0x{:X}"),
-                                       ++struct_context.unique_padding_number,
-                                       num_bytes_to_pad_by,
-                                       current_member_offset_if_all_reflected));
-                struct_context.last_size = num_bytes_to_pad_by;
-                struct_context.last_offset = current_member_offset_if_all_reflected;
-            }
+
+            auto num_bytes_to_pad_by = current_property_offset - struct_context.cursor;
+            write_line(std::format(STR("uint8 padding_{}[0x{:X}]{{}}; // 0x{:X}"),
+                                   ++struct_context.unique_padding_number,
+                                   num_bytes_to_pad_by,
+                                   struct_context.cursor));
+            struct_context.last_size = num_bytes_to_pad_by;
+            struct_context.last_offset = struct_context.cursor;
+            struct_context.cursor = current_property_offset;
         }
 
         auto generate_member_variable_declaration(StructContext& struct_context, FProperty* property) -> void
@@ -2203,7 +2365,8 @@ namespace RC::UEGenerator
             generate_dependency_requirements_for_property(property, struct_context.current_struct);
 
             // Add padding to finish the bitfield if the last property was the last bit in the field but there are more bits available.
-            auto last_property = struct_context.get_last_property();
+            // Only within this struct: a derived struct never continues packing into its super's bitfield byte.
+            auto last_property = struct_context.last_property;
             if (last_property && last_property->IsA<FBoolProperty>())
             {
                 auto last_property_in_bitfield = get_last_property_in_bitfield(struct_context.current_struct, static_cast<FBoolProperty*>(last_property));
@@ -2253,42 +2416,32 @@ namespace RC::UEGenerator
 
             struct_context.last_offset = current_member_offset;
             struct_context.last_size = property->GetSize();
+            // Covers static arrays via ArrayDim. Bitfields sharing a byte all report the same offset
+            // and storage size, so max() keeps the cursor stable across them.
+            struct_context.cursor = std::max(struct_context.cursor, current_member_offset + get_property_emitted_size(property));
             current_file().runtime_sdk_test_data().properties.emplace_back(property, sanitized_property_name);
         }
 
+        // Pad out to this struct's cut size, covering unreflected native members at the end.
+        // Deliberately pads to the cut size rather than the reflected one: if a derived struct
+        // intrudes into our trailing padding we must stop where it starts, and the remaining bytes
+        // come back from the alignas we emit on the type.
         auto generate_end_of_struct_padding(StructContext& struct_context) -> void
         {
-            auto struct_size = struct_context.current_struct->GetStructureSize();
-            if (!struct_context.current_struct->GetFirstProperty())
+            auto& layout = get_struct_layout(struct_context.current_struct);
+            auto num_bytes_to_pad_by = layout.unaligned_size - struct_context.cursor;
+            if (num_bytes_to_pad_by <= 0)
             {
-                // There are no properties, but there might be unreflected data.
-                auto num_bytes_to_pad_by = struct_size - (struct_context.super_context ? struct_context.super_context->current_struct->GetStructureSize() : 0);
-                if (num_bytes_to_pad_by <= 0)
-                {
-                    return;
-                }
-                current_file().end_of_struct_padding() = num_bytes_to_pad_by;
-                current_file().end_of_struct_padding_offset() = struct_context.get_last_offset() + struct_context.get_last_size();
-                struct_context.last_offset = current_file().end_of_struct_padding_offset();
-                struct_context.last_size = num_bytes_to_pad_by;
+                return;
             }
-            else if (auto predicted_struct_size = struct_context.last_offset + struct_context.last_size; predicted_struct_size != struct_size)
-            {
-                // There are unreflected member variables at the end of this struct.
-                // Generated padding to ensure memory layout accuracy.
-                auto num_bytes_to_pad_by = struct_size - struct_context.get_last_offset() - struct_context.get_last_size();
-                if (num_bytes_to_pad_by <= 0)
-                {
-                    return;
-                }
-                auto padding_offset = struct_context.get_last_offset() + struct_context.get_last_size();
-                current_file().end_of_struct_padding() = num_bytes_to_pad_by;
-                current_file().end_of_struct_padding_offset() = padding_offset;
-                struct_context.last_offset = padding_offset;
-                struct_context.last_size = num_bytes_to_pad_by;
-            }
-            current_file().end_of_struct_padding_start_pos() = current_file().contents().size();
-            current_file().last_unique_padding_number() = struct_context.unique_padding_number;
+
+            write_line(std::format(STR("uint8 padding_{}[0x{:X}]{{}}; // 0x{:X}"),
+                                   ++struct_context.unique_padding_number,
+                                   num_bytes_to_pad_by,
+                                   struct_context.cursor));
+            struct_context.last_offset = struct_context.cursor;
+            struct_context.last_size = num_bytes_to_pad_by;
+            struct_context.cursor = layout.unaligned_size;
         }
 
         auto generate_core_uobject_class() -> void
@@ -2428,25 +2581,47 @@ namespace RC::UEGenerator
             }
 
             auto class_is_native = std::bit_cast<UClass*>(class_or_struct)->HasAnyClassFlags(CLASS_Native);
+            auto& struct_layout = get_struct_layout(as_struct);
+            // Members start where the compiler will actually place them given how we emit the super.
+            current_struct_context.cursor = get_struct_start_offset(as_struct);
+
             write_line(std::format(STR("// Super Size: 0x{:X}"), super_struct ? super_struct->GetStructureSize() : 0));
-            write_line(std::format(STR("// Size: 0x{:X}"), as_struct->GetStructureSize()));
+            write_line(std::format(STR("// Size: 0x{:X} (unaligned: 0x{:X}, alignment: 0x{:X})"),
+                                   as_struct->GetStructureSize(),
+                                   struct_layout.unaligned_size,
+                                   struct_layout.alignment));
 
             auto struct_or_class_name = get_native_class_or_struct_name(as_struct, is_script_struct);
             current_file().runtime_sdk_test_data().struct_name = struct_or_class_name;
+
+            // A struct whose trailing padding a derived struct reuses must be emitted packed, or the
+            // compiler re-inserts that padding and shifts every derived member. The alignas below
+            // puts the type's real alignment back afterwards.
+            if (struct_layout.has_reused_trailing_padding)
+            {
+                write_line(STR("#pragma pack(push, 0x1)"));
+            }
+            StringType alignment_string{};
+            if (struct_layout.use_explicit_alignment || struct_layout.has_reused_trailing_padding)
+            {
+                alignment_string = std::format(STR("alignas(0x{:X}) "), struct_layout.alignment);
+            }
 
             auto function_range = as_struct->ForEachFunction();
             auto has_functions = begin(function_range) != end(function_range);
             bool has_properties = as_struct->GetFirstProperty();
             if (is_script_struct)
             {
-                write_line(std::format(STR("struct RC_UE4SS_SDK_API {}{}"),
+                write_line(std::format(STR("struct RC_UE4SS_SDK_API {}{}{}"),
+                                       alignment_string,
                                        struct_or_class_name,
                                        super_struct ? std::format(STR(" : public {}"), get_super_class_or_script_struct_name(as_struct, is_script_struct))
                                                     : STR("")));
             }
             else
             {
-                write_line(std::format(STR("class RC_UE4SS_SDK_API {} : public {}"),
+                write_line(std::format(STR("class RC_UE4SS_SDK_API {}{} : public {}"),
+                                       alignment_string,
                                        struct_or_class_name,
                                        get_super_class_or_script_struct_name(as_struct, is_script_struct)));
             }
@@ -2480,7 +2655,7 @@ namespace RC::UEGenerator
                     write_line(STR("//*/"));
                 }
             }
-            // generate_end_of_struct_padding(current_struct_context);
+            generate_end_of_struct_padding(current_struct_context);
             write_line();
             write_line(STR("// Functions."));
             bool class_contains_only_static_functions = true;
@@ -2522,6 +2697,10 @@ namespace RC::UEGenerator
             }
             end_scope();
             write_line(STR("};"));
+            if (struct_layout.has_reused_trailing_padding)
+            {
+                write_line(STR("#pragma pack(pop)"));
+            }
             write_line();
             end_scope(); // Namespace
             write_line();
