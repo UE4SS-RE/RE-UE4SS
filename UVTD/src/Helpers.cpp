@@ -45,7 +45,8 @@ namespace RC::UVTD
     {
         static constexpr StringViewType chunked = STR("FChunkedFixedUObjectArray");
         static constexpr StringViewType non_chunked = STR("FFixedUObjectArray");
-        static constexpr StringViewType indirect_410_and_earlier = STR("TStaticIndirectArrayThreadSafeRead<UObjectBase,8388608,16384>");
+        static constexpr StringViewType indirect_408_to_410 = STR("TStaticIndirectArrayThreadSafeRead<UObjectBase,8388608,16384>");
+        static constexpr StringViewType tarray_407_and_earlier = STR("TArray<UObjectBase *,FDefaultAllocator>");
 
         if (class_name == chunked)
         {
@@ -55,9 +56,13 @@ namespace RC::UVTD
         {
             return pdb_info.is_at_least(4, 20) || !pdb_info.is_at_least(4, 11);
         }
-        if (class_name == indirect_410_and_earlier)
+        if (class_name == indirect_408_to_410)
         {
-            return pdb_info.is_at_least(4, 11);
+            return pdb_info.is_at_least(4, 11) || !pdb_info.is_at_least(4, 8);
+        }
+        if (class_name == tarray_407_and_earlier)
+        {
+            return pdb_info.is_at_least(4, 8);
         }
         return false;
     }
@@ -130,6 +135,12 @@ namespace RC::UVTD
         static constexpr StringViewType fixed_uobject_array_string = STR("FFixedUObjectArray");
         static constexpr StringViewType chunked_fixed_uobject_array_string = STR("FChunkedFixedUObjectArray");
         static constexpr StringViewType non_chunked_410_and_earlier = STR("TStaticIndirectArrayThreadSafeRead<UObjectBase,8388608,16384>");
+        static constexpr StringViewType tarray_407_and_earlier = STR("TArray<UObjectBase *,FDefaultAllocator>");
+        if (auto tarray_pos = out_variable_type.find(tarray_407_and_earlier); tarray_pos != out_variable_type.npos)
+        {
+            out_variable_type.replace(tarray_pos, tarray_407_and_earlier.length(), STR("TUObjectArray"));
+            return true;
+        }
         if (auto fixed_uobject_array_pos = out_variable_type.find(fixed_uobject_array_string); fixed_uobject_array_pos != out_variable_type.npos)
         {
             out_variable_type.replace(fixed_uobject_array_pos, fixed_uobject_array_string.length(), STR("TUObjectArray"));
