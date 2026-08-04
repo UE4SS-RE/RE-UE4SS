@@ -986,7 +986,7 @@ namespace RC
             {
                 m_debugging_gui.get_live_view().set_listeners_allowed(false);
             }
-            register_keydown_event(Input::Key::O, {Input::ModifierKey::CONTROL}, [&]() {
+            register_keydown_event(settings_manager.Debug.ToggleGUIKey, {Input::ModifierKey::CONTROL}, [&]() {
                 TRY([&] {
                     std::lock_guard guard(m_render_thread_mutex);
                     if (s_gui_initializing_for_game_thread)

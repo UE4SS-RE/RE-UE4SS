@@ -583,6 +583,12 @@ UseModuleOffsets = 0
 [Debug]
 RenderMode = ExternalThread
 
+; The key that will toggle the GUI on/off if GuiConsoleEnabled is set to 1.
+; The CTRL key is always required.
+; Valid values (case-insensitive): Anything from Mods/Keybinds/Scripts/main.lua
+; Default: O
+ToggleGuiKey = O
+
 [Hooks]
 HookLoadMap = 1
 HookAActorTick = 1

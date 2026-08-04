@@ -82,6 +82,7 @@ namespace RC
             float DebugGUIFontScaling{1.0};
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
             GUI::RenderMode RenderMode{GUI::RenderMode::ExternalThread};
+            Input::Key ToggleGUIKey{Input::Key::O};
         } Debug;
 
         struct SectionCrashDump
