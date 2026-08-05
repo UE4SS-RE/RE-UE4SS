@@ -24,33 +24,14 @@
 #include <SDKGenerator/Common.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UScriptStruct.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/UInterface.hpp>
-#include <Unreal/FProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FNameProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
-#include <Unreal/Property/FTextProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FSoftObjectProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
-#include <Unreal/Property/FLazyObjectProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FInterfaceProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
 
 namespace RC::UEGenerator
 {
@@ -724,9 +705,8 @@ namespace RC::UEGenerator
             // These should probably be changed to either use the ini file for the file name, or they should always use the exact same file name as in UE.
             write_prologue_line(std::format(STR("#include <{}UObjectGlobals.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
             write_prologue_line(std::format(STR("#include <{}NameTypes.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}UScriptStruct.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}UClass.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}FProperty.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
+            write_prologue_line(std::format(STR("#include <{}CoreUObject/UObject/Class.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
+            write_prologue_line(std::format(STR("#include <{}CoreUObject/UObject/UnrealType.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
             generate_includes_for_platform_generic_types();
             write_prologue_line();
             start_scope(); // Namespace
@@ -2108,7 +2088,7 @@ namespace RC::UEGenerator
             //                 iterator traits), so `| views::enumerate` no longer compiles. Index is tracked
             //                 manually to keep the original semantics (it counts every property, including skipped ones).
             size_t next_index{};
-            for (auto* param : ufunction->ForEachProperty())
+            for (auto* param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
                 const auto i = next_index++;
                 if (param->HasAnyPropertyFlags(CPF_ReturnParm) || !param->HasAnyPropertyFlags(CPF_Parm))
@@ -2177,7 +2157,7 @@ namespace RC::UEGenerator
             // TODO: ArrayProperty!
             //       Either use TArray<T> or convert to std::vector<T>.
             //       Right now, TArray<T> is implicitly used.
-            for (const auto& param : ufunction->ForEachProperty())
+            for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (!param->HasAnyPropertyFlags(CPF_Parm) || param->HasAnyPropertyFlags(CPF_ReturnParm | CPF_OutParm))
                 {
@@ -2194,7 +2174,7 @@ namespace RC::UEGenerator
                     }
                     else
                     {
-                        for (const auto& inner_param : the_struct->ForEachProperty())
+                        for (const auto& inner_param : TFieldRange<FProperty>(the_struct, EFieldIterationFlags::IncludeDeprecated))
                         {
                             write_line(std::format(STR("UE_COPY_STRUCT_INNER_PROPERTY_CUSTOM({}, {}.{}, 0x{:X}, 0x{:X})"),
                                                    get_property_type_name(inner_param, the_struct, false),
@@ -2245,7 +2225,7 @@ namespace RC::UEGenerator
 
         auto generate_copy_out_property_macro_calls(UFunction* ufunction) -> void
         {
-            for (const auto& param : ufunction->ForEachProperty())
+            for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (param->HasAnyPropertyFlags(CPF_ReturnParm) || !param->HasAnyPropertyFlags(CPF_OutParm))
                 {
@@ -2347,7 +2327,7 @@ namespace RC::UEGenerator
         {
             FBoolProperty* last_property_in_field{};
             uint8_t num_bits_in_field{};
-            for (const auto& owner_property : owner->ForEachProperty())
+            for (const auto& owner_property : TFieldRange<FProperty>(owner, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (owner_property->GetOffset_Internal() == property->GetOffset_Internal() && !std::bit_cast<FBoolProperty*>(owner_property)->IsNativeBool())
                 {
@@ -2443,15 +2423,15 @@ namespace RC::UEGenerator
         auto get_last_property_in_chain(UStruct* ustruct) -> FProperty*
         {
             FProperty* last_property{};
-            for (const auto& property : ustruct->ForEachProperty())
+            for (const auto& property : TFieldRange<FProperty>(ustruct, EFieldIterationFlags::IncludeDeprecated))
             {
                 last_property = property;
             }
             if (!last_property)
             {
-                for (const auto& super_struct : ustruct->ForEachSuperStruct())
+                for (const auto& super_struct : TSuperStructRange(ustruct))
                 {
-                    for (const auto& property : super_struct->ForEachProperty())
+                    for (const auto& property : TFieldRange<FProperty>(super_struct, EFieldIterationFlags::IncludeDeprecated))
                     {
                         last_property = property;
                     }
@@ -2709,7 +2689,7 @@ namespace RC::UEGenerator
                 // A struct is only a problem in a function signature if one of its own members is,
                 // so inherit the strongest ban found anywhere in the chain.
                 BanType inner_ban_type{};
-                for (const auto& inner_property : as_struct_property->GetStruct()->ForEachPropertyInChain())
+                for (const auto& inner_property : TFieldRange<FProperty>(as_struct_property->GetStruct(), EFieldIterationFlags::Default))
                 {
                     auto next_inner_ban_type = get_banned_type(inner_property);
                     if (next_inner_ban_type == BanType::Full)
@@ -2735,8 +2715,7 @@ namespace RC::UEGenerator
             write_prologue_line(STR("#include <bit>"));
             write_prologue_line();
             write_prologue_line(STR("#include <UE4SS_SDK/Macros.hpp>"));
-            write_prologue_line(std::format(STR("#include <{}UClass.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}UFunction.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
+            write_prologue_line(std::format(STR("#include <{}CoreUObject/UObject/Class.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
 
             start_scope(); // Namespace
 
@@ -2771,9 +2750,6 @@ namespace RC::UEGenerator
                 alignment_string = std::format(STR("alignas(0x{:X}) "), struct_layout.alignment);
             }
 
-            auto function_range = as_struct->ForEachFunction();
-            auto has_functions = begin(function_range) != end(function_range);
-            bool has_properties = as_struct->GetFirstProperty();
             if (is_script_struct)
             {
                 write_line(std::format(STR("struct RC_UE4SS_SDK_API {}{}{}"),
@@ -2799,7 +2775,7 @@ namespace RC::UEGenerator
             }
             write_line(STR("// Properties."));
             std::unordered_set<FName> getter_functions_generated{};
-            for (const auto& property : as_struct->ForEachProperty())
+            for (const auto& property : TFieldRange<FProperty>(as_struct, EFieldIterationFlags::IncludeDeprecated))
             {
                 generate_member_variable_declaration(current_struct_context, property);
                 current_struct_context.last_property = property;
@@ -2808,7 +2784,7 @@ namespace RC::UEGenerator
             write_line();
             write_line(STR("// Functions."));
             bool class_contains_only_static_functions = true;
-            for (const auto& ufunction : as_struct->ForEachFunction())
+            for (const auto& ufunction : TFieldRange<UFunction>(as_struct, EFieldIterationFlags::None))
             {
                 if (!ufunction->HasAnyFunctionFlags(FUNC_Static))
                 {
@@ -2816,12 +2792,12 @@ namespace RC::UEGenerator
                     break;
                 }
             }
-            for (const auto& ufunction : as_struct->ForEachFunction())
+            for (const auto& ufunction : TFieldRange<UFunction>(as_struct, EFieldIterationFlags::None))
             {
                 auto banned_type = get_banned_type(ufunction->GetReturnProperty());
                 if (!is_member_function_type_banned(banned_type))
                 {
-                    for (const auto& param : ufunction->ForEachProperty())
+                    for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
                     {
                         banned_type = get_banned_type(param);
                         if (is_member_function_type_banned(banned_type))
