@@ -109,6 +109,7 @@
     - [DumpStaticMeshes](./lua-api/global-functions/dumpstaticmeshes.md)
     - [DumpAllActors](./lua-api/global-functions/dumpallactors.md)
     - [DumpUSMAP](./lua-api/global-functions/dumpusmap.md)
+    - [DumpJMAP](./lua-api/global-functions/dumpjmap.md)
     - [LoadExport](./lua-api/global-functions/loadexport.md)
     - [Mod Management](./lua-api/global-functions/modmanagement.md)
   - [Examples](./lua-api/examples.md)

@@ -15,6 +15,7 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectGlobals.hpp>
+#include <Unreal/UnrealFlags.hpp>
 #include <Unreal/UnrealVersion.hpp>
 #include <Unreal/UKismetSystemLibrary.hpp>
 
@@ -221,10 +222,14 @@ namespace RC::OutTheShade
         }
     };
 
-    auto generate_usmap() -> void
+    auto generate_usmap(bool include_blueprint_types) -> void
     {
         Output::send(STR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper "
                          "Commit SHA 4da8c66\n"));
+        if (include_blueprint_types)
+        {
+            Output::send(STR("Including Blueprint-generated types in mappings\n"));
+        }
 
         StreamWriter Buffer;
         std::unordered_map<FName, int> NameMap;
@@ -298,7 +303,19 @@ namespace RC::OutTheShade
         };
 
         UObjectGlobals::ForEachUObject([&](UObject* Object, ...) {
-            if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass())
+            bool dump_as_struct = Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass();
+            bool dump_as_enum = !dump_as_struct && Object->GetClassPrivate() == UEnum::StaticClass();
+            if (include_blueprint_types && !dump_as_struct && !dump_as_enum &&
+                (static_cast<uint32_t>(Object->GetObjectFlags()) & (RF_ClassDefaultObject | RF_ArchetypeObject)) == 0)
+            {
+                // Blueprint-generated types use derived metaclasses (UBlueprintGeneratedClass,
+                // UUserDefinedStruct, UUserDefinedEnum, ...), so match those by class cast flags
+                auto cast_flags = Object->GetClassPrivate()->GetClassCastFlags();
+                dump_as_struct = (cast_flags & (CASTCLASS_UClass | CASTCLASS_UScriptStruct)) != 0;
+                dump_as_enum = !dump_as_struct && (cast_flags & CASTCLASS_UEnum) != 0;
+            }
+
+            if (dump_as_struct)
             {
                 auto Struct = static_cast<UStruct*>(Object);
 
@@ -314,7 +331,7 @@ namespace RC::OutTheShade
                     NameMap.insert_or_assign(Prop->GetFName(), 0);
                 }
             }
-            else if (Object->GetClassPrivate() == UEnum::StaticClass())
+            else if (dump_as_enum)
             {
                 auto Enum = static_cast<UEnum*>(Object);
                 Enums.push_back(Enum);
@@ -327,8 +344,7 @@ namespace RC::OutTheShade
                 }
             }
 
-            if (Object->GetClassPrivate() == UClass::StaticClass() || Object->GetClassPrivate() == UScriptStruct::StaticClass() ||
-                Object->GetClassPrivate() == UEnum::StaticClass())
+            if (dump_as_struct || dump_as_enum)
             {
                 StringType RawPathName = Object->GetPathName();
                 StringType::size_type PathNameStart =
@@ -472,12 +488,13 @@ namespace RC::OutTheShade
         Buffer.Write<uint32_t>(static_cast<uint32_t>(Structs.size()));
         for (auto Struct : Structs)
         {
-            if (Struct->GetClassPrivate() == UScriptStruct::StaticClass())
+            // Match by cast flags so Blueprint-generated types (derived metaclasses) are covered too
+            if (Struct->GetClassPrivate()->GetClassCastFlags() & CASTCLASS_UScriptStruct)
             {
                 Buffer.Write<uint8_t>(1);
                 Buffer.Write<int32_t>(((UScriptStruct*)Struct)->GetStructFlags());
             }
-            else if (Struct->GetClassPrivate() == UClass::StaticClass())
+            else if (Struct->GetClassPrivate()->GetClassCastFlags() & CASTCLASS_UClass)
             {
                 Buffer.Write<uint8_t>(2);
                 Buffer.Write<int32_t>(((UClass*)Struct)->GetClassFlags());
