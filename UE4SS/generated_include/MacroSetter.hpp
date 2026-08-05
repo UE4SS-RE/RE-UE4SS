@@ -65,10 +65,10 @@ if (auto val = parser.get_int64(STR("UStruct"), STR("Children"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("Children"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("PropertiesSize"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("PropertiesSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UStruct"), STR("MinAlignment"), -1); val != -1)
-    Unreal::UStruct::MemberOffsets.emplace(STR("MinAlignment"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("Script"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("Script"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UStruct"), STR("MinAlignment"), -1); val != -1)
+    Unreal::UStruct::MemberOffsets.emplace(STR("MinAlignment"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("PropertyLink"), -1); val != -1)
     Unreal::UStruct::MemberOffsets.emplace(STR("PropertyLink"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UStruct"), STR("RefLink"), -1); val != -1)
@@ -123,8 +123,6 @@ if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("Window"), -1); 
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("Window"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("ViewportOverlayWidget"), -1); val != -1)
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("ViewportOverlayWidget"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("GameLayerManagerPtr"), -1); val != -1)
-    Unreal::UGameViewportClient::MemberOffsets.emplace(STR("GameLayerManagerPtr"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("CurrentBufferVisualizationMode"), -1); val != -1)
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("CurrentBufferVisualizationMode"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("HighResScreenshotDialog"), -1); val != -1)
@@ -143,6 +141,8 @@ if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("MouseCaptureMod
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("MouseCaptureMode"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("bHideCursorDuringCapture"), -1); val != -1)
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("bHideCursorDuringCapture"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("GameLayerManagerPtr"), -1); val != -1)
+    Unreal::UGameViewportClient::MemberOffsets.emplace(STR("GameLayerManagerPtr"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("AudioDeviceHandle"), -1); val != -1)
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("AudioDeviceHandle"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("bHasAudioFocus"), -1); val != -1)
@@ -203,12 +203,14 @@ if (auto val = parser.get_int64(STR("FUObjectArray"), STR("OpenForDisregardForGC
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("OpenForDisregardForGC"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjObjects"), -1); val != -1)
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjObjects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableList"), -1); val != -1)
-    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableList"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailable"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailable"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UObjectCreateListeners"), -1); val != -1)
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("UObjectCreateListeners"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UObjectDeleteListeners"), -1); val != -1)
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("UObjectDeleteListeners"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableList"), -1); val != -1)
+    Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableList"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("MaxObjectsNotConsideredByGC"), -1); val != -1)
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("MaxObjectsNotConsideredByGC"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("MasterSerialNumber"), -1); val != -1)
@@ -221,18 +223,26 @@ if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableListEstim
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableListEstimateCount"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("ArrayNum"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
+// Also support using the renamed version in the INI file
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumElements"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("ArrayMax"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
+// Also support using the renamed version in the INI file
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Chunks"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Chunks"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumChunks"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumChunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Objects"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("Objects"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("PreAllocatedObjects"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("PreAllocatedObjects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumElements"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxChunks"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxChunks"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumChunks"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumChunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArNetVer"), -1); val != -1)
@@ -241,8 +251,6 @@ if (auto val = parser.get_int64(STR("FArchive"), STR("ArUE4Ver"), -1); val != -1
     Unreal::FArchive::MemberOffsets.emplace(STR("ArUE4Ver"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArLicenseeUE4Ver"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("ArLicenseeUE4Ver"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FArchive"), STR("ArEngineVer"), -1); val != -1)
-    Unreal::FArchive::MemberOffsets.emplace(STR("ArEngineVer"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("CustomVersionContainer"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("CustomVersionContainer"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIsLoading"), {}); !val_str.empty())
@@ -275,8 +283,6 @@ if (auto val_str = parser.get_string(STR("FArchive"), STR("ArNoDelta"), {}); !va
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArNoDelta"));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreOuterRef"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreOuterRef"));
-if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreClassGeneratedByRef"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreClassGeneratedByRef"));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreClassRef"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreClassRef"));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArAllowLazyLoading"), {}); !val_str.empty())
@@ -305,6 +311,10 @@ if (auto val = parser.get_int64(STR("FArchive"), STR("SerializedProperty"), -1);
     Unreal::FArchive::MemberOffsets.emplace(STR("SerializedProperty"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FArchive"), STR("bCustomVersionsAreReset"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("bCustomVersionsAreReset"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FArchive"), STR("ArEngineVer"), -1); val != -1)
+    Unreal::FArchive::MemberOffsets.emplace(STR("ArEngineVer"), static_cast<int32_t>(val));
+if (auto val_str = parser.get_string(STR("FArchive"), STR("ArIgnoreClassGeneratedByRef"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::FArchive::MemberOffsets, Unreal::FArchive::BitfieldInfos, STR("ArIgnoreClassGeneratedByRef"));
 if (auto val = parser.get_int64(STR("FArchive"), STR("ArCustomPropertyList"), -1); val != -1)
     Unreal::FArchive::MemberOffsets.emplace(STR("ArCustomPropertyList"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("FArchive"), STR("ArUseCustomPropertyList"), {}); !val_str.empty())
@@ -485,6 +495,8 @@ if (auto val = parser.get_int64(STR("AGameMode"), STR("CurrentID"), -1); val != 
     Unreal::AGameMode::MemberOffsets.emplace(STR("CurrentID"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AGameMode"), STR("DefaultPlayerName"), -1); val != -1)
     Unreal::AGameMode::MemberOffsets.emplace(STR("DefaultPlayerName"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AGameMode"), STR("PlayerStarts"), -1); val != -1)
+    Unreal::AGameMode::MemberOffsets.emplace(STR("PlayerStarts"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AGameMode"), STR("EngineMessageClass"), -1); val != -1)
     Unreal::AGameMode::MemberOffsets.emplace(STR("EngineMessageClass"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AGameMode"), STR("SpectatorClass"), -1); val != -1)
@@ -497,6 +509,8 @@ if (auto val = parser.get_int64(STR("AGameMode"), STR("GameModeClassAliases"), -
     Unreal::AGameMode::MemberOffsets.emplace(STR("GameModeClassAliases"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AGameMode"), STR("InactivePlayerStateLifeSpan"), -1); val != -1)
     Unreal::AGameMode::MemberOffsets.emplace(STR("InactivePlayerStateLifeSpan"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AGameMode"), STR("TimerHandle_DefaultTimer"), -1); val != -1)
+    Unreal::AGameMode::MemberOffsets.emplace(STR("TimerHandle_DefaultTimer"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AGameMode"), STR("bHandleDedicatedServerReplays"), -1); val != -1)
     Unreal::AGameMode::MemberOffsets.emplace(STR("bHandleDedicatedServerReplays"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AGameMode"), STR("MaxInactivePlayers"), -1); val != -1)
@@ -577,20 +591,20 @@ if (auto val_str = parser.get_string(STR("AActor"), STR("bAutoDestroyWhenFinishe
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bAutoDestroyWhenFinished"));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bCanBeDamaged"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bCanBeDamaged"));
-if (auto val_str = parser.get_string(STR("AActor"), STR("bActorIsBeingDestroyed"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bActorIsBeingDestroyed"));
+if (auto val_str = parser.get_string(STR("AActor"), STR("bPendingKillPending"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bPendingKillPending"));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bCollideWhenPlacing"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bCollideWhenPlacing"));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bFindCameraComponentWhenViewTarget"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bFindCameraComponentWhenViewTarget"));
-if (auto val_str = parser.get_string(STR("AActor"), STR("bRelevantForNetworkReplays"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bRelevantForNetworkReplays"));
-if (auto val = parser.get_int64(STR("AActor"), STR("SpawnCollisionHandlingMethod"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("SpawnCollisionHandlingMethod"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("CreationTime"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("CreationTime"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("Children"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("Children"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AActor"), STR("AnimUpdateRateShiftTag"), -1); val != -1)
+    Unreal::AActor::MemberOffsets.emplace(STR("AnimUpdateRateShiftTag"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("AActor"), STR("AnimUpdateRateFrameCount"), -1); val != -1)
+    Unreal::AActor::MemberOffsets.emplace(STR("AnimUpdateRateFrameCount"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("RootComponent"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("RootComponent"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("ControllingMatineeActors"), -1); val != -1)
@@ -607,14 +621,10 @@ if (auto val = parser.get_int64(STR("AActor"), STR("ParentComponentActor"), -1);
     Unreal::AActor::MemberOffsets.emplace(STR("ParentComponentActor"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bActorInitialized"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bActorInitialized"));
-if (auto val_str = parser.get_string(STR("AActor"), STR("bActorHasBegunPlay"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bActorHasBegunPlay"));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bActorSeamlessTraveled"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bActorSeamlessTraveled"));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bIgnoresOriginShifting"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bIgnoresOriginShifting"));
-if (auto val_str = parser.get_string(STR("AActor"), STR("bEnableAutoLODGeneration"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bEnableAutoLODGeneration"));
 if (auto val = parser.get_int64(STR("AActor"), STR("Tags"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("Tags"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("HiddenEditorViews"), -1); val != -1)
@@ -651,6 +661,16 @@ if (auto val = parser.get_int64(STR("AActor"), STR("OnEndPlay"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("OnEndPlay"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("AActor"), STR("DetachFence"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("DetachFence"), static_cast<int32_t>(val));
+if (auto val_str = parser.get_string(STR("AActor"), STR("bRelevantForNetworkReplays"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bRelevantForNetworkReplays"));
+if (auto val_str = parser.get_string(STR("AActor"), STR("bActorHasBegunPlay"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bActorHasBegunPlay"));
+if (auto val_str = parser.get_string(STR("AActor"), STR("bEnableAutoLODGeneration"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bEnableAutoLODGeneration"));
+if (auto val_str = parser.get_string(STR("AActor"), STR("bActorIsBeingDestroyed"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bActorIsBeingDestroyed"));
+if (auto val = parser.get_int64(STR("AActor"), STR("SpawnCollisionHandlingMethod"), -1); val != -1)
+    Unreal::AActor::MemberOffsets.emplace(STR("SpawnCollisionHandlingMethod"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bAllowTickBeforeBeginPlay"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bAllowTickBeforeBeginPlay"));
 if (auto val_str = parser.get_string(STR("AActor"), STR("bTickFunctionsRegistered"), {}); !val_str.empty())
@@ -739,6 +759,8 @@ if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("AspectRatioAxisConstra
     Unreal::ULocalPlayer::MemberOffsets.emplace(STR("AspectRatioAxisConstraint"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("ULocalPlayer"), STR("bSentSplitJoin"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::ULocalPlayer::MemberOffsets, Unreal::ULocalPlayer::BitfieldInfos, STR("bSentSplitJoin"));
+if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("OnlineSession"), -1); val != -1)
+    Unreal::ULocalPlayer::MemberOffsets.emplace(STR("OnlineSession"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("ControllerId"), -1); val != -1)
     Unreal::ULocalPlayer::MemberOffsets.emplace(STR("ControllerId"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("bEmulateSplitscreen"), -1); val != -1)
@@ -844,12 +866,12 @@ if (auto val = parser.get_int64(STR("FWorldContext"), STR("RunAsDedicated"), -1)
     Unreal::FWorldContext::MemberOffsets.emplace(STR("RunAsDedicated"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FWorldContext"), STR("bWaitingOnOnlineSubsystem"), -1); val != -1)
     Unreal::FWorldContext::MemberOffsets.emplace(STR("bWaitingOnOnlineSubsystem"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FWorldContext"), STR("AudioDeviceHandle"), -1); val != -1)
-    Unreal::FWorldContext::MemberOffsets.emplace(STR("AudioDeviceHandle"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FWorldContext"), STR("ExternalReferences"), -1); val != -1)
     Unreal::FWorldContext::MemberOffsets.emplace(STR("ExternalReferences"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FWorldContext"), STR("ThisCurrentWorld"), -1); val != -1)
     Unreal::FWorldContext::MemberOffsets.emplace(STR("ThisCurrentWorld"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("FWorldContext"), STR("AudioDeviceHandle"), -1); val != -1)
+    Unreal::FWorldContext::MemberOffsets.emplace(STR("AudioDeviceHandle"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FWorldContext"), STR("CustomDescription"), -1); val != -1)
     Unreal::FWorldContext::MemberOffsets.emplace(STR("CustomDescription"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FWorldContext"), STR("AudioDeviceID"), -1); val != -1)
@@ -866,12 +888,12 @@ if (auto val = parser.get_int64(STR("FWorldContext"), STR("UEP_TotalSize"), -1);
     Unreal::FWorldContext::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UScriptStruct"), STR("StructFlags"), -1); val != -1)
     Unreal::UScriptStruct::MemberOffsets.emplace(STR("StructFlags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UScriptStruct"), STR("CppStructOps"), -1); val != -1)
+    Unreal::UScriptStruct::MemberOffsets.emplace(STR("CppStructOps"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UScriptStruct"), STR("bCppStructOpsFromBaseClass"), -1); val != -1)
     Unreal::UScriptStruct::MemberOffsets.emplace(STR("bCppStructOpsFromBaseClass"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UScriptStruct"), STR("bPrepareCppStructOpsCompleted"), -1); val != -1)
     Unreal::UScriptStruct::MemberOffsets.emplace(STR("bPrepareCppStructOpsCompleted"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UScriptStruct"), STR("CppStructOps"), -1); val != -1)
-    Unreal::UScriptStruct::MemberOffsets.emplace(STR("CppStructOps"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UScriptStruct"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UScriptStruct::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("ExtraReferencedObjects"), -1); val != -1)
@@ -890,6 +912,8 @@ if (auto val = parser.get_int64(STR("UWorld"), STR("AuthorityGameMode"), -1); va
     Unreal::UWorld::MemberOffsets.emplace(STR("AuthorityGameMode"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("NetworkActors"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("NetworkActors"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UWorld"), STR("EditorViews"), -1); val != -1)
+    Unreal::UWorld::MemberOffsets.emplace(STR("EditorViews"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("UWorld"), STR("bRequiresHitProxies"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bRequiresHitProxies"));
 if (auto val_str = parser.get_string(STR("UWorld"), STR("bStreamingDataDirty"), {}); !val_str.empty())
@@ -934,8 +958,6 @@ if (auto val_str = parser.get_string(STR("UWorld"), STR("bShouldSimulatePhysics"
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bShouldSimulatePhysics"));
 if (auto val = parser.get_int64(STR("UWorld"), STR("DebugDrawTraceTag"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("DebugDrawTraceTag"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("AudioDeviceHandle"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("AudioDeviceHandle"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("LastTimeUnbuiltLightingWasEncountered"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("LastTimeUnbuiltLightingWasEncountered"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("TimeSeconds"), -1); val != -1)
@@ -992,6 +1014,8 @@ if (auto val_str = parser.get_string(STR("UWorld"), STR("bDebugFrameStepExecutio
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bDebugFrameStepExecution"));
 if (auto val_str = parser.get_string(STR("UWorld"), STR("bAreConstraintsDirty"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bAreConstraintsDirty"));
+if (auto val = parser.get_int64(STR("UWorld"), STR("AudioDeviceHandle"), -1); val != -1)
+    Unreal::UWorld::MemberOffsets.emplace(STR("AudioDeviceHandle"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("AsyncPreRegisterLevelStreamingTasks"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("AsyncPreRegisterLevelStreamingTasks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("bCreateRenderStateForHiddenComponents"), -1); val != -1)
@@ -1072,38 +1096,36 @@ if (auto val = parser.get_int64(STR("UFunction"), STR("RPCResponseId"), -1); val
     Unreal::UFunction::MemberOffsets.emplace(STR("RPCResponseId"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("FirstPropertyToInit"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("FirstPropertyToInit"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UFunction"), STR("Func"), -1); val != -1)
+    Unreal::UFunction::MemberOffsets.emplace(STR("Func"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("EventGraphFunction"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("EventGraphFunction"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("EventGraphCallOffset"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("EventGraphCallOffset"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UFunction"), STR("Func"), -1); val != -1)
-    Unreal::UFunction::MemberOffsets.emplace(STR("Func"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassConstructor"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassConstructor"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UClass"), STR("ClassVTableHelperCtorCaller"), -1); val != -1)
-    Unreal::UClass::MemberOffsets.emplace(STR("ClassVTableHelperCtorCaller"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassAddReferencedObjects"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassAddReferencedObjects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UClass"), STR("ClassUnique"), -1); val != -1)
-    Unreal::UClass::MemberOffsets.emplace(STR("ClassUnique"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassFlags"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassFlags"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassCastFlags"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassCastFlags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UClass"), STR("ClassUnique"), -1); val != -1)
+    Unreal::UClass::MemberOffsets.emplace(STR("ClassUnique"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassWithin"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassWithin"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassGeneratedBy"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassGeneratedBy"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassConfigName"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassConfigName"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UClass"), STR("bCooked"), -1); val != -1)
-    Unreal::UClass::MemberOffsets.emplace(STR("bCooked"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("NetFields"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("NetFields"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassDefaultObject"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ClassDefaultObject"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UClass"), STR("bCooked"), -1); val != -1)
+    Unreal::UClass::MemberOffsets.emplace(STR("bCooked"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("FuncMap"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("FuncMap"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("Interfaces"), -1); val != -1)
@@ -1112,6 +1134,8 @@ if (auto val = parser.get_int64(STR("UClass"), STR("ReferenceTokenStream"), -1);
     Unreal::UClass::MemberOffsets.emplace(STR("ReferenceTokenStream"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("NativeFunctionLookupTable"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("NativeFunctionLookupTable"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UClass"), STR("ClassVTableHelperCtorCaller"), -1); val != -1)
+    Unreal::UClass::MemberOffsets.emplace(STR("ClassVTableHelperCtorCaller"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ParentFuncMap"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("ParentFuncMap"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("InterfaceFuncMap"), -1); val != -1)
@@ -1225,6 +1249,8 @@ if (auto val = parser.get_int64(STR("FSetProperty"), STR("UEP_TotalSize"), -1); 
     Unreal::FSetProperty::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UDataTable"), STR("RowStruct"), -1); val != -1)
     Unreal::UDataTable::MemberOffsets.emplace(STR("RowStruct"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UDataTable"), STR("ImportPath"), -1); val != -1)
+    Unreal::UDataTable::MemberOffsets.emplace(STR("ImportPath"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UDataTable"), STR("RowMap"), -1); val != -1)
     Unreal::UDataTable::MemberOffsets.emplace(STR("RowMap"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("UDataTable"), STR("bStripFromClientBuilds"), {}); !val_str.empty())
