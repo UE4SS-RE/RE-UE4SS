@@ -259,6 +259,29 @@ namespace RC::UEGenerator
         return fmt::format(STR("F{}{}"), context_name, property_name);
     }
 
+    // A delegate's type name is built from the name of the class that owns it, and a field path's from
+    // the property class it points at. Both are otherwise dereferenced unchecked, which would take the
+    // process down. Reporting the failure the same way the rest of this file does lets callers fall
+    // back to a placeholder or skip the property instead.
+    static auto get_delegate_context_name(UObject* class_context, FProperty* property) -> StringType
+    {
+        if (!class_context)
+        {
+            throw std::runtime_error(RC::fmt("Delegate property %S has no class context to name it from", property->GetName().c_str()));
+        }
+        return class_context->GetName();
+    }
+
+    static auto get_field_path_property_class_name(FFieldPathProperty* field_path_property) -> StringType
+    {
+        auto* property_class = field_path_property->GetPropertyClass();
+        if (!property_class)
+        {
+            throw std::runtime_error(RC::fmt("FieldPathProperty %S has no property class", field_path_property->GetName().c_str()));
+        }
+        return property_class->GetName();
+    }
+
     auto generate_property_cxx_name(FProperty* property,
                                     bool is_top_level_declaration,
                                     UObject* class_context,
@@ -554,7 +577,7 @@ namespace RC::UEGenerator
             {
                 delegate_type_name = STR("struct ");
             }
-            delegate_type_name.append(generate_delegate_name(delegate_property, class_context->GetName()));
+            delegate_type_name.append(generate_delegate_name(delegate_property, get_delegate_context_name(class_context, property)));
             return delegate_type_name;
         }
 
@@ -569,7 +592,7 @@ namespace RC::UEGenerator
             {
                 delegate_type_name = STR("struct ");
             }
-            delegate_type_name.append(generate_delegate_name(delegate_property, class_context->GetName()));
+            delegate_type_name.append(generate_delegate_name(delegate_property, get_delegate_context_name(class_context, property)));
             return delegate_type_name;
         }
 
@@ -582,7 +605,7 @@ namespace RC::UEGenerator
             {
                 delegate_type_name = STR("struct ");
             }
-            delegate_type_name.append(generate_delegate_name(delegate_property, class_context->GetName()));
+            delegate_type_name.append(generate_delegate_name(delegate_property, get_delegate_context_name(class_context, property)));
             return delegate_type_name;
         }
 
@@ -590,7 +613,7 @@ namespace RC::UEGenerator
         if (property->IsA<FFieldPathProperty>())
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
-            const StringType property_class_name = field_path_property->GetPropertyClass()->GetName();
+            const StringType property_class_name = get_field_path_property_class_name(field_path_property);
             return fmt::format(STR("TFieldPath<F{}>"), property_class_name);
         }
 
@@ -901,7 +924,7 @@ namespace RC::UEGenerator
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
 
-            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, get_delegate_context_name(class_context, property));
             return delegate_type_name;
         }
 
@@ -911,7 +934,7 @@ namespace RC::UEGenerator
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
 
-            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, get_delegate_context_name(class_context, property));
             return delegate_type_name;
         }
 
@@ -919,7 +942,7 @@ namespace RC::UEGenerator
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
 
-            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            const StringType delegate_type_name = generate_delegate_name(delegate_property, get_delegate_context_name(class_context, property));
             return delegate_type_name;
         }
 
@@ -927,7 +950,7 @@ namespace RC::UEGenerator
         if (field_class_name == STR("FieldPathProperty"))
         {
             FFieldPathProperty* field_path_property = static_cast<FFieldPathProperty*>(property);
-            const StringType property_class_name = field_path_property->GetPropertyClass()->GetName();
+            const StringType property_class_name = get_field_path_property_class_name(field_path_property);
             return fmt::format(STR("TFieldPath<F{}>"), property_class_name);
         }
 
