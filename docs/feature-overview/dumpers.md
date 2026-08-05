@@ -109,7 +109,21 @@ Generate `.usmap` mapping files for unversioned properties.
 
 The keybind to dump mappings is by default `Ctrl` + `Numpad 6`, and can be changed in `Mods/Keybinds/Scripts/main.lua`.
 
+By default the dump includes Blueprint-generated classes, structs and enums in addition to native types. This can be disabled with the `Include Blueprint-generated types` checkbox in the GUI `Dumpers` tab, or by calling `DumpUSMAP(false)` from Lua.
+
 Thanks to [OutTheShade](https://github.com/OutTheShade/UnrealMappingsDumper) for the original implementation.
+
+## .jmap Dumper
+
+Generate `.jmap` reflection dumps (JSON format by [trumank](https://github.com/trumank/jmap)).
+
+The output is a superset of `.usmap`: it contains full reflection data for classes, functions, structs and enums (including property offsets, sizes and flags), class default object property values, and approximate vtable layouts. The jmap CLI can convert it to `.usmap` or C++ headers, and the `ue_binja` plugin can apply it to Binary Ninja databases.
+
+The keybind to dump is by default `Ctrl` + `Numpad 5`, and can be changed in `Mods/Keybinds/Scripts/main.lua`. It can also be triggered from the GUI `Dumpers` tab or via the `DumpJMAP()` Lua function.
+
+By default the dump includes Blueprint-generated classes, structs and enums (and their CDOs) in addition to native objects. This can be disabled with the `Include Blueprint-generated types` checkbox in the GUI `Dumpers` tab, or by calling `DumpJMAP(false)` from Lua.
+
+The file is written to the UE4SS working directory as `<GameName>-<EngineVersion>-<UE4SSCommitSHA>.jmap`.
 
 ## .umap Recreation Dumper
 

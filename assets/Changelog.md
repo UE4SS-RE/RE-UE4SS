@@ -15,6 +15,10 @@ Added CMake build system alongside Xmake - ([UE4SS #1067](https://github.com/UE4
 
 Added support for UE Version 5.7
 
+Added a `.jmap` dumper: dumps the full UObject reflection graph (classes, structs, enums, functions, property types, class default object property values and approximate vtable layouts) to the JSON-based `.jmap` format by trumank (https://github.com/trumank/jmap). Available via the GUI `Dumpers` tab, the `DumpJMAP()` Lua function and `CTRL + Numpad 5`.
+
+Added the option to include Blueprint-generated classes, structs and enums in `.usmap` and `.jmap` dumps (enabled by default). Toggle via the checkbox in the GUI `Dumpers` tab or the optional boolean parameter of `DumpUSMAP()` / `DumpJMAP()`.
+
 Added support for UE Version 5.6 - ([UE4SS #977](https://github.com/UE4SS-RE/RE-UE4SS/pull/977)) 
 
 Added support for UE Version 5.5 - ([UE4SS #708](https://github.com/UE4SS-RE/RE-UE4SS/pull/708)) 

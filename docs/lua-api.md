@@ -329,6 +329,7 @@ This is an overall list of API definitions available in UE4SS. For more readable
     DumpStaticMeshes()
     DumpAllActors()
     DumpUSMAP()
+    DumpJMAP()
 
     RestartCurrentMod()
         - Restarts the currently running mod.
