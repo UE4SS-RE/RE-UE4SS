@@ -1,5 +1,6 @@
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <SDKGenerator/Common.hpp>
+#include <Constructs/Views/EnumerateView.hpp>
 #pragma warning(disable : 4005)
 #include <Unreal/AActor.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
@@ -11,6 +12,8 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UPackage.hpp>
+#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <UnrealDef.hpp>
 #pragma warning(default : 4005)
 
@@ -106,6 +109,150 @@ namespace RC::UEGenerator
         return resulting_name;
     }
 
+    auto sanitize_enumeration_name(const std::wstring& enumeration_name) -> StringType
+    {
+        std::wstring result_enum_name = enumeration_name;
+
+        // Remove enumeration name from the string
+        size_t enum_name_string_split = enumeration_name.find(STR("::"));
+        if (enum_name_string_split != std::wstring::npos)
+        {
+            result_enum_name.erase(0, enum_name_string_split + 2);
+        }
+        return result_enum_name;
+    }
+
+    auto get_highest_enum(UEnum* uenum, bool include_max) -> int64_t
+    {
+        if (!uenum || uenum->NumEnums() <= 0)
+        {
+            return 0;
+        }
+
+        int64_t highest_enum_value = 0;
+        const auto enum_prefix = uenum->GenerateEnumPrefix();
+        const auto expected_max_name = std::format(STR("{}_MAX"), enum_prefix);
+        auto expected_max_name_lower = expected_max_name;
+        std::transform(expected_max_name_lower.begin(), expected_max_name_lower.end(), expected_max_name_lower.begin(), ::towlower);
+
+        for (auto [Name, Value] : uenum->ForEachName())
+        {
+            auto enum_name = sanitize_enumeration_name(Name.ToString());
+            auto enum_name_lower = enum_name;
+            std::transform(enum_name_lower.begin(), enum_name_lower.end(), enum_name_lower.begin(), ::towlower);
+            if ((include_max || (enum_name_lower != expected_max_name_lower && enum_name_lower != sanitize_enumeration_name(expected_max_name_lower))) &&
+                Value > highest_enum_value)
+            {
+                highest_enum_value = Value;
+            }
+        }
+        return highest_enum_value;
+    }
+
+    auto generate_enum_value_definitions(Unreal::UEnum* uenum,
+                                         const std::function<void(const StringType&)>& appender_callback,
+                                         ShouldUseMacros should_use_macros,
+                                         UseFriendlyEnumNames use_friendly_enum_names,
+                                         std::unordered_set<FName>* unique_name_set) -> void
+    {
+        static size_t s_unique_id{};
+        static std::unordered_set<FName>* s_last_unique_name_set{};
+        if (unique_name_set != s_last_unique_name_set)
+        {
+            s_unique_id = 0;
+            s_last_unique_name_set = unique_name_set;
+        }
+
+        StringType enum_prefix = uenum->GenerateEnumPrefix();
+        auto highest_enum_value = get_highest_enum(uenum);
+        auto highest_enum_value_including_max = get_highest_enum(uenum, true);
+        bool last_value_was_negative{};
+        int64_t expected_next_enum_value = 0;
+        std::unordered_set<int64_t> enum_values{};
+        bool has_multiple_names_for_a_single_value{};
+        if (use_friendly_enum_names == UseFriendlyEnumNames::Yes && highest_enum_value_including_max <= std::numeric_limits<uint8_t>::max())
+        {
+            for (auto [Name, Value] : uenum->ForEachName())
+            {
+                auto [_, emplaced] = enum_values.emplace(Value);
+                if (!emplaced)
+                {
+                    has_multiple_names_for_a_single_value = true;
+                    break;
+                }
+            }
+        }
+        std::unordered_set<Unreal::FName> enum_names{};
+        for (auto [Name, Value] : uenum->ForEachName())
+        {
+            if (enum_names.contains(Name))
+            {
+                continue;
+            }
+            StringType result_enumeration_line{};
+            if (use_friendly_enum_names == UseFriendlyEnumNames::Yes && !has_multiple_names_for_a_single_value &&
+                highest_enum_value_including_max <= std::numeric_limits<uint8_t>::max())
+            {
+                result_enumeration_line =
+                        sanitize_enumeration_name(Unreal::UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, static_cast<uint8_t>(Value)));
+                if (result_enumeration_line.empty() || result_enumeration_line == STR("None"))
+                {
+                    result_enumeration_line = sanitize_enumeration_name(Name.ToString());
+                }
+            }
+            else
+            {
+                result_enumeration_line = sanitize_enumeration_name(Name.ToString());
+            }
+
+            if (unique_name_set && unique_name_set->contains(Name))
+            {
+                result_enumeration_line.append(std::format(STR("_{}"), ++s_unique_id));
+            }
+
+            auto pre_append_result_line = result_enumeration_line;
+            if (Value != expected_next_enum_value /*|| last_value_was_negative*/)
+            {
+                const auto MinusSign = Value < 0 ? STR("-") : STR("");
+                result_enumeration_line.append(std::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
+            }
+            expected_next_enum_value = Value + 1;
+            last_value_was_negative = Value < 0;
+
+            auto pre_append_result_line_lower = pre_append_result_line;
+            std::transform(pre_append_result_line_lower.begin(), pre_append_result_line_lower.end(), pre_append_result_line_lower.begin(), ::towlower);
+            if (pre_append_result_line_lower.ends_with(STR("_max")))
+            {
+                const StringType expected_full_constant_name = std::format(STR("{}_MAX"), enum_prefix);
+                auto expected_full_constant_name_lower = expected_full_constant_name;
+                std::transform(expected_full_constant_name_lower.begin(), expected_full_constant_name_lower.end(), expected_full_constant_name_lower.begin(), ::towlower);
+
+                int64_t expected_max_value = highest_enum_value + 1;
+
+                // Skip enum _MAX constant if it has a matching name and is 1 greater than the highest value used, which means it has been autogenerated
+                if ((pre_append_result_line_lower == expected_full_constant_name_lower ||
+                     pre_append_result_line_lower == sanitize_enumeration_name(expected_full_constant_name_lower)) &&
+                    Value == expected_max_value)
+                {
+                    continue;
+                }
+                // Otherwise, just make sure it's hidden and not visible to the end user
+                if (should_use_macros == ShouldUseMacros::Yes)
+                {
+                    result_enumeration_line.append(STR(" UMETA(Hidden)"));
+                }
+            }
+
+            result_enumeration_line.append(STR(","));
+            appender_callback(result_enumeration_line);
+            enum_names.emplace(Name);
+            if (unique_name_set)
+            {
+                unique_name_set->emplace(Name);
+            }
+        }
+    }
+
     auto generate_delegate_name(FProperty* property, const File::StringType& context_name) -> File::StringType
     {
         const StringType property_name = sanitize_property_name(property->GetName());
@@ -115,7 +262,9 @@ namespace RC::UEGenerator
     auto generate_property_cxx_name(FProperty* property,
                                     bool is_top_level_declaration,
                                     UObject* class_context,
-                                    EnableForwardDeclarations enable_forward_declarations) -> File::StringType
+                                    EnableForwardDeclarations enable_forward_declarations,
+                                    ForceForwardDeclarations force_forward_declarations,
+                                    StringType use_this_namespace) -> File::StringType
     {
         const StringType field_class_name = property->GetClass().GetName();
 
@@ -214,8 +363,9 @@ namespace RC::UEGenerator
             {
                 meta_class_name = STR("class ");
             }
-            meta_class_name.append(get_native_class_name(meta_class, false));
-            return fmt::format(STR("TSubclassOf<{}>"), meta_class_name);
+            meta_class_name.append(use_this_namespace);
+            meta_class_name.append(get_native_class_name(meta_class, meta_class != UInterface::StaticClass() && meta_class->IsChildOf<UInterface>()));
+            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
         }
 
         if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
@@ -238,8 +388,15 @@ namespace RC::UEGenerator
                 return STR("TSoftClassPtr<UObject>");
             }
 
-            const StringType meta_class_name = get_native_class_name(meta_class, false);
-            return fmt::format(STR("TSoftClassPtr<{}>"), meta_class_name);
+            StringType meta_class_name{};
+            if (force_forward_declarations == EnableForwardDeclarations::Yes)
+            {
+                meta_class_name = STR("class ");
+            }
+
+            meta_class_name.append(use_this_namespace);
+            meta_class_name.append(get_native_class_name(meta_class, false));
+            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
         // Object Properties
@@ -252,11 +409,23 @@ namespace RC::UEGenerator
 
             if (property_class == NULL)
             {
-                return STR("UObject*");
+                if (force_forward_declarations == EnableForwardDeclarations::Yes)
+                {
+                    return STR("class UObject*");
+                }
+                else
+                {
+                    return STR("UObject*");
+                }
             }
 
-            const StringType property_class_name = get_native_class_name(property_class, false);
-            return fmt::format(STR("{}*"), property_class_name);
+            StringType property_class_name{};
+            if (force_forward_declarations == EnableForwardDeclarations::Yes)
+            {
+                property_class_name = STR("class ");
+            }
+            property_class_name.append(get_native_class_name(property_class, false));
+            return std::format(STR("{}*"), property_class_name);
         }
 
         if (auto* object_property = CastField<FObjectPtrProperty>(property); object_property)
@@ -269,8 +438,14 @@ namespace RC::UEGenerator
             }
             else
             {
-                const StringType property_class_name = get_native_class_name(property_class, false);
-                return fmt::format(STR("TObjectPtr<{}>"), property_class_name);
+                StringType property_class_name{};
+                if (force_forward_declarations == ForceForwardDeclarations::Yes)
+                {
+                    property_class_name = STR("class ");
+                }
+                property_class_name.append(use_this_namespace);
+                property_class_name.append(get_native_class_name(property_class, false));
+                return std::format(STR("TObjectPtr<{}>"), property_class_name);
             }
         }
 
@@ -289,6 +464,7 @@ namespace RC::UEGenerator
             {
                 property_class_name = fmt::format(STR("class "));
             }
+            property_class_name.append(use_this_namespace);
             property_class_name.append(get_native_class_name(property_class, false));
             return fmt::format(STR("TWeakObjectPtr<{}>"), property_class_name);
         }
@@ -308,6 +484,7 @@ namespace RC::UEGenerator
             {
                 property_class_name = STR("class ");
             }
+            property_class_name.append(use_this_namespace);
             property_class_name.append(get_native_class_name(property_class, false));
             return fmt::format(STR("TLazyObjectPtr<{}>"), property_class_name);
         }
@@ -322,8 +499,14 @@ namespace RC::UEGenerator
                 return STR("TSoftObjectPtr<UObject>");
             }
 
-            const StringType property_class_name = get_native_class_name(property_class, false);
-            return fmt::format(STR("TSoftObjectPtr<{}>"), property_class_name);
+            StringType property_class_name{};
+            if (enable_forward_declarations == EnableForwardDeclarations::Yes)
+            {
+                property_class_name = STR("class ");
+            }
+            property_class_name.append(use_this_namespace);
+            property_class_name.append(get_native_class_name(property_class, false));
+            return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
         // Interface Property
@@ -366,7 +549,12 @@ namespace RC::UEGenerator
         {
             FDelegateProperty* delegate_property = static_cast<FDelegateProperty*>(property);
 
-            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            StringType delegate_type_name{};
+            if (force_forward_declarations == EnableForwardDeclarations::Yes)
+            {
+                delegate_type_name = STR("struct ");
+            }
+            delegate_type_name.append(generate_delegate_name(delegate_property, class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -376,7 +564,12 @@ namespace RC::UEGenerator
         {
             FMulticastInlineDelegateProperty* delegate_property = static_cast<FMulticastInlineDelegateProperty*>(property);
 
-            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            StringType delegate_type_name{};
+            if (force_forward_declarations == EnableForwardDeclarations::Yes)
+            {
+                delegate_type_name = STR("struct ");
+            }
+            delegate_type_name.append(generate_delegate_name(delegate_property, class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -384,7 +577,12 @@ namespace RC::UEGenerator
         {
             FMulticastSparseDelegateProperty* delegate_property = static_cast<FMulticastSparseDelegateProperty*>(property);
 
-            const StringType delegate_type_name = generate_delegate_name(delegate_property, class_context->GetName());
+            StringType delegate_type_name{};
+            if (force_forward_declarations == EnableForwardDeclarations::Yes)
+            {
+                delegate_type_name = STR("struct ");
+            }
+            delegate_type_name.append(generate_delegate_name(delegate_property, class_context->GetName()));
             return delegate_type_name;
         }
 
@@ -404,15 +602,13 @@ namespace RC::UEGenerator
             FProperty* inner_property = array_property->GetInner();
 
             File::StringType inner_property_type{};
-            if (enable_forward_declarations == EnableForwardDeclarations::Yes && !is_integral_type(inner_property))
+            if (enable_forward_declarations == EnableForwardDeclarations::Yes && is_integral_type(inner_property))
             {
-                if (inner_property->IsA<FObjectProperty>())
-                {
-                    inner_property_type = STR("class ");
-                }
+                enable_forward_declarations = EnableForwardDeclarations::No;
             }
-            inner_property_type.append(generate_property_cxx_name(inner_property, is_top_level_declaration, class_context));
-            return fmt::format(STR("TArray<{}>"), inner_property_type);
+            inner_property_type.append(
+                    generate_property_cxx_name(inner_property, is_top_level_declaration, class_context, enable_forward_declarations, force_forward_declarations));
+            return std::format(STR("TArray<{}>"), inner_property_type);
         }
 
         if (property->IsA<FSetProperty>())
@@ -420,8 +616,9 @@ namespace RC::UEGenerator
             FSetProperty* set_property = static_cast<FSetProperty*>(property);
             FProperty* element_prop = set_property->GetElementProp();
 
-            const StringType element_property_type = generate_property_cxx_name(element_prop, is_top_level_declaration, class_context);
-            return fmt::format(STR("TSet<{}>"), element_property_type);
+            const std::wstring element_property_type =
+                    generate_property_cxx_name(element_prop, is_top_level_declaration, class_context, enable_forward_declarations, force_forward_declarations);
+            return std::format(STR("TSet<{}>"), element_property_type);
         }
 
         // TODO: This is missing support for freeze image map properties because XMapProperty is incomplete. (low priority)
@@ -433,20 +630,14 @@ namespace RC::UEGenerator
 
             File::StringType key_type{};
             File::StringType value_type{};
-            if (enable_forward_declarations == EnableForwardDeclarations::Yes && !is_integral_type(key_property) && !is_integral_type(value_property))
+            if (enable_forward_declarations == EnableForwardDeclarations::Yes && (is_integral_type(key_property) || is_integral_type(value_property)))
             {
-                if (!key_property->IsA<FClassPtrProperty>())
-                {
-                    key_type = STR("class ");
-                }
-
-                if (!value_property->IsA<FClassPtrProperty>())
-                {
-                    value_type = STR("class ");
-                }
+                enable_forward_declarations = EnableForwardDeclarations::No;
             }
-            key_type.append(generate_property_cxx_name(key_property, is_top_level_declaration, class_context));
-            value_type.append(generate_property_cxx_name(value_property, is_top_level_declaration, class_context));
+            key_type.append(
+                    generate_property_cxx_name(key_property, is_top_level_declaration, class_context, enable_forward_declarations, force_forward_declarations));
+            value_type.append(
+                    generate_property_cxx_name(value_property, is_top_level_declaration, class_context, enable_forward_declarations, force_forward_declarations));
 
             return fmt::format(STR("TMap<{}, {}>"), key_type, value_type);
         }
