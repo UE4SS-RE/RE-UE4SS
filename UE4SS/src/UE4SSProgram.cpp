@@ -164,13 +164,12 @@ namespace RC
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FFieldPathProperty);
 
         // UObjectBase-derived classes that DON'T have their own MemberOffsets:
-        // - AActor (uses UObjectBase::MemberOffsets)
-        // - UEngine (uses UObjectBase::MemberOffsets)
-        // - UGameViewportClient (uses UObjectBase::MemberOffsets)
-        // - AGameModeBase, AGameMode (uses UObjectBase::MemberOffsets)
+        // UEngine has no dumped member offsets of its own, so there is nothing to adjust for it.
 
         // Other UObject-derived classes
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AActor);
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AGameMode);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UGameViewportClient);
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UPlayer);
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(ULocalPlayer);
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
