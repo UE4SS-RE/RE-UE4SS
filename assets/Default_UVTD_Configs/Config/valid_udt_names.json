@@ -59,7 +59,7 @@
   "FFrame",
   "ULineBatchComponent",
   "TObjectPtr",
-  "FTransactionallySafeCriticalSection",    
+  "FTransactionallySafeCriticalSection",
   "FThreadSafeCounter",
   "FSchemaOwner",
   "TOptional",
@@ -71,5 +71,9 @@
   "FImplementedInterface",
   "FSchemaOwner",
   "FNativeFunctionLookup",
-  "FGCReferenceTokenStream"  
+  "FGCReferenceTokenStream",
+  "FText",
+  "FSoftObjectPath",
+  "FTopLevelAssetPath",
+  "FStaticConstructObjectParameters"
 ]
