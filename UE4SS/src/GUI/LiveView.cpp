@@ -1513,7 +1513,8 @@ namespace RC::GUI
             }
             render_property_value_context_menu(tree_node_id);
         }
-        else if (property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum()))
+        else if (UE4SSProgram::settings_manager.Debug.RenderMode != RenderMode::ExternalThread && (
+                     property->IsA<FEnumProperty>() || (property->IsA<FByteProperty>() && static_cast<FByteProperty*>(property)->IsEnum())))
         {
             UEnum* uenum{};
             if (property->IsA<FByteProperty>())
@@ -1630,7 +1631,11 @@ namespace RC::GUI
         for (const auto name : names)
         {
             auto enum_name = name.Key.ToString();
-            auto enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, name.Value);
+            StringType enum_friendly_name = STR("Unable to Display Friendly Name with GUI Outside of Gamethread.");
+            if (UE4SSProgram::settings_manager.Debug.RenderMode != RenderMode::ExternalThread)
+            {
+                enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, name.Value);
+            }
 
             ImGui::TableNextRow();
             bool open_edit_name_popup{};
