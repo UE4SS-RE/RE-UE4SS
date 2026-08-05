@@ -227,6 +227,18 @@ namespace RC::UEGenerator
       public:
         SDKGenerator(std::filesystem::path output_dir, SDKBackendSettings* backend) : m_output_dir(std::move(output_dir)), m_backend(backend)
         {
+#ifdef _WIN32
+            // Blueprint asset paths nest deeply, and one header per class puts the class name in the
+            // directory as well as the file name, so the full path routinely passes MAX_PATH. Without
+            // the extended-length prefix both the directory creation and the file open fail with
+            // ERROR_PATH_NOT_FOUND. The prefix requires a normalised absolute path with backslashes.
+            static constexpr StringViewType extended_length_prefix = STR("\\\\?\\");
+            m_output_dir = m_output_dir.lexically_normal().make_preferred();
+            if (m_output_dir.is_absolute() && !m_output_dir.native().starts_with(extended_length_prefix))
+            {
+                m_output_dir = std::filesystem::path{extended_length_prefix} += m_output_dir.native();
+            }
+#endif
         }
 
       private:
