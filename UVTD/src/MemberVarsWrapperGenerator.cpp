@@ -35,6 +35,30 @@ namespace RC::UVTD
         return type.find(STR("::*)(")) != File::StringType::npos;
     }
 
+    // Check if a type is a C-style array (ends with [N])
+    // These need special handling because "Type[N]&" is invalid syntax
+    // Must use typedef: using ArrType = Type[N]; ArrType& GetX();
+    static auto is_c_array_type(const File::StringType& type) -> bool
+    {
+        // Look for pattern ending with [number]
+        if (type.empty() || type.back() != STR(']'))
+            return false;
+
+        // Find the matching opening bracket
+        auto bracket_pos = type.rfind(STR('['));
+        if (bracket_pos == File::StringType::npos)
+            return false;
+
+        // Check that there's something between the brackets (the array size)
+        return bracket_pos + 1 < type.length() - 1;
+    }
+
+    // Check if a type needs a typedef for proper reference return syntax
+    static auto needs_typedef_for_reference(const File::StringType& type) -> bool
+    {
+        return is_pointer_to_member_function(type) || is_c_array_type(type);
+    }
+
     // Type normalization lives in Helpers (normalize_type_for_comparison), shared with
     // TypeContainer's type-change detection.
 
@@ -423,7 +447,7 @@ namespace RC::UVTD
                             File::StringType versioned_getter_name = final_variable_name + getter_suffix;
 
                             // Check if this is a pointer-to-member-function type which needs special handling
-                            if (is_pointer_to_member_function(version_type_name))
+                            if (needs_typedef_for_reference(version_type_name))
                             {
                                 // Generate typedef with unique name for this versioned getter
                                 File::StringType typedef_name = versioned_getter_name + STR("_Type");
@@ -516,7 +540,7 @@ namespace RC::UVTD
                         // Check if this is a pointer-to-member-function type which needs special handling
                         // These types have complex syntax for reference return types: ReturnType (ClassName::*&)(Args...)
                         // We handle this by generating a typedef
-                        if (is_pointer_to_member_function(final_type_name))
+                        if (needs_typedef_for_reference(final_type_name))
                         {
                             File::StringType typedef_name = final_variable_name + STR("_Type");
                             header_wrapper_dumper.send(STR("    using {} = {};\n"), typedef_name, final_type_name);
@@ -536,7 +560,7 @@ namespace RC::UVTD
                 // Handle classes with inheritance relationship (only for non-versioned, non-bitfield getters)
                 if (inheritance_info.has_value() && !variable.has_type_changes() && !variable.is_bitfield)
                 {
-                    bool is_pmf_inherit = is_pointer_to_member_function(final_type_name);
+                    bool is_pmf_inherit = needs_typedef_for_reference(final_type_name);
                     File::StringType typedef_name_inherit = final_variable_name + STR("_Type");
 
                     wrapper_src_dumper.send(STR("{\n"));
@@ -583,7 +607,15 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("        }\n"));
                     wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
                     wrapper_src_dumper.send(STR("    }();\n"));
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
+                    // Use typedef for cast when type needs special handling (arrays, pointer-to-member-function)
+                    if (is_pmf_inherit)
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), typedef_name_inherit);
+                    }
+                    else
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
+                    }
                     wrapper_src_dumper.send(STR("}\n"));
 
                     // Now do the same for the const version - use typedef for pointer-to-member-function types
@@ -639,13 +671,21 @@ namespace RC::UVTD
                     wrapper_src_dumper.send(STR("        }\n"));
                     wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
                     wrapper_src_dumper.send(STR("    }();\n"));
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
+                    // Use typedef for cast when type needs special handling
+                    if (is_pmf_inherit)
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), typedef_name_inherit);
+                    }
+                    else
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
+                    }
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
                 else if (!variable.has_type_changes() && !variable.is_bitfield)
                 {
                     // Standard handling for classes without special inheritance, type changes, or bitfields
-                    bool is_pmf = is_pointer_to_member_function(final_type_name);
+                    bool is_pmf = needs_typedef_for_reference(final_type_name);
                     File::StringType typedef_name = final_variable_name + STR("_Type");
 
                     wrapper_src_dumper.send(STR("{\n"));
@@ -658,7 +698,15 @@ namespace RC::UVTD
                                             final_variable_name);
                     wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
                     wrapper_src_dumper.send(STR("    }();\n"));
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
+                    // Use typedef for cast when type needs special handling (arrays, pointer-to-member-function)
+                    if (is_pmf)
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), typedef_name);
+                    }
+                    else
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), final_type_name);
+                    }
                     wrapper_src_dumper.send(STR("}\n"));
 
                     // Const getter - use typedef for pointer-to-member-function types
@@ -680,7 +728,15 @@ namespace RC::UVTD
                                             final_variable_name);
                     wrapper_src_dumper.send(STR("        return offset_it->second;\n"));
                     wrapper_src_dumper.send(STR("    }();\n"));
-                    wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
+                    // Use typedef for cast when type needs special handling
+                    if (is_pmf)
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<const {}*>(this, offset);\n"), typedef_name);
+                    }
+                    else
+                    {
+                        wrapper_src_dumper.send(STR("    return *Helper::Casting::ptr_cast<{}*>(this, offset);\n"), add_const_if_needed(final_type_name));
+                    }
                     wrapper_src_dumper.send(STR("}\n\n"));
                 }
                 // Note: if variable.has_type_changes() is true, getters were already generated above
