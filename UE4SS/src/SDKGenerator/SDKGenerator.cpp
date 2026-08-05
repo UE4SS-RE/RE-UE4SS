@@ -1271,9 +1271,8 @@ namespace RC::UEGenerator
             }
             else if (auto as_set_property = CastField<FSetProperty>(property); as_set_property)
             {
-                // Commented until we have TSet support.
-                // static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TSet"));
-                // add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
+                static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TSet"));
+                add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
                 generate_dependency_requirements_for_property(as_set_property->GetElementProp(), struct_context);
             }
             else if (auto as_byte_property = CastField<FByteProperty>(property); as_byte_property && as_byte_property->GetEnum())
@@ -2547,14 +2546,9 @@ namespace RC::UEGenerator
             }
             else
             {
-                // TMap/TSet can be named but this generator has no support for emitting them as real
-                // members, and some property types cannot be named at all. Both take the placeholder
-                // path, which keeps the member's offset and size intact either way.
-                std::optional<StringType> type_name{};
-                if (!property->IsA<FMapProperty>() && !property->IsA<FSetProperty>())
-                {
-                    type_name = try_get_property_type_name(property, struct_context.current_struct, false);
-                }
+                // A container whose key or value type can't be named falls back to the placeholder
+                // along with everything else that can't be expressed.
+                auto type_name = try_get_property_type_name(property, struct_context.current_struct, false);
 
                 StringType buffer{};
                 if (!type_name)
@@ -2668,7 +2662,6 @@ namespace RC::UEGenerator
             }
             else if (auto as_map_property = CastField<FMapProperty>(property); as_map_property)
             {
-                // Commented out until we support MapProperty.
                 auto key_ban_type = get_banned_type(as_map_property->GetKeyProp());
                 auto value_ban_type = get_banned_type(as_map_property->GetValueProp());
                 if (key_ban_type == BanType::Full || value_ban_type == BanType::Full ||
@@ -2687,14 +2680,12 @@ namespace RC::UEGenerator
                 }
                 else
                 {
-                    return BanType::MemberFunctionOnly;
+                    return BanType::NotBanned;
                 }
             }
             else if (auto as_set_property = CastField<FSetProperty>(property); as_set_property)
             {
-                // Commented out until we support SetProperty.
-                // return get_banned_type(as_set_property->GetElementProp());
-                return BanType::MemberFunctionOnly;
+                return get_banned_type(as_set_property->GetElementProp());
             }
             else if (auto as_struct_property = CastField<FStructProperty>(property); as_struct_property)
             {
