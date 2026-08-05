@@ -32,6 +32,7 @@
 #pragma warning(disable : 4005)
 #include <GUI/Dumpers.hpp>
 #include <UE4SSProgram.hpp>
+#include <JMapGenerator/JMapGenerator.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <Unreal/Core/HAL/Platform.hpp>
 #include <Unreal/FFrame.hpp>
@@ -1869,8 +1870,28 @@ Overloads:
                 return 0;
             });
 
-            lua.register_function("DumpUSMAP", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
-                OutTheShade::generate_usmap();
+            lua.register_function("DumpUSMAP", [](const LuaMadeSimple::Lua& lua) -> int {
+                bool include_blueprint_types{true};
+                if (lua.is_bool())
+                {
+                    include_blueprint_types = lua.get_bool();
+                }
+                OutTheShade::generate_usmap(include_blueprint_types);
+                return 0;
+            });
+
+            lua.register_function("DumpJMAP", [](const LuaMadeSimple::Lua& lua) -> int {
+                bool include_blueprint_types{true};
+                if (lua.is_bool())
+                {
+                    include_blueprint_types = lua.get_bool();
+                }
+                bool skip_property_values{false};
+                if (lua.is_bool())
+                {
+                    skip_property_values = lua.get_bool();
+                }
+                JMapGenerator::generate_jmap(include_blueprint_types, skip_property_values);
                 return 0;
             });
         }
