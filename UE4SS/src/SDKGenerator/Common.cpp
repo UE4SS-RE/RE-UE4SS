@@ -12,7 +12,7 @@
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UInterface.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UScriptStruct.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/UKismetNodeHelperLibrary.hpp>
 #include <UnrealDef.hpp>
 #pragma warning(default : 4005)

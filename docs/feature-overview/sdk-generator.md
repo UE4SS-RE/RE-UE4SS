@@ -6,7 +6,11 @@ The generated structs and classes are memory accurate: leading, inter-member and
 
 Where a derived type places its members inside a base type's trailing padding (which MSVC allows for non-POD types), the base is emitted packed with an explicit `alignas` so the derived members still land at the right offsets.
 
+A property whose C++ type the generator cannot express — a `TMap`/`TSet` member, a Verse property, or a property class the running engine defines and this generator doesn't know — is emitted as an opaque stand-in from `UE4SS_SDK/PlaceholderTypes.hpp` with the size and alignment reported by the engine. The member keeps its name and offset, everything after it stays correctly placed, and `GetTyped<T>()` reinterprets the storage as your own definition if you write one. Previously a single such property aborted the entire dump and produced no files at all.
+
 To verify a generated SDK against a specific game build, include `UE4SS_SDK/LayoutAsserts.hpp`. It contains `static_assert`s for the size, alignment and every member offset of every generated type. It is not included by default, so a layout problem shows up as a failed assert on the exact type rather than breaking the whole SDK build. `UE4SS_SDK/RuntimeSDKTest.hpp` performs the equivalent check at runtime against the live game.
+
+The UE4SS backend is compiled into UE4SS, so the generator works without any configuration files present. Dropping a backend description into `<working_dir>/UE4SS_SDK_Backends` adds a new backend, or overrides the built-in one if it uses the same file name (`UE4SS.json`). The shipped copy in `assets/UE4SS_SDK_Backends/UE4SS.json` is the same file the built-in is generated from, so it doubles as a starting point for customisation.
 
 ## How it works
 

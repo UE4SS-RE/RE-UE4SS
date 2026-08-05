@@ -24,33 +24,14 @@
 #include <SDKGenerator/Common.hpp>
 #include <Unreal/UObjectGlobals.hpp>
 #include <Unreal/UPackage.hpp>
-#include <Unreal/UClass.hpp>
-#include <Unreal/UScriptStruct.hpp>
-#include <Unreal/UEnum.hpp>
-#include <Unreal/UFunction.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/UInterface.hpp>
-#include <Unreal/FProperty.hpp>
-#include <Unreal/Property/FObjectProperty.hpp>
-#include <Unreal/Property/FClassProperty.hpp>
-#include <Unreal/Property/FWeakObjectProperty.hpp>
+#include <Unreal/CoreUObject/UObject/Class.hpp>
+#include <Unreal/CoreUObject/UObject/FStrProperty.hpp>
+#include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
-#include <Unreal/Property/NumericPropertyTypes.hpp>
-#include <Unreal/Property/FDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastInlineDelegateProperty.hpp>
-#include <Unreal/Property/FMulticastSparseDelegateProperty.hpp>
-#include <Unreal/Property/FArrayProperty.hpp>
-#include <Unreal/Property/FNameProperty.hpp>
-#include <Unreal/Property/FStrProperty.hpp>
-#include <Unreal/Property/FTextProperty.hpp>
-#include <Unreal/Property/FMapProperty.hpp>
-#include <Unreal/Property/FSetProperty.hpp>
-#include <Unreal/Property/FSoftObjectProperty.hpp>
-#include <Unreal/Property/FSoftClassProperty.hpp>
-#include <Unreal/Property/FLazyObjectProperty.hpp>
-#include <Unreal/Property/FBoolProperty.hpp>
-#include <Unreal/Property/FInterfaceProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
+#include <Unreal/Property/FTextProperty.hpp>
 
 namespace RC::UEGenerator
 {
@@ -103,7 +84,6 @@ namespace RC::UEGenerator
         int32_t m_contents_scope_level{};
         bool m_has_non_boilerplate_content{};
         bool m_might_need_namespace{true};
-        bool m_is_class_banned{};
 
       public:
         GeneratedSDKFile() = default;
@@ -219,11 +199,6 @@ namespace RC::UEGenerator
             return m_might_need_namespace;
         }
 
-        auto is_class_banned() -> bool&
-        {
-            return m_is_class_banned;
-        }
-
         auto write_to_disk() -> size_t
         {
             if (!m_has_non_boilerplate_content)
@@ -246,13 +221,24 @@ namespace RC::UEGenerator
         GeneratedSDKFile* m_current_file{};
         std::unordered_set<FName> m_non_code_file_ids{};
         std::unordered_set<FName> m_unique_enum_names{};
-        std::unordered_set<UStruct*> m_banned_classes{};
         std::unordered_map<StringType, StringType> m_underlying_enum_types{};
         SDKBackendSettings* m_backend{};
 
       public:
         SDKGenerator(std::filesystem::path output_dir, SDKBackendSettings* backend) : m_output_dir(std::move(output_dir)), m_backend(backend)
         {
+#ifdef _WIN32
+            // Blueprint asset paths nest deeply, and one header per class puts the class name in the
+            // directory as well as the file name, so the full path routinely passes MAX_PATH. Without
+            // the extended-length prefix both the directory creation and the file open fail with
+            // ERROR_PATH_NOT_FOUND. The prefix requires a normalised absolute path with backslashes.
+            static constexpr StringViewType extended_length_prefix = STR("\\\\?\\");
+            m_output_dir = m_output_dir.lexically_normal().make_preferred();
+            if (m_output_dir.is_absolute() && !m_output_dir.native().starts_with(extended_length_prefix))
+            {
+                m_output_dir = std::filesystem::path{extended_length_prefix} += m_output_dir.native();
+            }
+#endif
         }
 
       private:
@@ -409,6 +395,9 @@ namespace RC::UEGenerator
 
             generate_namespaces_for_classes_with_identical_names();
 
+            // Must follow class generation: the registry is filled as members are emitted.
+            generate_opaque_placeholder_types();
+            detect_include_cycles();
             generate_api_macro_file();
             generate_cmakelists();
             generate_master_header();
@@ -435,11 +424,6 @@ namespace RC::UEGenerator
                 }
                 return LoopAction::Continue;
             });
-        }
-
-        auto is_class_banned() -> bool&
-        {
-            return current_file().is_class_banned();
         }
 
         auto start_prologue_scope() -> void
@@ -733,9 +717,8 @@ namespace RC::UEGenerator
             // These should probably be changed to either use the ini file for the file name, or they should always use the exact same file name as in UE.
             write_prologue_line(std::format(STR("#include <{}UObjectGlobals.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
             write_prologue_line(std::format(STR("#include <{}NameTypes.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}UScriptStruct.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}UClass.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}FProperty.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
+            write_prologue_line(std::format(STR("#include <{}CoreUObject/UObject/Class.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
+            write_prologue_line(std::format(STR("#include <{}CoreUObject/UObject/UnrealType.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
             generate_includes_for_platform_generic_types();
             write_prologue_line();
             start_scope(); // Namespace
@@ -842,6 +825,130 @@ namespace RC::UEGenerator
         // Compile-time counterpart to the runtime SDK test. Emitted into its own header which nothing
         // includes by default: a layout bug then shows up as a failed assert on the exact struct/member
         // when the user opts in, instead of making the whole generated SDK fail to compile.
+        // Hard #includes are emitted for by-value struct members, enums and super classes. Two headers
+        // can therefore end up including each other -- two structs each holding a TArray of the other,
+        // for instance -- and with #pragma once whichever is reached second sees an incomplete type.
+        // Nothing breaks such a cycle today, so report it here rather than let it surface as an opaque
+        // compile error in someone's mod.
+        auto detect_include_cycles() -> void
+        {
+            std::unordered_map<StringType, GeneratedSDKFile*> files_by_include_path{};
+            for (const auto& file : m_files)
+            {
+                if (!file->include_path().empty())
+                {
+                    files_by_include_path.emplace(to_generic_string(file->include_path().c_str()), file.get());
+                }
+            }
+
+            enum class VisitState
+            {
+                Unvisited,
+                InProgress,
+                Done
+            };
+            std::unordered_map<GeneratedSDKFile*, VisitState> visit_states{};
+            std::vector<GeneratedSDKFile*> path{};
+            size_t cycles_found{};
+            constexpr size_t max_reported_cycles = 20;
+
+            auto visit = [&](auto&& self, GeneratedSDKFile* file) -> void {
+                auto& state = visit_states[file];
+                if (state == VisitState::Done)
+                {
+                    return;
+                }
+                if (state == VisitState::InProgress)
+                {
+                    if (++cycles_found <= max_reported_cycles)
+                    {
+                        StringType cycle{};
+                        auto cycle_start = std::find(path.begin(), path.end(), file);
+                        for (auto it = cycle_start; it != path.end(); ++it)
+                        {
+                            cycle.append(to_generic_string((*it)->include_path().c_str()));
+                            cycle.append(STR(" -> "));
+                        }
+                        cycle.append(to_generic_string(file->include_path().c_str()));
+                        Output::send<LogLevel::Warning>(STR("Include cycle in generated SDK: {}\n"), cycle);
+                    }
+                    return;
+                }
+
+                state = VisitState::InProgress;
+                path.push_back(file);
+                for (const auto& [dependency_path, is_full_path] : file->file_dependencies())
+                {
+                    if (is_full_path == IsFullPath::Yes)
+                    {
+                        continue;
+                    }
+                    if (auto it = files_by_include_path.find(to_generic_string(dependency_path.c_str())); it != files_by_include_path.end())
+                    {
+                        self(self, it->second);
+                    }
+                }
+                path.pop_back();
+                visit_states[file] = VisitState::Done;
+            };
+
+            for (const auto& file : m_files)
+            {
+                if (!file->include_path().empty())
+                {
+                    visit(visit, file.get());
+                }
+            }
+
+            if (cycles_found > max_reported_cycles)
+            {
+                Output::send<LogLevel::Warning>(STR("{} further include cycles not listed\n"), cycles_found - max_reported_cycles);
+            }
+            if (cycles_found > 0)
+            {
+                Output::send<LogLevel::Warning>(STR("{} include cycles found; the generated SDK may not compile until these are broken\n"), cycles_found);
+            }
+        }
+
+        // One opaque struct per type this generator can't express, sized and aligned from reflection.
+        // Members declared with these keep their offset and size, so a type we can't name costs that
+        // member's readability rather than the whole class or the whole dump. GetTyped() lets a mod
+        // reinterpret the storage as its own hand-written struct.
+        auto generate_opaque_placeholder_types() -> void
+        {
+            if (s_opaque_placeholders.empty())
+            {
+                return;
+            }
+
+            new_file(STR("src/UE4SS_SDK/PlaceholderTypes"), STR("hpp"));
+            current_file().set_might_need_namespace(false);
+            current_file().set_has_non_boilerplate_content(true);
+            m_non_code_file_ids.emplace(to_generic_string(current_file().full_file_path().c_str()), FNAME_Add);
+            write_prologue_line(STR("#pragma once"));
+            write_prologue_line();
+            write_line(STR("// Stand-ins for property types this SDK generator cannot express in C++."));
+            write_line(STR("// Each has the size and alignment reported by the engine, so surrounding members stay at"));
+            write_line(STR("// their real offsets. Use GetTyped<T>() to reinterpret one as your own definition."));
+            write_line();
+
+            for (const auto& [type_name, info] : s_opaque_placeholders)
+            {
+                write_line(std::format(STR("struct alignas(0x{:X}) {}"), info.alignment, type_name));
+                write_line(STR("{"));
+                start_scope();
+                write_line(std::format(STR("uint8 Pad[0x{:X}]{{}};"), info.size));
+                write_line();
+                write_line(STR("template <typename T> T& GetTyped() { return *reinterpret_cast<T*>(this); }"));
+                write_line(STR("template <typename T> const T& GetTyped() const { return *reinterpret_cast<const T*>(this); }"));
+                end_scope();
+                write_line(STR("};"));
+                write_line();
+            }
+
+            Output::send(STR("Generated {} opaque placeholder types\n"), s_opaque_placeholders.size());
+        }
+
         auto generate_layout_asserts() -> void
         {
             new_file(STR("src/UE4SS_SDK/LayoutAsserts"), STR("hpp"));
@@ -851,7 +958,7 @@ namespace RC::UEGenerator
             write_line();
             for (const auto& file : m_files)
             {
-                if (!file->related_uobject() || !file->related_uobject()->IsA<UStruct>() || file->is_class_banned())
+                if (!file->related_uobject() || !file->related_uobject()->IsA<UStruct>())
                 {
                     continue;
                 }
@@ -956,29 +1063,15 @@ namespace RC::UEGenerator
             Output::send(STR("Writing {} files...\n"), files_written.number_of_files_total);
             for (const auto& file : m_files)
             {
-                if (file->is_class_banned())
-                {
-                    write_line_internal(file->prologue(),
-                                        file->prologue_scope_level(),
-                                        STR("// Class/struct is commented out because of unsupported member variable types."));
-                    write_line_internal(
-                            file->prologue(),
-                            file->prologue_scope_level(),
-                            STR("// The class/struct cannot exist until these types are support or the class/struct would not be memory accurate."));
-                    write_line_internal(file->prologue(), file->prologue_scope_level(), STR("/*"));
-                }
-                // Trailing padding used to be spliced into the buffer here after the fact; it is now
-                // emitted inline by generate_end_of_struct_padding() against the struct's cut size.
+                // Classes used to be commented out wholesale when a member's type was unsupported.
+                // Unrepresentable members are now emitted as sized opaque placeholders instead, so
+                // every class stays present and correctly laid out.
                 if (file->might_need_namespace())
                 {
                     start_namespace(file.get());
                     end_namespace(file.get());
                 }
                 generate_forward_declarations(file.get());
-                if (file->is_class_banned())
-                {
-                    write_line_internal(file->contents(), file->contents_scope_level(), STR("//*/"));
-                }
                 files_written.number_of_files_actually_written += file->write_to_disk();
             }
             Output::send(STR("Done!\n"));
@@ -1477,6 +1570,51 @@ namespace RC::UEGenerator
             }
         }
 
+        // Types this generator cannot express in C++ are substituted with a fixed-size opaque struct, so
+        // the member keeps its name, offset and size and everything after it stays at the right offset.
+        // Keyed by the emitted type name; sorted so the generated file is stable between runs.
+        struct OpaquePlaceholderInfo
+        {
+            int32_t size{};
+            int32_t alignment{};
+        };
+        std::map<StringType, OpaquePlaceholderInfo> s_opaque_placeholders{};
+
+        // Registers a placeholder for a property whose type can't be named and returns the type to
+        // declare the member with. Sizes are per element: a static array of an unrepresentable type is
+        // emitted as an array of the placeholder, matching how ordinary members handle ArrayDim.
+        auto register_opaque_placeholder(FProperty* property) -> StringType
+        {
+            auto element_size = std::max(property->GetElementSize(), 1);
+            auto alignment = std::max(static_cast<int32_t>(property->GetMinAlignment()), 1);
+            // sizeof a struct is rounded up to its alignment, so stating an alignment the size isn't a
+            // multiple of would make the placeholder occupy more bytes than the property and shift
+            // every following member. Drop to 1 in that case: the containing struct's own alignment is
+            // computed from the property's real alignment separately, so nothing is lost.
+            if (element_size % alignment != 0)
+            {
+                alignment = 1;
+            }
+            auto base_name = std::format(STR("F{}_Opaque"), property->GetClass().GetName());
+
+            auto it = s_opaque_placeholders.find(base_name);
+            if (it == s_opaque_placeholders.end())
+            {
+                s_opaque_placeholders.emplace(base_name, OpaquePlaceholderInfo{element_size, alignment});
+                return base_name;
+            }
+            if (it->second.size == element_size && it->second.alignment == alignment)
+            {
+                return base_name;
+            }
+
+            // Same property class, different layout: give this one its own type rather than silently
+            // emitting whichever was seen first.
+            auto unique_name = std::format(STR("{}_{:X}_{:X}"), base_name, element_size, alignment);
+            s_opaque_placeholders.insert_or_assign(unique_name, OpaquePlaceholderInfo{element_size, alignment});
+            return unique_name;
+        }
+
         // Reflection reports a struct's padded sizeof, but MSVC lets a derived struct place its members
         // inside a non-POD base's trailing padding, so a child's first property can start *below* the
         // parent's reported size. Emitting the parent at its padded size would then push every child
@@ -1890,6 +2028,7 @@ namespace RC::UEGenerator
                         {
                             name.append(generate_property_cxx_name(as_map_property->GetKeyProp(), true, class_context));
                         }
+                        name.append(STR(", "));
                         auto [value_delegate_type, is_value_delegate] = get_delegate_type_if_property_is_delegate(as_map_property->GetValueProp());
                         if (is_value_delegate)
                         {
@@ -1897,7 +2036,7 @@ namespace RC::UEGenerator
                         }
                         else
                         {
-                            name.append(generate_property_cxx_name(as_map_property->GetKeyProp(), true, class_context));
+                            name.append(generate_property_cxx_name(as_map_property->GetValueProp(), true, class_context));
                         }
                         name.append(STR(">"));
                     }
@@ -1930,6 +2069,23 @@ namespace RC::UEGenerator
             }
         }
 
+        // Name resolution reports failure by throwing (an FProperty subclass this generator has no
+        // branch for, a null UEnum/UScriptStruct, and so on). Nothing else in this file catches, and
+        // generate() runs to completion before write_to_disk(), so an uncaught throw means the whole
+        // dump produces no files at all. Convert it to a value so a single unrepresentable property
+        // costs that member instead of everything.
+        auto try_get_property_type_name(FProperty* property, UObject* class_context, bool can_be_ref) -> std::optional<StringType>
+        {
+            try
+            {
+                return get_property_type_name(property, class_context, can_be_ref);
+            }
+            catch (std::exception&)
+            {
+                return std::nullopt;
+            }
+        }
+
         auto generate_ufunction_params(UFunction* ufunction) -> void
         {
             auto num_params = ufunction->GetNumParms();
@@ -1944,7 +2100,7 @@ namespace RC::UEGenerator
             //                 iterator traits), so `| views::enumerate` no longer compiles. Index is tracked
             //                 manually to keep the original semantics (it counts every property, including skipped ones).
             size_t next_index{};
-            for (auto* param : ufunction->ForEachProperty())
+            for (auto* param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
                 const auto i = next_index++;
                 if (param->HasAnyPropertyFlags(CPF_ReturnParm) || !param->HasAnyPropertyFlags(CPF_Parm))
@@ -2013,7 +2169,7 @@ namespace RC::UEGenerator
             // TODO: ArrayProperty!
             //       Either use TArray<T> or convert to std::vector<T>.
             //       Right now, TArray<T> is implicitly used.
-            for (const auto& param : ufunction->ForEachProperty())
+            for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (!param->HasAnyPropertyFlags(CPF_Parm) || param->HasAnyPropertyFlags(CPF_ReturnParm | CPF_OutParm))
                 {
@@ -2030,7 +2186,7 @@ namespace RC::UEGenerator
                     }
                     else
                     {
-                        for (const auto& inner_param : the_struct->ForEachProperty())
+                        for (const auto& inner_param : TFieldRange<FProperty>(the_struct, EFieldIterationFlags::IncludeDeprecated))
                         {
                             write_line(std::format(STR("UE_COPY_STRUCT_INNER_PROPERTY_CUSTOM({}, {}.{}, 0x{:X}, 0x{:X})"),
                                                    get_property_type_name(inner_param, the_struct, false),
@@ -2081,7 +2237,7 @@ namespace RC::UEGenerator
 
         auto generate_copy_out_property_macro_calls(UFunction* ufunction) -> void
         {
-            for (const auto& param : ufunction->ForEachProperty())
+            for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (param->HasAnyPropertyFlags(CPF_ReturnParm) || !param->HasAnyPropertyFlags(CPF_OutParm))
                 {
@@ -2183,7 +2339,7 @@ namespace RC::UEGenerator
         {
             FBoolProperty* last_property_in_field{};
             uint8_t num_bits_in_field{};
-            for (const auto& owner_property : owner->ForEachProperty())
+            for (const auto& owner_property : TFieldRange<FProperty>(owner, EFieldIterationFlags::IncludeDeprecated))
             {
                 if (owner_property->GetOffset_Internal() == property->GetOffset_Internal() && !std::bit_cast<FBoolProperty*>(owner_property)->IsNativeBool())
                 {
@@ -2279,15 +2435,15 @@ namespace RC::UEGenerator
         auto get_last_property_in_chain(UStruct* ustruct) -> FProperty*
         {
             FProperty* last_property{};
-            for (const auto& property : ustruct->ForEachProperty())
+            for (const auto& property : TFieldRange<FProperty>(ustruct, EFieldIterationFlags::IncludeDeprecated))
             {
                 last_property = property;
             }
             if (!last_property)
             {
-                for (const auto& super_struct : ustruct->ForEachSuperStruct())
+                for (const auto& super_struct : TSuperStructRange(ustruct))
                 {
-                    for (const auto& property : super_struct->ForEachProperty())
+                    for (const auto& property : TFieldRange<FProperty>(super_struct, EFieldIterationFlags::IncludeDeprecated))
                     {
                         last_property = property;
                     }
@@ -2389,21 +2545,36 @@ namespace RC::UEGenerator
                 // Add padding before this bit if there are unreflected bits between this bit and the last bit.
                 generate_member_variable_bitfield_bit(struct_context, as_bool_property, sanitized_property_name);
             }
-            else if (property->IsA<FMapProperty>() || property->IsA<FSetProperty>())
-            {
-                write_line(std::format(STR("// Type '{}' unsupported! Generated as padding instead."),
-                                       get_property_type_name(property, struct_context.current_struct, false)));
-                write_line(std::format(STR("uint8 {}[0x{:X}]{{}}; // 0x{:X}"), sanitized_property_name, property->GetSize(), current_member_offset));
-            }
             else
             {
-                StringType buffer{};
-                static auto transform_struct = UObjectGlobals::FindObject<UScriptStruct>(nullptr, STR("/Script/CoreUObject.Transform"));
-                if (struct_context.current_struct == transform_struct)
+                // TMap/TSet can be named but this generator has no support for emitting them as real
+                // members, and some property types cannot be named at all. Both take the placeholder
+                // path, which keeps the member's offset and size intact either way.
+                std::optional<StringType> type_name{};
+                if (!property->IsA<FMapProperty>() && !property->IsA<FSetProperty>())
                 {
-                    buffer.append(STR("alignas(16) "));
+                    type_name = try_get_property_type_name(property, struct_context.current_struct, false);
                 }
-                buffer.append(std::format(STR("{} {}"), get_property_type_name(property, struct_context.current_struct, false), sanitized_property_name));
+
+                StringType buffer{};
+                if (!type_name)
+                {
+                    auto placeholder_type = register_opaque_placeholder(property);
+                    add_file_dependency(STR("PlaceholderTypes"));
+                    write_line(std::format(STR("// Type '{}' is not representable in this SDK; emitted as a sized placeholder."),
+                                           property->GetClass().GetName()));
+                    buffer.append(std::format(STR("{} {}"), placeholder_type, sanitized_property_name));
+                }
+                else
+                {
+                    static auto transform_struct = UObjectGlobals::FindObject<UScriptStruct>(nullptr, STR("/Script/CoreUObject.Transform"));
+                    if (struct_context.current_struct == transform_struct)
+                    {
+                        buffer.append(STR("alignas(16) "));
+                    }
+                    buffer.append(std::format(STR("{} {}"), *type_name, sanitized_property_name));
+                }
+
                 if (auto array_dim = property->GetArrayDim(); array_dim > 1)
                 {
                     buffer.append(STR("["));
@@ -2527,27 +2698,22 @@ namespace RC::UEGenerator
             }
             else if (auto as_struct_property = CastField<FStructProperty>(property); as_struct_property)
             {
-                if (m_banned_classes.contains(as_struct_property->GetStruct()))
+                // A struct is only a problem in a function signature if one of its own members is,
+                // so inherit the strongest ban found anywhere in the chain.
+                BanType inner_ban_type{};
+                for (const auto& inner_property : TFieldRange<FProperty>(as_struct_property->GetStruct(), EFieldIterationFlags::Default))
                 {
-                    return BanType::Full;
-                }
-                else
-                {
-                    BanType inner_ban_type{};
-                    for (const auto& inner_property : as_struct_property->GetStruct()->ForEachPropertyInChain())
+                    auto next_inner_ban_type = get_banned_type(inner_property);
+                    if (next_inner_ban_type == BanType::Full)
                     {
-                        auto next_inner_ban_type = get_banned_type(inner_property);
-                        if (next_inner_ban_type == BanType::Full)
-                        {
-                            return BanType::Full;
-                        }
-                        else if (next_inner_ban_type != BanType::NotBanned)
-                        {
-                            inner_ban_type = next_inner_ban_type;
-                        }
+                        return BanType::Full;
                     }
-                    return inner_ban_type;
+                    else if (next_inner_ban_type != BanType::NotBanned)
+                    {
+                        inner_ban_type = next_inner_ban_type;
+                    }
                 }
+                return inner_ban_type;
             }
             return BanType::NotBanned;
         }
@@ -2561,24 +2727,13 @@ namespace RC::UEGenerator
             write_prologue_line(STR("#include <bit>"));
             write_prologue_line();
             write_prologue_line(STR("#include <UE4SS_SDK/Macros.hpp>"));
-            write_prologue_line(std::format(STR("#include <{}UClass.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
-            write_prologue_line(std::format(STR("#include <{}UFunction.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
+            write_prologue_line(std::format(STR("#include <{}CoreUObject/UObject/Class.{}>"), get_header_prefix(), m_backend->HeaderFileExtension));
 
             start_scope(); // Namespace
 
             auto as_struct = std::bit_cast<UStruct*>(class_or_struct);
             auto& current_struct_context = get_struct_context(as_struct);
             auto super_struct = as_struct->GetSuperStruct();
-
-            if (super_struct)
-            {
-                if (m_banned_classes.contains(super_struct))
-                {
-                    Output::send(STR("Banning type '{}' because super is banned\n"), as_struct->GetFullName());
-                    is_class_banned() = true;
-                    m_banned_classes.emplace(as_struct);
-                }
-            }
 
             auto class_is_native = std::bit_cast<UClass*>(class_or_struct)->HasAnyClassFlags(CLASS_Native);
             auto& struct_layout = get_struct_layout(as_struct);
@@ -2607,9 +2762,6 @@ namespace RC::UEGenerator
                 alignment_string = std::format(STR("alignas(0x{:X}) "), struct_layout.alignment);
             }
 
-            auto function_range = as_struct->ForEachFunction();
-            auto has_functions = begin(function_range) != end(function_range);
-            bool has_properties = as_struct->GetFirstProperty();
             if (is_script_struct)
             {
                 write_line(std::format(STR("struct RC_UE4SS_SDK_API {}{}{}"),
@@ -2635,31 +2787,16 @@ namespace RC::UEGenerator
             }
             write_line(STR("// Properties."));
             std::unordered_set<FName> getter_functions_generated{};
-            for (const auto& property : as_struct->ForEachProperty())
+            for (const auto& property : TFieldRange<FProperty>(as_struct, EFieldIterationFlags::IncludeDeprecated))
             {
-                auto banned_type = get_banned_type(property);
-                if (is_member_variable_type_banned(banned_type))
-                {
-                    Output::send(STR("Banning type '{}' because type '{}' is banned\n"), as_struct->GetFullName(), property->GetFullName());
-                    is_class_banned() = true;
-                    m_banned_classes.emplace(as_struct);
-                }
-                if (is_member_variable_type_banned(banned_type) && !is_class_banned())
-                {
-                    write_line(STR("/*"));
-                }
                 generate_member_variable_declaration(current_struct_context, property);
                 current_struct_context.last_property = property;
-                if (is_member_variable_type_banned(banned_type) && !is_class_banned())
-                {
-                    write_line(STR("//*/"));
-                }
             }
             generate_end_of_struct_padding(current_struct_context);
             write_line();
             write_line(STR("// Functions."));
             bool class_contains_only_static_functions = true;
-            for (const auto& ufunction : as_struct->ForEachFunction())
+            for (const auto& ufunction : TFieldRange<UFunction>(as_struct, EFieldIterationFlags::None))
             {
                 if (!ufunction->HasAnyFunctionFlags(FUNC_Static))
                 {
@@ -2667,12 +2804,12 @@ namespace RC::UEGenerator
                     break;
                 }
             }
-            for (const auto& ufunction : as_struct->ForEachFunction())
+            for (const auto& ufunction : TFieldRange<UFunction>(as_struct, EFieldIterationFlags::None))
             {
                 auto banned_type = get_banned_type(ufunction->GetReturnProperty());
                 if (!is_member_function_type_banned(banned_type))
                 {
-                    for (const auto& param : ufunction->ForEachProperty())
+                    for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
                     {
                         banned_type = get_banned_type(param);
                         if (is_member_function_type_banned(banned_type))
@@ -2685,15 +2822,15 @@ namespace RC::UEGenerator
                 {
                     continue;
                 }
-                if (is_member_function_type_banned(banned_type) && !is_class_banned())
+                if (is_member_function_type_banned(banned_type))
                 {
-                    write_line(STR("/*"));
+                    // Unlike a member variable, a parameter has no sized stand-in that would keep the
+                    // call working, so the function is omitted rather than emitted commented out.
+                    write_line(std::format(STR("// Function '{}' omitted: a parameter or return type is not representable in this SDK."),
+                                           ufunction->GetName()));
+                    continue;
                 }
                 generate_ufunction_definition(std::bit_cast<UClass*>(class_or_struct), ufunction, class_is_native, class_contains_only_static_functions, is_script_struct);
-                if (is_member_function_type_banned(banned_type) && !is_class_banned())
-                {
-                    write_line(STR("//*/"));
-                }
             }
             end_scope();
             write_line(STR("};"));
