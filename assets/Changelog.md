@@ -38,6 +38,17 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 **BREAKING:** Changed default `EFindName` parameter for FName constructors from `FNAME_Find` to `FNAME_Add`. 
 - FName constructors will now create new name table entries by default if the name doesn't exist, rather than returning NAME_None
 - To maintain the old behavior, explicitly pass `FNAME_Find` as the second parameter
+
+**BREAKING:** `FSoftObjectPath` no longer exposes the `AssetPathName` and `SubPathString` member variables. The struct layout now adapts at runtime to the running engine (5.1+ replaced the FName with an FTopLevelAssetPath), which fixes silent memory corruption when accessing soft object paths on 5.1+ games. C++ mods must migrate:
+- `path.AssetPathName` -> `path.GetAssetPathName()` (on 5.1+ this returns the combined `/Package/Path.Asset` name; use `path.GetAssetPath()` for the package/asset name pair)
+- `path.SubPathString` -> `path.GetSubPathString()` (non-const overload available for assignment)
+- Lua mods are unaffected; the Lua API is unchanged
+
+**BREAKING:** `FText` no longer exposes the `Data`, `SharedRefCollector`, `Flags` and `Unk` member variables. The layout adapts at runtime (5.4 changed TSharedRef to TRefCountPtr, shrinking FText from 0x18 to 0x10), and copies/destruction now use the engine's own FTextProperty value operations, so FText copies are properly reference counted in every engine version. C++ mods must migrate:
+- `text.Data` -> `text.GetTextData()`
+- `text.Flags` -> `text.GetFlags()`
+- Constructing, copying, assigning and `ToString()`/`ToFString()` are unchanged
+- Lua mods are unaffected
 - This affects all string-based FName constructors 
 
 Added optional scans for GUObjectHashTables, GNatives and ConsoleManagerSingleton; made FText an optional scan; externed the found GNatives for use by mods([UE4SS #744](https://github.com/UE4SS-RE/RE-UE4SS/pull/744)) 

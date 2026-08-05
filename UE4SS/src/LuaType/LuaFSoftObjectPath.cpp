@@ -53,13 +53,13 @@ namespace RC::LuaType
     {
         table.add_pair("GetAssetPathName", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<FSoftObjectPath>();
-            FName::construct(lua, lua_object.get_local_cpp_object().AssetPathName);
+            FName::construct(lua, lua_object.get_local_cpp_object().GetAssetPathName());
             return 1;
         });
 
         table.add_pair("GetSubPathString", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<FSoftObjectPath>();
-            FString::construct(lua, &lua_object.get_local_cpp_object().SubPathString);
+            FString::construct(lua, &lua_object.get_local_cpp_object().GetSubPathString());
             return 1;
         });
 
