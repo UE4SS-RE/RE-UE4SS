@@ -17,6 +17,9 @@
 #include <SDKGenerator/TMapOverrideGen.hpp>
 #include <SDKGenerator/BuiltinSDKBackend.hpp>
 #include <SDKGenerator/SDKGenerator.hpp>
+#include <Timer/ScopedTimer.hpp>
+#include <Unreal/FAssetData.hpp>
+#include <Unreal/UAssetRegistry.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/AActor.hpp>
 #include <Unreal/NameTypes.hpp>
@@ -478,6 +481,45 @@ namespace RC::GUI::Dumpers
 
     using SDKGeneratorBackends = std::vector<std::pair<std::string, UEGenerator::SDKBackendSettings>>;
 
+    // Blueprint classes, structs and enums only exist in memory once their asset has been loaded, so a
+    // dump taken at the main menu sees almost none of them. Force-loading everything first makes the
+    // dump complete at the cost of a lot of memory and stability -- see the warning below -- so it is
+    // opt-in per dump rather than a setting.
+    //
+    // Runs 'dump' with every asset loaded, then releases them again. The release runs even if the dump
+    // throws, because leaving the game holding every asset is far worse than losing the dump.
+    template <typename Callable>
+    static auto run_with_all_assets_loaded(Callable&& dump) -> void
+    {
+        if (Unreal::Version::IsBelow(4, 17) || !Unreal::bFAssetDataAvailable)
+        {
+            Output::send<LogLevel::Warning>(STR("FAssetData is not available in this game, dumping without force-loading assets.\n"));
+            dump();
+            return;
+        }
+
+        Output::send(STR("Loading all assets...\n"));
+        double asset_loading_duration{};
+        {
+            ScopedTimer loading_timer{&asset_loading_duration};
+            UAssetRegistry::LoadAllAssets();
+        }
+        Output::send(STR("Loading all assets took {} seconds\n"), asset_loading_duration);
+
+        // Anything that force-loads assets leaves the game in a state it was never meant to be in;
+        // the game is likely to crash if play continues past this point.
+        struct AssetReleaseGuard
+        {
+            ~AssetReleaseGuard()
+            {
+                Output::send(STR("Unloading all forcefully loaded assets\n"));
+                UAssetRegistry::FreeAllForcefullyLoadedAssets();
+            }
+        } release_guard{};
+
+        dump();
+    }
+
     // Converts a parsed backend description into the wide-string form the generator consumes.
     static auto sdk_backend_from_ascii(const UEGenerator::SDKBackendSettings_ASCII& settings_ascii) -> UEGenerator::SDKBackendSettings
     {
@@ -624,24 +666,48 @@ namespace RC::GUI::Dumpers
 
         static bool s_include_blueprint_types{true};
         static bool s_skip_property_values{false};
+        static bool s_load_all_assets_first{false};
+
+        auto run_dump = [](auto&& dump) {
+            if (s_load_all_assets_first)
+            {
+                run_with_all_assets_loaded(dump);
+            }
+            else
+            {
+                dump();
+            }
+        };
 
         if (ImGui::Button("Generate .usmap file\nUnrealMappingsDumper by OutTheShade"))
         {
-            TRY([] {
-                OutTheShade::generate_usmap(s_include_blueprint_types);
+            TRY([&] {
+                run_dump([] {
+                    OutTheShade::generate_usmap(s_include_blueprint_types);
+                });
             });
         }
         ImGui::SameLine();
         if (ImGui::Button("Generate .jmap file\njmap format by trumank"))
         {
-            TRY([] {
-                JMapGenerator::generate_jmap(s_include_blueprint_types, s_skip_property_values);
+            TRY([&] {
+                run_dump([] {
+                    JMapGenerator::generate_jmap(s_include_blueprint_types, s_skip_property_values);
+                });
             });
         }
         ImGui::SameLine();
         ImGui::BeginGroup();
         ImGui::Checkbox("Include Blueprint-generated types", &s_include_blueprint_types);
         ImGui::Checkbox("Skip property values (.jmap, smaller output)", &s_skip_property_values);
+        ImGui::Checkbox("Load all assets first", &s_load_all_assets_first);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Applies to the .usmap, .jmap and BP SDK dumps below.\n"
+                              "Force-loads every asset so Blueprint types are present in the dump.\n"
+                              "Can need several GB of extra memory, and the game is likely to crash\n"
+                              "if you keep playing afterwards.");
+        }
         ImGui::EndGroup();
 
         if (ImGui::Button("Generate TMapOverride file\n"))
@@ -707,9 +773,12 @@ namespace RC::GUI::Dumpers
         ImGui::BeginDisabled(s_selected_backend_index == 0);
         if (ImGui::Button("Generate BP SDK"))
         {
-            TRY([] {
-                auto& selected_backend = s_sdk_generator_backends[s_selected_backend_index];
-                UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK", selected_backend.second);
+            TRY([&] {
+                run_dump([] {
+                    auto& selected_backend = s_sdk_generator_backends[s_selected_backend_index];
+                    UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK",
+                                              selected_backend.second);
+                });
             });
         }
         ImGui::EndDisabled();
