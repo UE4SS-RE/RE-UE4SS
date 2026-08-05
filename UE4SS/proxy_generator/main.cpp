@@ -246,7 +246,10 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    SOriginalDll = LoadLibrary(dll_path.c_str());" << endl;
     cpp_file << "    if (!SOriginalDll)" << endl;
     cpp_file << "    {" << endl;
-    cpp_file << "        MessageBox(nullptr, L\"Failed to load proxy DLL\", L\"UE4SS Error\", MB_OK | MB_ICONERROR);" << endl;
+    cpp_file << "        const auto last_err = GetLastError();" << endl;
+    cpp_file << "        const std::error_code ec(last_err, std::system_category());" << endl;
+    cpp_file << "        const auto err_msg = std::format(\"Failed to load proxy DLL\\nError: 0x{:X}\\nMsg: {}\", last_err, std::system_error(ec).what());" << endl;
+    cpp_file << "        MessageBoxA(nullptr, err_msg.c_str(), \"UE4SS Error\", MB_OK | MB_ICONERROR);" << endl;
     cpp_file << "        ExitProcess(0);" << endl;
     cpp_file << "    }" << endl;
     cpp_file << "}" << endl;
