@@ -14,6 +14,7 @@
 #undef TEXT
 #endif
 #include <SDKGenerator/TMapOverrideGen.hpp>
+#include <SDKGenerator/BuiltinSDKBackend.hpp>
 #include <SDKGenerator/SDKGenerator.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/AActor.hpp>
@@ -476,16 +477,45 @@ namespace RC::GUI::Dumpers
 
     using SDKGeneratorBackends = std::vector<std::pair<std::string, UEGenerator::SDKBackendSettings>>;
 
-    // Loads every backend description file from <working_dir>/UE4SS_SDK_Backends into 'backends'.
-    // The entry at index 0 is the "no backend selected" placeholder and is always kept.
+    // Converts a parsed backend description into the wide-string form the generator consumes.
+    static auto sdk_backend_from_ascii(const UEGenerator::SDKBackendSettings_ASCII& settings_ascii) -> UEGenerator::SDKBackendSettings
+    {
+        UEGenerator::SDKBackendSettings settings{};
+        settings.IncludePrefix = to_wstring(settings_ascii.IncludePrefix.value);
+        settings.HeaderFileExtension = to_wstring(settings_ascii.HeaderFileExtension.value);
+        settings.UnrealImplementationNamespace = to_wstring(settings_ascii.UnrealImplementationNamespace.value);
+        settings.SDKNamespace = to_wstring(settings_ascii.SDKNamespace.value);
+        for (const auto& setting : settings_ascii.ExcludedTypes.value)
+        {
+            settings.ExcludedTypes.emplace(to_wstring(setting));
+        }
+        for (const auto& [key, value] : settings_ascii.UnreflectedTypes.value)
+        {
+            settings.UnreflectedTypes.emplace(to_wstring(key), to_wstring(value));
+        }
+        return settings;
+    }
+
+    // Adds a backend under 'name', replacing any existing entry of the same name so that a backend
+    // found on disk overrides the compiled-in one instead of appearing twice in the list.
+    static auto add_or_replace_sdk_backend(SDKGeneratorBackends& backends, std::string name, UEGenerator::SDKBackendSettings settings) -> void
+    {
+        for (auto& [existing_name, existing_settings] : backends)
+        {
+            if (existing_name == name)
+            {
+                existing_settings = std::move(settings);
+                return;
+            }
+        }
+        backends.emplace_back(std::move(name), std::move(settings));
+    }
+
+    // Seeds 'backends' with the compiled-in UE4SS backend, then loads every backend description file
+    // from <working_dir>/UE4SS_SDK_Backends over the top of it. The entry at index 0 is the
+    // "no backend selected" placeholder and is always kept.
     static auto load_sdk_generator_backends(SDKGeneratorBackends& backends) -> void
     {
-        const auto backends_path = std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK_Backends";
-        if (!std::filesystem::exists(backends_path))
-        {
-            return;
-        }
-
         static constexpr auto glz_opts = glz::opts{
                 .format = glz::JSON,
                 .comments = false,              // Support reading in JSONC style comments
@@ -501,6 +531,28 @@ namespace RC::GUI::Dumpers
                 .raw = false,        // write out string like values without quotes
         };
 
+        // Compiled-in backend first, so the generator is usable with nothing on disk.
+        {
+            UEGenerator::SDKBackendSettings_ASCII settings_ascii{};
+            std::string settings_buffer{UEGenerator::g_builtin_ue4ss_backend_json};
+            auto ec = glz::read<glz_opts>(settings_ascii, settings_buffer);
+            if (ec)
+            {
+                Output::send<LogLevel::Error>(STR("Error '{}' while reading the built-in SDK generator backend\n"),
+                                              to_wstring(glz::format_error(ec, settings_buffer)));
+            }
+            else
+            {
+                add_or_replace_sdk_backend(backends, std::string{UEGenerator::g_builtin_ue4ss_backend_name}, sdk_backend_from_ascii(settings_ascii));
+            }
+        }
+
+        const auto backends_path = std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK_Backends";
+        if (!std::filesystem::exists(backends_path))
+        {
+            return;
+        }
+
         for (const auto& item : std::filesystem::directory_iterator(backends_path))
         {
             if (item.is_directory())
@@ -509,8 +561,6 @@ namespace RC::GUI::Dumpers
             }
 
             UEGenerator::SDKBackendSettings_ASCII settings_ascii{};
-            settings_ascii.ExcludedTypes.value.clear();    // Defaults are only used during dev to keep track. Remove this and the defaults later!
-            settings_ascii.UnreflectedTypes.value.clear(); // Defaults are only used during dev to keep track. Remove this and the defaults later!
             std::string settings_buffer{};
             auto ec = glz::read_file_json<glz_opts, UEGenerator::SDKBackendSettings_ASCII>(settings_ascii, item.path().string(), settings_buffer);
             if (ec)
@@ -521,20 +571,7 @@ namespace RC::GUI::Dumpers
                 continue;
             }
 
-            UEGenerator::SDKBackendSettings settings{};
-            settings.IncludePrefix = to_wstring(settings_ascii.IncludePrefix.value);
-            settings.HeaderFileExtension = to_wstring(settings_ascii.HeaderFileExtension.value);
-            settings.UnrealImplementationNamespace = to_wstring(settings_ascii.UnrealImplementationNamespace.value);
-            settings.SDKNamespace = to_wstring(settings_ascii.SDKNamespace.value);
-            for (const auto& setting : settings_ascii.ExcludedTypes.value)
-            {
-                settings.ExcludedTypes.emplace(to_wstring(setting));
-            }
-            for (const auto& [key, value] : settings_ascii.UnreflectedTypes.value)
-            {
-                settings.UnreflectedTypes.emplace(to_wstring(key), to_wstring(value));
-            }
-            backends.emplace_back(item.path().stem().string(), settings);
+            add_or_replace_sdk_backend(backends, item.path().stem().string(), sdk_backend_from_ascii(settings_ascii));
         }
     }
 
