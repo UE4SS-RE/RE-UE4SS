@@ -248,7 +248,7 @@ int _tmain(int argc, TCHAR* argv[])
     cpp_file << "    {" << endl;
     cpp_file << "        const auto last_err = GetLastError();" << endl;
     cpp_file << "        const std::error_code ec(last_err, std::system_category());" << endl;
-    cpp_file << "        const auto err_msg = std::format(\"Failed to load proxy DLL\\nError: 0x{:X}\\nMsg: {}\", last_err, std::system_error(ec).what());" << endl;
+    cpp_file << "        std::string err_msg = std::format(\"Failed to load proxy DLL\\nError: 0x{:X}\\nMsg: {}\\nPath: {}\", last_err, std::system_error(ec).what(), std::string{dll_path.begin(), dll_path.end()});" << endl;
     cpp_file << "        MessageBoxA(nullptr, err_msg.c_str(), \"UE4SS Error\", MB_OK | MB_ICONERROR);" << endl;
     cpp_file << "        ExitProcess(0);" << endl;
     cpp_file << "    }" << endl;
