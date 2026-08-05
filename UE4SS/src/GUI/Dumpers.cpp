@@ -328,7 +328,7 @@ namespace RC::GUI::Dumpers
             auto& name_components = name_json["Components"];
             name_components["ComparisonIndex"] = name.GetComparisonIndex().ToUnstableInt();
 #ifdef WITH_CASE_PRESERVING_NAME
-            name_components["DisplayIndex"] = name.GetDisplayIndex();
+            name_components["DisplayIndex"] = name.GetDisplayIndex().ToUnstableInt();
 #else
             name_components["DisplayIndex"] = nullptr;
 #endif
