@@ -53,6 +53,7 @@
 #include <Unreal/UPackage.hpp>
 #include <Unreal/CoreUObject/UObject/Class.hpp>
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
+#include <Unreal/Property/FFieldPathProperty.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/World.hpp>
 #include <Unreal/FWorldContext.hpp>
@@ -102,6 +103,78 @@ namespace RC
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
     {                                                                                                                                                          \
         Output::send(STR(#StructName "::{} = 0x{:X}\n"), name, offset);                                                                                        \
+    }
+
+    // Helper macro to adjust all member offsets for a UObjectBase-derived struct by +8 bytes
+    // Used when running on debug/stats builds that have TStatId added to UObjectBase
+#define ADJUST_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
+    for (auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                             \
+    {                                                                                                                                                          \
+        offset += sizeof(void*);                                                                                                                               \
+    }
+
+    // Adjusts all member offsets for UObjectBase-derived classes by +8 bytes.
+    // In stats/debug builds, UObjectBase has an additional TStatId member (8 bytes) after OuterPrivate,
+    // which shifts all derived class member offsets by 8 bytes.
+    // This is only needed for pre-4.25 games since FUObjectItem adjustment handles 4.25+.
+    auto AdjustOffsetsForStatsBuild() -> void
+    {
+        static bool s_already_adjusted = false;
+        if (s_already_adjusted)
+        {
+            Output::send<LogLevel::Warning>(STR("AdjustOffsetsForStatsBuild called twice! Skipping.\n"));
+            return;
+        }
+        s_already_adjusted = true;
+
+        Output::send<LogLevel::Verbose>(STR("Adjusting member offsets for stats/debug build (+8 bytes for UObjectBase-derived classes)\n"));
+
+        // UObjectBase itself - ONLY UEP_TotalSize needs adjustment
+        // The other members (ObjectFlags, InternalIndex, ClassPrivate, NamePrivate, OuterPrivate)
+        // are BEFORE the StatID insertion point and should NOT be shifted
+        Unreal::UObjectBase::UEP_TotalSize() += sizeof(void*);
+
+        // UField and all its derivatives (UStruct, UClass, UScriptStruct, UFunction, UEnum)
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UField);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UStruct);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UClass);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(USparseDelegateFunction);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UEnum);
+
+        // Property classes (in pre-4.25, these are UProperty which inherits from UField)
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
+
+        // NOTE: FNumericProperty does NOT have its own MemberOffsets - it inherits from FProperty
+        // So do NOT adjust it, as that would double-adjust FProperty::MemberOffsets
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FObjectPropertyBase);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FStructProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FArrayProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FMapProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FSetProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FBoolProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FByteProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FEnumProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FClassProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FSoftClassProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FDelegateProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FMulticastDelegateProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FInterfaceProperty);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FFieldPathProperty);
+
+        // UObjectBase-derived classes that DON'T have their own MemberOffsets:
+        // - AActor (uses UObjectBase::MemberOffsets)
+        // - UEngine (uses UObjectBase::MemberOffsets)
+        // - UGameViewportClient (uses UObjectBase::MemberOffsets)
+        // - AGameModeBase, AGameMode (uses UObjectBase::MemberOffsets)
+
+        // Other UObject-derived classes
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AGameMode);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UPlayer);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(ULocalPlayer);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UDataTable);
     }
 
     enum class IsCoalesced
@@ -206,14 +279,6 @@ namespace RC
             {
                 create_emergency_console_for_early_error(fmt::format(STR("The IniParser failed to parse: {}"), ensure_str(e.what())));
                 return;
-            }
-
-            if (settings_manager.EngineVersionOverride.DebugBuild)
-            {
-                if (Unreal::Version::IsAtLeast(4, 25))
-                {
-                    Unreal::FUObjectItem::UEP_TotalSize() += sizeof(void*);
-                }
             }
 
             if (settings_manager.CrashDump.EnableDumping)
@@ -893,6 +958,23 @@ namespace RC
         cpp_mods_done_loading.notify_one();
         // Continuous scanning, and finish initializing after the game thread is unlocked.
         Unreal::UnrealInitializer::Initialize(config);
+
+        // Apply debug/stats build offset adjustments now that version is known and member offsets are initialized
+        if (settings_manager.EngineVersionOverride.DebugBuild)
+        {
+            if (Unreal::Version::IsAtLeast(4, 25))
+            {
+                // In 4.25+, debug builds add TStatId to FUObjectItem
+                Unreal::FUObjectItem::UEP_TotalSize() += sizeof(void*);
+                Output::send<LogLevel::Verbose>(STR("Adjusted FUObjectItem::UEP_TotalSize for stats/debug build (+8 bytes)\n"));
+            }
+            else
+            {
+                // In pre-4.25, debug builds add TStatId to UObjectBase (after OuterPrivate)
+                // This shifts all derived class member offsets by 8 bytes
+                AdjustOffsetsForStatsBuild();
+            }
+        }
 
         output_all_member_offsets(IsCoalesced::Yes);
 
