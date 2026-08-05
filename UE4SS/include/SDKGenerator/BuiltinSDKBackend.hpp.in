@@ -1,0 +1,16 @@
+#pragma once
+
+// Generated at configure time from assets/UE4SS_SDK_Backends/UE4SS.json -- do not edit.
+//
+// The UE4SS backend is compiled in so the SDK generator works with nothing on disk. A backend of the
+// same name found in <working_dir>/UE4SS_SDK_Backends still takes precedence, so this is a fallback
+// rather than a fixed policy. Generating it from the shipped JSON keeps the two from disagreeing.
+
+#include <string_view>
+
+namespace RC::UEGenerator
+{
+    inline constexpr std::string_view g_builtin_ue4ss_backend_name = "UE4SS";
+
+    inline constexpr std::string_view g_builtin_ue4ss_backend_json = R"UE4SSBACKENDJSON(@UE4SS_SDK_BACKEND_JSON@)UE4SSBACKENDJSON";
+} // namespace RC::UEGenerator

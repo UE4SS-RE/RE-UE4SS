@@ -10,6 +10,8 @@ A property whose C++ type the generator cannot express — a `TMap`/`TSet` membe
 
 To verify a generated SDK against a specific game build, include `UE4SS_SDK/LayoutAsserts.hpp`. It contains `static_assert`s for the size, alignment and every member offset of every generated type. It is not included by default, so a layout problem shows up as a failed assert on the exact type rather than breaking the whole SDK build. `UE4SS_SDK/RuntimeSDKTest.hpp` performs the equivalent check at runtime against the live game.
 
+The UE4SS backend is compiled into UE4SS, so the generator works without any configuration files present. Dropping a backend description into `<working_dir>/UE4SS_SDK_Backends` adds a new backend, or overrides the built-in one if it uses the same file name (`UE4SS.json`). The shipped copy in `assets/UE4SS_SDK_Backends/UE4SS.json` is the same file the built-in is generated from, so it doubles as a starting point for customisation.
+
 ## How it works
 
 The generator generates classes, struct and enums.  
