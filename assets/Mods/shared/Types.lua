@@ -303,7 +303,12 @@ function DumpStaticMeshes() end
 function DumpAllActors() end
 
 --- Generates .usmap file
-function DumpUSMAP() end
+---@param IncludeBlueprintTypes boolean? Whether to include Blueprint-generated classes/structs/enums (default: true)
+function DumpUSMAP(IncludeBlueprintTypes) end
+
+--- Generates .jmap file (JSON reflection dump, format by trumank)
+---@param IncludeBlueprintTypes boolean? Whether to include Blueprint-generated classes/structs/enums (default: true)
+function DumpJMAP(IncludeBlueprintTypes) end
 
 ---@param ObjectName string
 ---@return UObject

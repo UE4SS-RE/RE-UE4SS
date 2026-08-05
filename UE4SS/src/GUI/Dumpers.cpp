@@ -8,6 +8,7 @@
 #include <File/File.hpp>
 #include <File/Macros.hpp>
 #include <GUI/Dumpers.hpp>
+#include <JMapGenerator/JMapGenerator.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <FlagsStringifier.hpp>
 #ifdef TEXT
@@ -519,12 +520,27 @@ namespace RC::GUI::Dumpers
             });
         }*/
 
+        static bool s_include_blueprint_types{true};
+        static bool s_skip_property_values{false};
+
         if (ImGui::Button("Generate .usmap file\nUnrealMappingsDumper by OutTheShade"))
         {
             TRY([] {
-                OutTheShade::generate_usmap();
+                OutTheShade::generate_usmap(s_include_blueprint_types);
             });
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Generate .jmap file\njmap format by trumank"))
+        {
+            TRY([] {
+                JMapGenerator::generate_jmap(s_include_blueprint_types, s_skip_property_values);
+            });
+        }
+        ImGui::SameLine();
+        ImGui::BeginGroup();
+        ImGui::Checkbox("Include Blueprint-generated types", &s_include_blueprint_types);
+        ImGui::Checkbox("Skip property values (.jmap, smaller output)", &s_skip_property_values);
+        ImGui::EndGroup();
 
         if (ImGui::Button("Generate TMapOverride file\n"))
         {
