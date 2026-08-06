@@ -1,5 +1,6 @@
 #define NOMINMAX
 
+#include <algorithm>
 #include <atomic>
 #include <filesystem>
 #include <format>
@@ -8,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
@@ -2626,52 +2628,112 @@ Overloads:
 
             auto game_name = game_executable_directory.parent_path().parent_path().filename();
             auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
+
+            // A C function only gets LUA_MINSTACK (20) free slots and each level below holds two of them until
+            // fuse_pair() runs, so a deep tree pushes past the end of the stack. api_incr_top's check is compiled
+            // out in release, so it corrupts the heap instead of erroring.
+            constexpr int32_t lua_stack_slots_per_level = 8;
+            constexpr size_t max_directory_depth = 64;
+
             auto directories_table = lua.prepare_new_table();
 
-            std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&)> iterate_directory =
-                    [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table) {
+            bool reported_depth_limit{};
+            // Link targets on the current path. Every cycle goes through a link, so this breaks them all without
+            // resolving the non-link entries.
+            std::vector<std::filesystem::path> followed_links{};
+
+            std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&, size_t)> iterate_directory =
+                    [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table, size_t depth) {
                         try
                         {
-                            std::error_code ec;
-                            for (const auto& item : std::filesystem::directory_iterator(directory, ec))
+                            if (!lua_checkstack(lua.get_lua_state(), lua_stack_slots_per_level))
                             {
-                                try
+                                Output::send<LogLevel::Error>(STR("IterateGameDirectories: Could not grow the Lua stack while iterating {}, "
+                                                                  "stopping traversal here\n"),
+                                                              directory.wstring());
+                                return;
+                            }
+
+                            if (depth >= max_directory_depth)
+                            {
+                                if (!reported_depth_limit)
                                 {
-                                    if (!item.is_directory())
+                                    reported_depth_limit = true;
+                                    Output::send<LogLevel::Warning>(STR("IterateGameDirectories: Reached the maximum directory depth of {} at {}. "
+                                                                        "Directories below this are not included in the result.\n"),
+                                                                    max_directory_depth,
+                                                                    directory.wstring());
+                                }
+                            }
+                            else
+                            {
+                                std::error_code ec;
+                                for (const auto& item :
+                                     std::filesystem::directory_iterator(directory, std::filesystem::directory_options::skip_permission_denied, ec))
+                                {
+                                    std::error_code item_ec;
+                                    if (!item.is_directory(item_ec) || item_ec)
                                     {
                                         continue;
                                     }
 
-                                    auto path = item.path().filename();
-
-                                    // Set key to "Game" if this is the game directory, otherwise use the actual name
-                                    std::string table_key;
-                                    if (path == game_name)
+                                    bool following_link{};
+                                    if (item.is_symlink(item_ec) && !item_ec)
                                     {
-                                        table_key = "Game";
+                                        auto link_target = std::filesystem::canonical(item.path(), item_ec);
+                                        if (item_ec)
+                                        {
+                                            // Can't check an unresolvable link for a cycle, so don't descend into it.
+                                            continue;
+                                        }
+
+                                        if (std::find(followed_links.begin(), followed_links.end(), link_target) != followed_links.end())
+                                        {
+                                            continue;
+                                        }
+
+                                        followed_links.emplace_back(std::move(link_target));
+                                        following_link = true;
                                     }
-                                    else
+
+                                    try
                                     {
-                                        // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
-                                        table_key = to_utf8_string(path);
+                                        auto path = item.path().filename();
+
+                                        // Set key to "Game" if this is the game directory, otherwise use the actual name
+                                        std::string table_key;
+                                        if (path == game_name)
+                                        {
+                                            table_key = "Game";
+                                        }
+                                        else
+                                        {
+                                            // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                                            table_key = to_utf8_string(path);
+                                        }
+
+                                        current_directory_table.add_key(table_key.c_str());
+                                        auto next_directory_table = lua.prepare_new_table();
+
+                                        // Recursively iterate the subdirectory
+                                        iterate_directory(item.path(), next_directory_table, depth + 1);
+                                        current_directory_table.fuse_pair();
+                                    }
+                                    catch (const std::exception& e)
+                                    {
+                                        Output::send<LogLevel::Error>(STR("Error processing directory entry: {}\n"), to_wstring(e.what()));
                                     }
 
-                                    current_directory_table.add_key(table_key.c_str());
-                                    auto next_directory_table = lua.prepare_new_table();
-
-                                    // Recursively iterate the subdirectory
-                                    iterate_directory(item.path(), next_directory_table);
-                                    current_directory_table.fuse_pair();
+                                    if (following_link)
+                                    {
+                                        followed_links.pop_back();
+                                    }
                                 }
-                                catch (const std::exception& e)
+
+                                if (ec)
                                 {
-                                    Output::send<LogLevel::Error>(STR("Error processing directory entry: {}\n"), to_wstring(e.what()));
+                                    Output::send<LogLevel::Error>(STR("Error iterating directory {}: {}\n"), directory.wstring(), to_wstring(ec.message()));
                                 }
-                            }
-
-                            if (ec)
-                            {
-                                Output::send<LogLevel::Error>(STR("Error iterating directory {}: {}\n"), directory.wstring(), to_wstring(ec.message()));
                             }
 
                             auto meta_table = lua.prepare_new_table();
@@ -2790,24 +2852,38 @@ Overloads:
                                             std::error_code ec;
                                             if (std::filesystem::exists(path_wstr, ec))
                                             {
-                                                for (const auto& item : std::filesystem::directory_iterator(path_wstr, ec))
+                                                for (const auto& item :
+                                                     std::filesystem::directory_iterator(path_wstr, std::filesystem::directory_options::skip_permission_denied, ec))
                                                 {
                                                     try
                                                     {
-                                                        if (!item.is_directory())
+                                                        std::error_code item_ec;
+                                                        if (item.is_directory(item_ec) || item_ec)
                                                         {
-                                                            files_table.add_key(index);
-                                                            auto file_table = lua.prepare_new_table();
-
-                                                            // Create safe strings for filenames and paths
-                                                            // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
-                                                            std::string safe_filename = to_utf8_string(item.path().filename());
-                                                            std::string safe_path = to_utf8_string(item.path());
-
-                                                            file_table.add_pair("__name", safe_filename.c_str());
-                                                            file_table.add_pair("__absolute_path", safe_path.c_str());
-                                                            files_table.fuse_pair();
+                                                            continue;
                                                         }
+
+                                                        if (!lua_checkstack(lua_state, 5))
+                                                        {
+                                                            Output::send<LogLevel::Error>(STR("Error iterating files in {}: could not grow the Lua stack\n"),
+                                                                                          path_wstr);
+                                                            break;
+                                                        }
+
+                                                        files_table.add_key(index);
+                                                        auto file_table = lua.prepare_new_table();
+
+                                                        // Create safe strings for filenames and paths
+                                                        // TODO: When UE5 String conversion is implemented, replace with StringCast<ANSICHAR>
+                                                        std::string safe_filename = to_utf8_string(item.path().filename());
+                                                        std::string safe_path = to_utf8_string(item.path());
+
+                                                        file_table.add_pair("__name", safe_filename.c_str());
+                                                        file_table.add_pair("__absolute_path", safe_path.c_str());
+                                                        files_table.fuse_pair();
+
+                                                        // Only advance when something was added, otherwise skipped
+                                                        // directories leave holes and '#files' stops being usable.
                                                         ++index;
                                                     }
                                                     catch (const std::exception& e)
@@ -2856,7 +2932,7 @@ Overloads:
 
             try
             {
-                iterate_directory(game_root_directory, directories_table);
+                iterate_directory(game_root_directory, directories_table, 0);
             }
             catch (const std::exception& e)
             {
