@@ -42,6 +42,7 @@ if (NOT ${UE4SS_${TARGET}_BUILD_SHARED})
     target_compile_definitions(${TARGET} PRIVATE
             RC_PARSER_BASE_BUILD_STATIC
             RC_FILE_BUILD_STATIC
+            RC_HELPERS_BUILD_STATIC
     )
 endif ()
 

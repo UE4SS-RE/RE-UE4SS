@@ -36,6 +36,7 @@ target_compile_definitions(${TARGET} PRIVATE
         RC_PARSER_BASE_BUILD_STATIC
         RC_INI_PARSER_BUILD_STATIC
         RC_JSON_BUILD_STATIC
+        RC_HELPERS_BUILD_STATIC
 )
 # First party static build -> END
 

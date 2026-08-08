@@ -24,6 +24,12 @@ endif ()
 # Enabling c++23 support
 target_compile_features(${TARGET} PUBLIC cxx_std_23)
 
+if (NOT ${UE4SS_${TARGET}_BUILD_SHARED})
+    target_compile_definitions(${TARGET} PRIVATE
+            RC_HELPERS_BUILD_STATIC
+    )
+endif ()
+
 target_compile_definitions(${TARGET} PRIVATE
         RC_${MODULE_NAME}_EXPORTS
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
