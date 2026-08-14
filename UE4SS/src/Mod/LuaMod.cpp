@@ -6190,105 +6190,120 @@ Overloads:
                         continue;
                     }
 
-                    lua.registry().get_function_ref(registry_index.lua_index);
-
-                    static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
-                    LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
-
-                    auto node = Stack.Node();
-                    auto return_value_offset = node->GetReturnValueOffset();
-                    auto has_return_value = return_value_offset != 0xFFFF;
-                    auto num_unreal_params = node->GetNumParms();
-                    if (has_return_value && num_unreal_params > 0)
+                    // Guard each callback separately so a throwing hook can't skip the remaining callbacks or escape into the hook layer.
+                    const auto stack_top_before_callback = lua_gettop(lua.get_lua_state());
+                    try
                     {
-                        --num_unreal_params;
-                    }
+                        lua.registry().get_function_ref(registry_index.lua_index);
 
-                    if (has_return_value || num_unreal_params > 0)
-                    {
-                        for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(node, Unreal::EFieldIterationFlags::IncludeDeprecated))
+                        static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
+                        LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
+
+                        auto node = Stack.Node();
+                        auto return_value_offset = node->GetReturnValueOffset();
+                        auto has_return_value = return_value_offset != 0xFFFF;
+                        auto num_unreal_params = node->GetNumParms();
+                        if (has_return_value && num_unreal_params > 0)
                         {
-                            if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
-                            {
-                                continue;
-                            }
-                            if (has_return_value && param->GetOffset_Internal() == return_value_offset)
-                            {
-                                continue;
-                            }
+                            --num_unreal_params;
+                        }
 
-                            auto param_type = param->GetClass().GetFName();
-                            auto param_type_comparison_index = param_type.GetComparisonIndex();
-                            if (auto it = LuaType::StaticState::m_property_value_pushers.find(param_type_comparison_index);
-                                it != LuaType::StaticState::m_property_value_pushers.end())
+                        if (has_return_value || num_unreal_params > 0)
+                        {
+                            for (Unreal::FProperty* param : Unreal::TFieldRange<Unreal::FProperty>(node, Unreal::EFieldIterationFlags::IncludeDeprecated))
                             {
-                                void* data{};
-                                if (param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                                if (!param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_Parm))
                                 {
-                                    data = Unreal::FindOutParamValueAddress(Stack, param);
+                                    continue;
+                                }
+                                if (has_return_value && param->GetOffset_Internal() == return_value_offset)
+                                {
+                                    continue;
+                                }
+
+                                auto param_type = param->GetClass().GetFName();
+                                auto param_type_comparison_index = param_type.GetComparisonIndex();
+                                if (auto it = LuaType::StaticState::m_property_value_pushers.find(param_type_comparison_index);
+                                    it != LuaType::StaticState::m_property_value_pushers.end())
+                                {
+                                    void* data{};
+                                    if (param->HasAnyPropertyFlags(Unreal::EPropertyFlags::CPF_OutParm))
+                                    {
+                                        data = Unreal::FindOutParamValueAddress(Stack, param);
+                                    }
+                                    else
+                                    {
+                                        data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
+                                    }
+                                    const LuaType::PusherParams pusher_param{
+                                            .operation = LuaType::Operation::GetParam,
+                                            .lua = lua,
+                                            .base = nullptr,
+                                            .data = data,
+                                            .property = param,
+                                    };
+                                    auto& type_handler = it->second;
+                                    type_handler(pusher_param);
                                 }
                                 else
                                 {
-                                    data = param->ContainerPtrToValuePtr<void>(Stack.Locals());
+                                    lua.throw_error(fmt::format(
+                                            "[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
+                                            to_string(param_type.ToString())));
                                 }
-                                const LuaType::PusherParams pusher_param{
-                                        .operation = LuaType::Operation::GetParam,
-                                        .lua = lua,
-                                        .base = nullptr,
-                                        .data = data,
-                                        .property = param,
-                                };
-                                auto& type_handler = it->second;
-                                type_handler(pusher_param);
-                            }
-                            else
-                            {
-                                lua.throw_error(fmt::format(
-                                        "[script_hook] Tried accessing unreal property without a registered handler. Property type '{}' not supported.",
-                                        to_string(param_type.ToString())));
-                            }
-                        };
-                    }
+                            };
+                        }
 
-                    lua.call_function(num_unreal_params + 1, 1);
+                        lua.call_function(num_unreal_params + 1, 1);
 
-                    bool return_value_handled{};
-                    if (has_return_value && RESULT_DECL && lua.get_stack_size() > 0 && !lua.is_nil())
-                    {
-                        auto return_property = node->GetReturnProperty();
-                        if (return_property)
+                        bool return_value_handled{};
+                        if (has_return_value && RESULT_DECL && lua.get_stack_size() > 0 && !lua.is_nil())
                         {
-                            auto return_property_type = return_property->GetClass().GetFName();
-                            auto return_property_type_comparison_index = return_property_type.GetComparisonIndex();
-
-                            if (auto it = LuaType::StaticState::m_property_value_pushers.find(return_property_type_comparison_index);
-                                it != LuaType::StaticState::m_property_value_pushers.end())
+                            auto return_property = node->GetReturnProperty();
+                            if (return_property)
                             {
-                                const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::Set,
-                                                                          .lua = lua,
-                                                                          .base = static_cast<Unreal::UObject*>(RESULT_DECL),
-                                                                          .data = RESULT_DECL,
-                                                                          .property = return_property};
-                                auto& type_handler = it->second;
-                                type_handler(pusher_params);
-                                return_value_handled = true;
-                            }
-                            else
-                            {
-                                auto return_property_type_name = return_property_type.ToString();
-                                auto return_property_name = return_property->GetName();
+                                auto return_property_type = return_property->GetClass().GetFName();
+                                auto return_property_type_comparison_index = return_property_type.GetComparisonIndex();
 
-                                Output::send(STR("Tried altering return value of a custom BP function without a registered handler for return type Return "
-                                                 "property '{}' of type '{}' not supported."),
-                                             return_property_name,
-                                             return_property_type_name);
+                                if (auto it = LuaType::StaticState::m_property_value_pushers.find(return_property_type_comparison_index);
+                                    it != LuaType::StaticState::m_property_value_pushers.end())
+                                {
+                                    const LuaType::PusherParams pusher_params{.operation = LuaType::Operation::Set,
+                                                                              .lua = lua,
+                                                                              .base = static_cast<Unreal::UObject*>(RESULT_DECL),
+                                                                              .data = RESULT_DECL,
+                                                                              .property = return_property};
+                                    auto& type_handler = it->second;
+                                    type_handler(pusher_params);
+                                    return_value_handled = true;
+                                }
+                                else
+                                {
+                                    auto return_property_type_name = return_property_type.ToString();
+                                    auto return_property_name = return_property->GetName();
+
+                                    Output::send(STR("Tried altering return value of a custom BP function without a registered handler for return type Return "
+                                                     "property '{}' of type '{}' not supported."),
+                                                 return_property_name,
+                                                 return_property_type_name);
+                                }
                             }
                         }
-                    }
 
-                    if (!return_value_handled)
+                        if (!return_value_handled)
+                        {
+                            lua.discard_value();
+                        }
+                    }
+                    catch (std::exception& e)
                     {
-                        lua.discard_value();
+                        lua_settop(lua.get_lua_state(), stack_top_before_callback);
+                        Output::send<LogLevel::Error>(STR("[script_hook] A callback threw an exception: {}\n"), ensure_str(e.what()));
+                    }
+                    catch (...)
+                    {
+                        lua_settop(lua.get_lua_state(), stack_top_before_callback);
+                        Output::send<LogLevel::Error>(STR("[script_hook] A callback threw a non-standard exception\n"));
                     }
                 }
             }
