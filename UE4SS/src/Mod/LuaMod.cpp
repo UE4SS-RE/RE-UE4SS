@@ -7111,47 +7111,50 @@ Overloads:
 
         actions_unlock();
 
-        TRY([&]() {
-            m_delayed_actions.erase(std::remove_if(m_delayed_actions.begin(),
-                                                   m_delayed_actions.end(),
-                                                   [&](AsyncAction& action) -> bool {
-                                                       auto passed =
-                                                               now -
-                                                               std::chrono::duration_cast<std::chrono::milliseconds>(action.created_at.time_since_epoch()).count();
-                                                       auto duration_since_creation = (action.type == LuaMod::ActionType::Immediate || passed >= action.delay);
-                                                       if (duration_since_creation)
+        m_delayed_actions.erase(std::remove_if(m_delayed_actions.begin(),
+                                               m_delayed_actions.end(),
+                                               [&](AsyncAction& action) -> bool {
+                                                   auto passed =
+                                                           now -
+                                                           std::chrono::duration_cast<std::chrono::milliseconds>(action.created_at.time_since_epoch()).count();
+                                                   auto duration_since_creation = (action.type == LuaMod::ActionType::Immediate || passed >= action.delay);
+                                                   if (duration_since_creation)
+                                                   {
+                                                       bool result = true;
+                                                       try
                                                        {
-                                                           bool result = true;
-                                                           try
+                                                           async_lua()->registry().get_function_ref(action.lua_action_function_ref);
+                                                           if (action.type == LuaMod::ActionType::Loop)
                                                            {
-                                                               async_lua()->registry().get_function_ref(action.lua_action_function_ref);
-                                                               if (action.type == LuaMod::ActionType::Loop)
-                                                               {
-                                                                   async_lua()->call_function(0, 1);
-                                                                   result = async_lua()->is_bool() && async_lua()->get_bool();
-                                                                   action.created_at = std::chrono::steady_clock::now();
-                                                               }
-                                                               else
-                                                               {
-                                                                   async_lua()->call_function(0, 0);
-                                                               }
+                                                               async_lua()->call_function(0, 1);
+                                                               result = async_lua()->is_bool() && async_lua()->get_bool();
+                                                               action.created_at = std::chrono::steady_clock::now();
                                                            }
-                                                           catch (std::runtime_error& e)
+                                                           else
                                                            {
-                                                               Output::send(STR("[{}] {}\n"),
-                                                                            ensure_str(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"),
-                                                                            ensure_str(e.what()));
+                                                               async_lua()->call_function(0, 0);
                                                            }
+                                                       }
+                                                       catch (std::exception& e)
+                                                       {
+                                                           Output::send(STR("[{}] {}\n"),
+                                                                        ensure_str(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"),
+                                                                        ensure_str(e.what()));
+                                                       }
+                                                       catch (...)
+                                                       {
+                                                           Output::send(STR("[{}] Unknown exception\n"),
+                                                                        ensure_str(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"));
+                                                       }
 
-                                                           return result;
-                                                       }
-                                                       else
-                                                       {
-                                                           return false;
-                                                       }
-                                                   }),
-                                    m_delayed_actions.end());
-        });
+                                                       return result;
+                                                   }
+                                                   else
+                                                   {
+                                                       return false;
+                                                   }
+                                               }),
+                                m_delayed_actions.end());
     }
 
     auto LuaMod::clear_delayed_actions() -> void
