@@ -48,6 +48,9 @@ set(CMAKE_RC_COMPILER ${LLVM_RC_EXECUTABLE})
 if(LLVM_MT_EXECUTABLE)
     set(CMAKE_MT ${LLVM_MT_EXECUTABLE})
 endif()
+if(LLVM_ML_EXECUTABLE)
+    set(CMAKE_ASM_MASM_COMPILER ${LLVM_ML_EXECUTABLE})
+endif()
 
 # Get xwin directory from environment or use default relative path
 if(DEFINED ENV{XWIN_DIR})
