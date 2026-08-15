@@ -230,6 +230,7 @@ namespace RC::GUI
       private:
         std::unique_ptr<GfxBackendBase> m_gfx_backend{};
         std::unique_ptr<OSBackendBase> m_os_backend{};
+        ImFont* m_texteditor_font{};
         Console m_console{};
         LiveView m_live_view{};
         std::stop_token* m_thread_stop_token{};
@@ -271,6 +272,10 @@ namespace RC::GUI
         {
             return m_live_view;
         };
+        auto get_texteditor_font() const -> ImFont*
+        {
+            return m_texteditor_font;
+        }
         auto set_gfx_backend(GfxBackend) -> void;
         auto add_tab(std::shared_ptr<GUITab> tab) -> void;
         auto remove_tab(std::shared_ptr<GUITab> tab) -> void;
