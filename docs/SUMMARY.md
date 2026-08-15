@@ -81,6 +81,8 @@
     - [ExecuteWithDelay](./lua-api/global-functions/executewithdelay.md)
     - [ExecuteInGameThread](./lua-api/global-functions/executeingamethread.md)
     - [Delayed Actions](./lua-api/global-functions/delayedactions.md)
+    - [AsyncCompute](./lua-api/global-functions/asynccompute.md)
+    - [json](./lua-api/global-functions/json.md)
     - [ExecuteAsync](./lua-api/global-functions/executeasync.md)
     - [LoopAsync](./lua-api/global-functions/loopasync.md)
     - [LoadAsset](./lua-api/global-functions/loadasset.md)
