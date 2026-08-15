@@ -161,6 +161,20 @@ namespace RC
         {
             Debug.RenderMode = GUI::RenderMode::GameViewportClientTick;
         }
+        StringType toggle_gui_key{};
+        REGISTER_STRING_SETTING(toggle_gui_key, section_debug, ToggleGuiKey)
+        if (!toggle_gui_key.empty())
+        {
+            try
+            {
+                Debug.ToggleGUIKey = Input::string_to_key(toggle_gui_key);
+            }
+            catch (...)
+            {
+                // Note that this happens too early to be sent to the log file or the GUI, so it will only appear in the native console on Win32, or the terminal on Linux.
+                throw std::runtime_error{fmt::format("Invalid value for 'Debug.ToggleGUIKey': {}\n", to_string(toggle_gui_key))};
+            }
+        }
 
         constexpr static File::CharType section_crash_dump[] = STR("CrashDump");
         REGISTER_BOOL_SETTING(CrashDump.EnableDumping, section_crash_dump, EnableDumping);
