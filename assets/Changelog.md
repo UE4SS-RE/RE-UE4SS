@@ -308,6 +308,7 @@ Added improved string and path conversion utilities with proper UTF-8 support ([
 Added `RC::await_debugger` in `Helpers/Debug.hpp`. ([UE4SS #1314](https://github.com/UE4SS-RE/RE-UE4SS/pull/1314))
 
 ### BPModLoader 
+BREAKING: default INSERT keybind to manually reload the ModActors was changed to les obtrusive ALT+INSERT
 
 ### Experimental 
 
