@@ -1,0 +1,8 @@
+UE4SS_LINUX_1.0 {
+    global:
+        ue4ss_start;
+        ue4ss_get_status;
+        ue4ss_shutdown;
+    local:
+        *;
+};

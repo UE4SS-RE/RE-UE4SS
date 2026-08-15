@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "name": "UE4SS Linux headless Lua MVP",
+  "version": "0.2.0",
+  "git_sha": "@UE4SS_LINUX_GIT_SHA@",
+  "platform": "linux-x86_64-glibc",
+  "compiler": "@CMAKE_CXX_COMPILER_ID@ @CMAKE_CXX_COMPILER_VERSION@",
+  "cxx_runtime": "@UE4SS_LINUX_CXX_RUNTIME@",
+  "abi_version": 1,
+  "phase": "lua-hooks-mvp",
+  "unreal_capabilities": {
+    "abi_headers": @UE4SS_BUILD_UNREAL_ABI@,
+    "source_gate": @UE4SS_BUILD_UNREAL_SOURCE_GATE@,
+    "resolver_state": @UE4SS_BUILD_UNREAL_RUNTIME@,
+    "object_registry_read_only": true,
+    "lua_vm": @UE4SS_BUILD_LUA_RUNTIME@,
+    "lua_bindings": "reflected-hooks-mvp"
+  }
+}

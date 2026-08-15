@@ -10,9 +10,22 @@
 #include <tuple>
 #include <typeinfo>
 #include <vector>
+
+// Unreal exposes a global function-like `check` macro. fmt also has internal
+// members named check, so including fmt after Unreal headers otherwise lets
+// the preprocessor corrupt fmt/ranges.h. Preserve the caller's macro exactly.
+#if defined(check)
+#pragma push_macro("check")
+#undef check
+#define RC_DYNAMIC_OUTPUT_RESTORE_CHECK_MACRO 1
+#endif
 #include <fmt/core.h>
 #include <fmt/xchar.h>
 #include <fmt/chrono.h>
+#if defined(RC_DYNAMIC_OUTPUT_RESTORE_CHECK_MACRO)
+#pragma pop_macro("check")
+#undef RC_DYNAMIC_OUTPUT_RESTORE_CHECK_MACRO
+#endif
 #include <DynamicOutput/Common.hpp>
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>

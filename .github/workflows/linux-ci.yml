@@ -1,0 +1,68 @@
+name: Native Linux bootstrap
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "linux/**"
+      - "deps/first/patternsleuth_bind/**"
+      - ".gitmodules"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - ".github/workflows/linux-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out the public patternsleuth submodule
+        run: git submodule update --init deps/first/patternsleuth
+
+      - name: Configure private UEPseudo access
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          UEPSEUDO_TOKEN: ${{ secrets.UEPSEUDO_TOKEN }}
+        run: |
+          test -n "${UEPSEUDO_TOKEN}" || { echo "UEPSEUDO_TOKEN is required for the full Linux runtime build"; exit 1; }
+          git config --local url."https://x-access-token:${UEPSEUDO_TOKEN}@github.com/".insteadOf "git@github.com:"
+
+      - name: Build full runtime in the Ubuntu 22.04 toolchain container
+        if: github.event_name == 'workflow_dispatch'
+        run: linux/docker/build-package.sh
+
+      - name: Build public platform gate without private UEPseudo
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p build/container-package
+          docker build \
+            --file linux/docker/Dockerfile.builder \
+            --target artifact \
+            --tag ue4ss-linux-public-gate:local \
+            --build-arg UE4SS_WITH_UNREAL_ABI=OFF \
+            --build-arg UE4SS_WITH_UNREAL_SOURCE_GATE=OFF \
+            --build-arg UE4SS_WITH_UNREAL_RUNTIME=OFF \
+            .
+          container_id="$(docker create ue4ss-linux-public-gate:local)"
+          trap 'docker rm -f "${container_id}" >/dev/null 2>&1 || true' EXIT
+          docker cp "${container_id}:/UE4SS-Linux-x86_64-unknown.tar.gz" build/container-package/
+
+      - name: Extract package for ABI checks
+        run: |
+          mkdir -p build/package-audit
+          tar -xzf build/container-package/UE4SS-Linux-x86_64-*.tar.gz -C build/package-audit
+      - name: Verify exported core ABI
+        run: |
+          test "$(readelf --dyn-syms --wide build/package-audit/libUE4SS.so | awk '$8 != "" && $7 != "UND" && $4 != "SECTION" && $8 !~ /^(Name|UE4SS_LINUX_1.0)$/ {sub(/@@.*/, "", $8); print $8}' | sort -u | tr '\n' ' ')" = "ue4ss_get_status ue4ss_shutdown ue4ss_start "
+          test "$(readelf --dyn-syms --wide build/package-audit/libue4ss_preload.so | awk '$8 != "" && $7 != "UND" && $4 != "SECTION" && $8 != "Name" {sub(/@@.*/, "", $8); print $8}' | sort -u | tr '\n' ' ')" = "__libc_start_main "
+          ! readelf -d build/package-audit/libUE4SS.so | grep -q 'libstdc++\|libc++'
+          MAX_GLIBC="$(readelf --version-info build/package-audit/libUE4SS.so | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1)"
+          test "$(printf '%s\n' "${MAX_GLIBC}" GLIBC_2.35 | sort -Vu | tail -1)" = GLIBC_2.35
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UE4SS-Linux-x86_64-${{ github.event_name }}
+          path: build/container-package/UE4SS-Linux-x86_64-*.tar.gz

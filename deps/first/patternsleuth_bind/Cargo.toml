@@ -4,7 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-pe"] }
+# Keep both image backends in one lockfile so the existing Windows build and
+# the new Linux build remain reproducible with `--locked`.
+patternsleuth = { path = "../patternsleuth/patternsleuth", features = ["process-internal", "image-pe", "image-elf"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2.175"
 
 [lib]
 crate-type = ["staticlib"]
