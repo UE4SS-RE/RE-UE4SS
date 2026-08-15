@@ -62,16 +62,25 @@ RE-UE4SS supports the following environment variables:
 
 ## Build requirements
 
-- A computer running Windows.
-  - Linux support might happen at some point but not soon.
-- A version of MSVC that supports C++23:
+- A computer running Windows or Linux.
+  - Linux is fully supported for cross-compilation and has specific stability fixes for Proton/Wine.
+- A version of MSVC that supports C++23 (or Clang for cross-compilation):
   - MSVC toolset version >= 14.43.0
   - MSVC version >= 19.43
   - Visual Studio version >= 17.13
-  - More compilers will hopefully be supported in the future.
+  - Clang version >= 17 (for Linux cross-compilation)
 - [Rust toolchain >= 1.73.0](https://www.rust-lang.org/tools/install)
 - [CMake >= 3.22](https://cmake.org/download/)
-- A build system: either [Ninja](https://ninja-build.org/) or MSVC (included with Visual Studio)
+- A build system: either [Ninja](https://ninja-build.org/) (recommended) or MSVC (included with Visual Studio)
+
+## Linux Stability Improvements
+
+RE-UE4SS includes specific hardening for Linux/Proton environments to ensure a smooth experience:
+
+- **Robust Directory Iteration:** Filesystem iterators now skip symbolic links and handle permission errors gracefully, preventing infinite recursion crashes (common with Wine's `Z:` drive mapping).
+- **CPU Efficiency:** The async event loop and main update loop use thread-safe atomic flags and proper sleep intervals when paused, eliminating the 100% CPU busy-wait bug.
+- **Thread-Safe Hooks:** Hook management uses a synchronized mutex system and safe data capture to prevent data races and Use-After-Free crashes during mod hot-reloading.
+- **Improved UTF-8 Support:** Robust path conversion ensures that games installed in directories with non-ASCII characters (accents, CJK, etc.) load correctly.
 
 ## Build instructions
 
