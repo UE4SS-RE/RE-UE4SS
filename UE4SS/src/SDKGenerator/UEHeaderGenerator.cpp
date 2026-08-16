@@ -6,7 +6,6 @@
 
 #include <algorithm>
 #include <format>
-#include <fstream>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -2045,7 +2044,7 @@ namespace RC::UEGenerator
 
         bool previous_character_was_hex = false;
         const CharType* ptr = string.c_str();
-        
+
         while (CharType ch = *ptr++)
         {
             switch (ch)
@@ -4245,14 +4244,8 @@ namespace RC::UEGenerator
         // TODO might be slow, maybe move it out into the header generator?
         std::filesystem::create_directories(this->m_full_file_path.parent_path());
 
-        std::basic_ofstream<CharType> file_output_stream;
-        file_output_stream.open(m_full_file_path);
-        if (!file_output_stream.is_open())
-        {
-            throw std::invalid_argument("Failed to open the header file");
-        }
-        file_output_stream << generate_file_contents();
-        file_output_stream.close();
+        auto file = File::open(m_full_file_path, File::OpenFor::Writing, File::OverwriteExistingFile::Yes, File::CreateIfNonExistent::Yes);
+        file.write_string_to_file(generate_file_contents());
         return true;
     }
 
