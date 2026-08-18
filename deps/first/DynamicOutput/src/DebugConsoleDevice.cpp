@@ -4,6 +4,10 @@
 #include <DynamicOutput/DebugConsoleDevice.hpp>
 #include <DynamicOutput/Output.hpp>
 
+#if __cpp_lib_stacktrace >= RC_REQ_STACKTRACE_MIN_VER
+#include <stacktrace>
+#endif
+
 #ifdef _WIN32
 #define NOMINMAX
 #include <Windows.h>
@@ -50,6 +54,18 @@ namespace RC::Output
         RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "DebugConsoleDevice received: ")
 #else
         RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "")
+#if __cpp_lib_stacktrace >= RC_REQ_STACKTRACE_MIN_VER
+        if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
+        {
+            if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
+            {
+                RC_DEVICE_PRINT_FUNC(STR("Wine detected, stack trace might be incorrect!"), Color::Yellow, "")
+            }
+            const auto trace = std::stacktrace::current();
+            const auto trace_string = std::to_string(trace);
+            RC_DEVICE_PRINT_FUNC(ensure_str(trace_string), Color::Red, "")
+        }
+#endif
 #endif
     }
 } // namespace RC::Output
