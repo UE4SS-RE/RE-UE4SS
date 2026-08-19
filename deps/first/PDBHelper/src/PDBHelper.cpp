@@ -162,6 +162,38 @@ namespace RC::PDB
         return reinterpret_cast<uintptr_t>(nullptr);
     }
 
+    auto SymbolsHolder::get_rva_symbol_name(uint32_t input_rva) -> StringType
+    {
+        if (!is_valid())
+        {
+            initialize();
+        }
+
+        const ::PDB::ArrayView<::PDB::HashRecord> hash_records = m_public_symbol_stream.GetRecords();
+        for (const ::PDB::HashRecord& hash_record : hash_records)
+        {
+            const auto record = m_public_symbol_stream.GetRecord(m_symbol_record_stream, hash_record);
+            if (record->header.kind != ::PDB::CodeView::DBI::SymbolRecordKind::S_PUB32)
+            {
+                continue;
+            }
+
+            const auto rva = m_image_section_stream.ConvertSectionOffsetToRVA(record->data.S_PUB32.section, record->data.S_PUB32.offset);
+            const auto record_name_ascii = std::string_view{record->data.S_PUB32.name};
+            if (record_name_ascii.contains("LookupAllRequiredSymbolsInPDB"))
+            {
+                Output::send(STR("FOUND RVA: 0x{:016X}\n"), rva);
+            }
+            if (rva != input_rva)
+            {
+                continue;
+            }
+            const auto record_name = ensure_str(record_name_ascii);
+            return record_name;
+        }
+        return {};
+    }
+
     auto SymbolsHolder::for_each_symbol(const CallbackType& callback) -> void
     {
         if (!is_valid())

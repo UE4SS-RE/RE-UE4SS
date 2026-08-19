@@ -50,6 +50,9 @@ namespace RC::PDB
         // Returns the address for the supplied symbol, or nullptr if the symbol isn't found.
         [[nodiscard]] auto get_address_of_symbol(const StringType& symbol_name, ScanTarget scan_target) -> uintptr_t;
 
+        // Returns the symbol for the supplied RVA, or an empty string if the RVA isn't found.
+        [[nodiscard]] auto get_rva_symbol_name(uint32_t rva) -> StringType;
+
         // Iterates each symbol and calls the supplied callback.
         // The callback can LoopAction::Break to exit early.
         using CallbackType = std::function<LoopAction(std::string_view symbol_name, uint32_t rva)>;
