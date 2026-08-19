@@ -5,8 +5,6 @@
 #include <DynamicOutput/Macros.hpp>
 #include <File/Macros.hpp>
 
-#define RC_REQ_STACKTRACE_MIN_VER 202011L
-
 namespace RC
 {
     // Namespaced enums are used here to make them scoped
