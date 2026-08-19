@@ -1,20 +1,16 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(TARGET DynamicOutput)
+set(TARGET CallStackDebug)
 project(${TARGET})
 
 option(UE4SS_${TARGET}_BUILD_SHARED "Build as a shared lib" OFF)
 
 set(${TARGET}_Sources
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/DebugConsoleDevice.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/Output.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/OutputDevice.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/CallStackDebug.cpp"
         )
 
-string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
-string(TOUPPER ${MODULE_NAME} MODULE_NAME)
 
-if (UE4SS_${TARGET}_BUILD_SHARED)
+if (UE4SS_ASM_HELPER_BUILD_SHARED)
     message("Project: ${TARGET} (SHARED)")
     add_library(${TARGET} SHARED ${${TARGET}_Sources})
 else ()
@@ -30,9 +26,18 @@ target_compile_definitions(${TARGET} PRIVATE
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
             RC_${MODULE_NAME}_BUILD_STATIC>)
 
+if (NOT ${UE4SS_${TARGET}_BUILD_SHARED})
+    target_compile_definitions(${TARGET} PRIVATE
+            RC_FILE_BUILD_STATIC
+            RC_DYNAMIC_OUTPUT_BUILD_STATIC
+            RC_SINGLE_PASS_SIG_SCANNER_BUILD_STATIC
+            RC_HELPERS_BUILD_STATIC
+    )
+endif ()
+
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${TARGET} PUBLIC File CallStackDebug)
+target_link_libraries(${TARGET} PUBLIC File Helpers)
 
 # Make headers visible in the IDE
 # Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake

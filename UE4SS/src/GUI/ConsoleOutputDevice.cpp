@@ -4,16 +4,7 @@
 
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <UE4SSProgram.hpp>
-
-#if __cpp_lib_stacktrace >= RC_REQ_STACKTRACE_MIN_VER
-#include <stacktrace>
-#endif
-
-#if _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <Windows.h>
-#endif
+#include <CallStackDebug/CallStackDebug.hpp>
 
 namespace RC::Output
 {
@@ -44,15 +35,10 @@ namespace RC::Output
         {
             UE4SSProgram::get_program().get_debugging_ui().get_console().add_line(line, color);
         }
-#if __cpp_lib_stacktrace >= RC_REQ_STACKTRACE_MIN_VER
+#if RC_STACKTRACE_ENABLED
         if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
         {
-            if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-            {
-                UE4SSProgram::get_program().get_debugging_ui().get_console().add_line("Wine detected, stack trace might be incorrect!", Color::Yellow);
-            }
-            const auto trace = std::stacktrace::current();
-            const auto trace_string = std::to_string(trace);
+            const auto trace_string = to_string(CallStackDebug::generate_call_stack());
             std::stringstream stack_stream{trace_string};
             for (std::string line; std::getline(stack_stream, line);)
             {

@@ -8,12 +8,9 @@
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/File.hpp>
+#include <CallStackDebug/CallStackDebug.hpp>
 #include <fmt/core.h>
 #include <fmt/xchar.h>
-
-#if __cpp_lib_stacktrace >= RC_REQ_STACKTRACE_MIN_VER
-#include <stacktrace>
-#endif
 
 namespace RC::Output
 {
@@ -94,17 +91,11 @@ namespace RC::Output
 
         m_file.write_string_to_file(m_formatter(fmt));
 
-#if __cpp_lib_stacktrace >= RC_REQ_STACKTRACE_MIN_VER
+#if RC_STACKTRACE_ENABLED
         if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
         {
-            // TODO: Move into a .cpp file so that we can ue GetModuleHandleW to detect Wine.
-            //if (auto module = GetModuleHandleW(L"ntdll.dll"); module && GetProcAddress(module, "wine_get_version"))
-            //{
-            //    m_file.write_string_to_file(STR("Wine detected, stack trace might be incorrect!\n"));
-            //}
-            const auto trace = std::stacktrace::current();
-            const auto trace_string = std::to_string(trace);
-            const auto log_str = fmt::format(STR("{}\n"), ensure_str(trace_string));
+            const auto trace_string = CallStackDebug::generate_call_stack();
+            const auto log_str = fmt::format(STR("{}\n"), trace_string);
             m_file.write_string_to_file(log_str);
         }
 #endif
