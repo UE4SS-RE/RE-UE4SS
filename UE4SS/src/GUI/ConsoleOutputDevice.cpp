@@ -38,7 +38,7 @@ namespace RC::Output
 #if RC_STACKTRACE_ENABLED
         if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
         {
-            const auto trace_string = to_string(CallStackDebug::generate_call_stack());
+            const auto trace_string = to_string(CallStackDebug::get_call_stack());
             std::stringstream stack_stream{trace_string};
             for (std::string line; std::getline(stack_stream, line);)
             {
