@@ -54,7 +54,7 @@ namespace RC::Output
 #if RC_STACKTRACE_ENABLED
         if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
         {
-            const auto trace_string = CallStackDebug::generate_call_stack();
+            const auto trace_string = CallStackDebug::get_call_stack();
             RC_DEVICE_PRINT_FUNC(trace_string, Color::Red, "")
         }
 #endif

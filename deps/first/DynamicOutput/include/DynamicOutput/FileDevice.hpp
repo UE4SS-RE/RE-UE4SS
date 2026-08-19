@@ -94,7 +94,7 @@ namespace RC::Output
 #if RC_STACKTRACE_ENABLED
         if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
         {
-            const auto trace_string = CallStackDebug::generate_call_stack();
+            const auto trace_string = CallStackDebug::get_call_stack();
             const auto log_str = fmt::format(STR("{}\n"), trace_string);
             m_file.write_string_to_file(log_str);
         }
