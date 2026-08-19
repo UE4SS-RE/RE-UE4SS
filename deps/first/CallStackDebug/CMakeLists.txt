@@ -9,6 +9,8 @@ set(${TARGET}_Sources
         "${CMAKE_CURRENT_SOURCE_DIR}/src/CallStackDebug.cpp"
         )
 
+string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
+string(TOUPPER ${MODULE_NAME} MODULE_NAME)
 
 if (UE4SS_ASM_HELPER_BUILD_SHARED)
     message("Project: ${TARGET} (SHARED)")
@@ -29,8 +31,6 @@ target_compile_definitions(${TARGET} PRIVATE
 if (NOT ${UE4SS_${TARGET}_BUILD_SHARED})
     target_compile_definitions(${TARGET} PRIVATE
             RC_FILE_BUILD_STATIC
-            RC_DYNAMIC_OUTPUT_BUILD_STATIC
-            RC_SINGLE_PASS_SIG_SCANNER_BUILD_STATIC
             RC_HELPERS_BUILD_STATIC
     )
 endif ()
