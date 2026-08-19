@@ -3,6 +3,7 @@
 
 #include <DynamicOutput/DebugConsoleDevice.hpp>
 #include <DynamicOutput/Output.hpp>
+#include <CallStackDebug/CallStackDebug.hpp>
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -50,6 +51,13 @@ namespace RC::Output
         RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "DebugConsoleDevice received: ")
 #else
         RC_DEVICE_PRINT_FUNC(fmt, optional_arg, "")
+#if RC_STACKTRACE_ENABLED
+        if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
+        {
+            const auto trace_string = CallStackDebug::get_call_stack();
+            RC_DEVICE_PRINT_FUNC(trace_string, Color::Red, "")
+        }
+#endif
 #endif
     }
 } // namespace RC::Output

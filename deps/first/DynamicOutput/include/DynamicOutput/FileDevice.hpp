@@ -8,6 +8,9 @@
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/File.hpp>
+#include <CallStackDebug/CallStackDebug.hpp>
+#include <fmt/core.h>
+#include <fmt/xchar.h>
 
 namespace RC::Output
 {
@@ -69,9 +72,34 @@ namespace RC::Output
 
   public:
     // OutputDevice Interface -> START
+    auto has_optional_arg() const -> bool override
+    {
+        return true;
+    }
     // Due to the design of the Output system the opening of the file is done in receive instead of in the constructor
     // It's opened only once and stays open until the Output object (not the device) leaves scope
     // The destructor is responsible for closing the file
+    auto receive_with_optional_arg(File::StringViewType fmt, [[maybe_unused]] int32_t optional_arg) const -> void
+    {
+        if (!m_is_device_ready)
+        {
+            start_device();
+        }
+
+        // Do file output stuff here
+        // File should already be open & be ready for writing (happens in constructor)
+
+        m_file.write_string_to_file(m_formatter(fmt));
+
+#if RC_STACKTRACE_ENABLED
+        if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
+        {
+            const auto trace_string = CallStackDebug::get_call_stack();
+            const auto log_str = fmt::format(STR("{}\n"), trace_string);
+            m_file.write_string_to_file(log_str);
+        }
+#endif
+    }
     auto receive(File::StringViewType fmt) const -> void override
     {
         if (!m_is_device_ready)
