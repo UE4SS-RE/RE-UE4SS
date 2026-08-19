@@ -14,4 +14,4 @@
 namespace RC::CallStackDebug
 {
     auto RC_CALL_STACK_DEBUG_API generate_call_stack() -> StringType;
-} // namespace RC::PDB
+} // namespace RC::CallStackDebug
