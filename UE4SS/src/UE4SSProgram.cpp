@@ -168,6 +168,7 @@ namespace RC
 
         // Other UObject-derived classes
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AActor);
+        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AGameModeBase);
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AGameMode);
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UGameViewportClient);
         ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UPlayer);
