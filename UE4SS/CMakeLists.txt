@@ -61,10 +61,22 @@ add_library(UE4SS SHARED ${UE4SS_SOURCES})
 # Set C++23 standard 
 target_compile_features(UE4SS PUBLIC cxx_std_23)
 
+# Compile the UE4SS SDK generator backend in from the same JSON that ships in assets/, so the
+# generator is usable without any files on disk and the built-in can never drift from the shipped one.
+set(UE4SS_SDK_BACKEND_JSON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../assets/UE4SS_SDK_Backends/UE4SS.json")
+file(READ "${UE4SS_SDK_BACKEND_JSON_PATH}" UE4SS_SDK_BACKEND_JSON)
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/SDKGenerator/BuiltinSDKBackend.hpp.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/SDKGenerator/BuiltinSDKBackend.hpp"
+    @ONLY
+)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${UE4SS_SDK_BACKEND_JSON_PATH}")
+
 # Add include directories
 target_include_directories(UE4SS PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/generated_include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>
 )
 
 # Add version definitions with PUBLIC visibility so external consumers get them

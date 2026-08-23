@@ -1,0 +1,163 @@
+{
+   "IncludePrefix": {
+      "Comments": [
+         "What prefix, if any, should be used in #include preprocessor statements.",
+         "This does not apply to types supplied in 'UnreflectedTypes'.",
+         "Example with the default value: #include <Unreal/UObject.hpp>",
+         "Example with empty value: #include <UObject.hpp>"
+      ],
+      "Value": "Unreal"
+   },
+   "HeaderFileExtension": {
+      "Comments": [
+         "What extension should header files use.",
+         "Usually h or hpp."
+      ],
+      "Value": "hpp"
+   },
+   "UnrealImplementationNamespace": {
+      "Comments": [
+         "The namespace the UE implementation is located in.",
+         "This value can be empty if no namespace is used."
+      ],
+      "Value": "RC::Unreal"
+   },
+   "SDKNamespace": {
+      "Comments": [
+         "What namespace the SDK should use.",
+         "Can be multiple levels deep or completely empty.",
+         "If empty, no namespace will be used.",
+         "If UE4SS_Default is used, the default for UE4SS is used, which is 'WSDK'."
+      ],
+      "Value": "UE4SS_Default"
+   },
+   "ExcludedTypes": {
+      "Comments": [
+         "These structs, classes, and enums won't appear in the SDK.",
+         "These structs, classes, and enums won't be generated, will use 'UnrealImplementationNamespace' if they appear in code, and won't have #include statements generated.",
+         "These types do not use 'F', 'U', 'A', 'I' or any other UE specific struct, class, or enum prefixes.",
+         "Put one struct/class/enum per line."
+      ],
+      "Value": [
+         "BoolProperty",
+         "Property",
+         "UInt16Property",
+         "ScriptStruct",
+         "WeakObjectProperty",
+         "ArrayProperty",
+         "ClassProperty",
+         "ClassPtrProperty",
+         "SoftObjectProperty",
+         "DelegateProperty",
+         "EnumProperty",
+         "StrProperty",
+         "FieldPathProperty",
+         "InterfaceProperty",
+         "UInt32Property",
+         "LazyObjectProperty",
+         "MapProperty",
+         "IntProperty",
+         "TextProperty",
+         "MulticastDelegateProperty",
+         "MulticastInlineDelegateProperty",
+         "MulticastSparseDelegateProperty",
+         "NameProperty",
+         "DoubleProperty",
+         "NumericProperty",
+         "ObjectPropertyBase",
+         "ObjectProperty",
+         "SetProperty",
+         "SoftClassProperty",
+         "StructProperty",
+         "ByteProperty",
+         "Int8Property",
+         "Int16Property",
+         "Int64Property",
+         "UInt64Property",
+         "FloatProperty"
+      ]
+   },
+   "UnreflectedTypes": {
+      "Comments": [
+         "These types will be use the provided path and file for #include statements instead using the generated file.",
+         "These types will use 'UnrealImplementationNamespace' when appropriate.",
+         "Thess types will still be generated unless they also exist in 'ExcludedTypes'",
+         "Primarily intended to allow the backend to provide unreflected types that the SDK cannot generate.",
+         "Can be used in combination with 'ExcludedTypes' to provide your own version of a reflected struct, class or enum.",
+         "The type names use the full type, including 'F', 'U', 'A', 'I' or any other UE specific struct, class, or enum prefixes."
+      ],
+      "Value": {
+         "uint64": "Unreal/Core/HAL/Platform.hpp",
+         "FDelegateProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FField": "Unreal/FField.hpp",
+         "TMap": "Unreal/Core/Containers/Map.hpp",
+         "uint8": "Unreal/Core/HAL/Platform.hpp",
+         "FName": "Unreal/NameTypes.hpp",
+         "uint16": "Unreal/Core/HAL/Platform.hpp",
+         "int8": "Unreal/Core/HAL/Platform.hpp",
+         "int64": "Unreal/Core/HAL/Platform.hpp",
+         "uint32": "Unreal/Core/HAL/Platform.hpp",
+         "int16": "Unreal/Core/HAL/Platform.hpp",
+         "FMulticastSparseDelegateProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FIntProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "int32": "Unreal/Core/HAL/Platform.hpp",
+         "TCHAR": "Unreal/Core/HAL/Platform.hpp",
+         "FArrayProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "SIZE_T": "Unreal/Core/HAL/Platform.hpp",
+         "bool32": "Unreal/Core/HAL/Platform.hpp",
+         "bool64": "Unreal/Core/HAL/Platform.hpp",
+         "FMulticastDelegateProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "TWeakObjectPtr": "Unreal/FWeakObjectPtr.hpp",
+         "TSoftObjectPtr": "Unreal/SoftObjectPtr.hpp",
+         "ANSICHAR": "Unreal/Core/HAL/Platform.hpp",
+         "WIDECHAR": "Unreal/Core/HAL/Platform.hpp",
+         "UCS2CHAR": "Unreal/Core/HAL/Platform.hpp",
+         "UScriptStruct": "Unreal/CoreUObject/UObject/Class.hpp",
+         "FMulticastInlineDelegateProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FText": "Unreal/FText.hpp",
+         "TSubclassOf": "Unreal/TObjectPtr.hpp",
+         "TEnumAsByte": "Unreal/ULocalPlayer.hpp",
+         "TArray": "Unreal/Core/Containers/Array.hpp",
+      "TSet": "Unreal/Core/Containers/Set.hpp",
+         "TObjectPtr": "Unreal/TObjectPtr.hpp",
+         "TLazyObjectPtr": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FScriptInterface": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FWeakObjectProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "TScriptInterface": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FScriptDelegate": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FStructProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FMulticastScriptDelegate": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FSetProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "TFieldPath": "Unreal/FieldPath.hpp",
+         "FSparseDelegate": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FFieldPathProperty": "Unreal/Property/FFieldPathProperty.hpp",
+         "TSoftClassPtr": "Unreal/SoftObjectPtr.hpp",
+         "FProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FString": "Unreal/FString.hpp",
+         "FLazyObjectProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FBoolProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FByteProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FClassProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FClassPtrProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FEnumProperty": "Unreal/Property/FEnumProperty.hpp",
+         "FNumericProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FInterfaceProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FMapProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FNameProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FObjectPropertyBase": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FObjectProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FSoftClassProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FSoftObjectProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FStrProperty": "Unreal/CoreUObject/UObject/FStrProperty.hpp",
+         "FTextProperty": "Unreal/Property/FTextProperty.hpp",
+         "FInt8Property": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FInt16Property": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FInt64Property": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FUInt16Property": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FUInt32Property": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FUInt64Property": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FFloatProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp",
+         "FDoubleProperty": "Unreal/CoreUObject/UObject/UnrealType.hpp"
+      }
+   }
+}
