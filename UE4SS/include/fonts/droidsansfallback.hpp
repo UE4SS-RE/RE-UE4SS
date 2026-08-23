@@ -1,5 +1,5 @@
 // File: 'DroidSansFallback.ttf' (3939852 bytes)
-// License: UE4SS/include/fonts/NOTICE.txt
+// License: UE4SS/include/fonts/LICENSE_Droid.txt
 // Exported using binary_to_compressed_c.cpp
 static const unsigned int DroidSansFallback_compressed_size = 2570755;
 static const unsigned int DroidSansFallback_compressed_data[2570756/4] =
