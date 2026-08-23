@@ -76,7 +76,7 @@ public:
 
 class FileWriter : IBufferWriter
 {
-    FILE* m_File;
+    FILE* m_File{};
 
 public:
 
@@ -87,7 +87,6 @@ public:
         {
             RC::Output::send<RC::LogLevel::Error>(STR("Unable to open file for writing: '{}': {}\n"), FileName, RC::ensure_str(std::strerror(fopen_r)));
         }
-        printf("");
     }
 
     virtual ~FileWriter()

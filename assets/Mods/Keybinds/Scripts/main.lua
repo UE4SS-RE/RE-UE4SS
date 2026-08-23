@@ -17,6 +17,7 @@ Keybinds = {
     ["DumpStaticMeshes"]             = {["Key"] = Key.NUM_EIGHT,     ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["DumpAllActors"]                = {["Key"] = Key.NUM_SEVEN,     ["ModifierKeys"] = {ModifierKey.CONTROL}},
     ["DumpUSMAP"]                    = {["Key"] = Key.NUM_SIX,       ["ModifierKeys"] = {ModifierKey.CONTROL}},
+    ["DumpJMAP"]                     = {["Key"] = Key.NUM_FIVE,      ["ModifierKeys"] = {ModifierKey.CONTROL}},
 }
 
 -- Logic, DO NOT CHANGE!
@@ -32,6 +33,7 @@ RegisterKey("UHTCompatibleHeaderGenerator", function() GenerateUHTCompatibleHead
 RegisterKey("DumpStaticMeshes", function() DumpStaticMeshes() end)
 RegisterKey("DumpAllActors", function() DumpAllActors() end)
 RegisterKey("DumpUSMAP", function() DumpUSMAP() end)
+RegisterKey("DumpJMAP", function() DumpJMAP() end)
 
 --[[
     Valid keys:
