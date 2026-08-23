@@ -1,13 +1,31 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(UE4SSMonorepo)
+project(UE4SSMonorepo LANGUAGES C CXX)
 
 # Basic setup
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-enable_language(CXX ASM_MASM)
+if(WIN32)
+    enable_language(ASM_MASM)
+endif()
+
+# The native Linux port is deliberately built as a small, headless bootstrap
+# while UEPseudo and the remaining Windows-only runtime gain reviewed Linux
+# implementations. Keeping this path independent also makes it possible to
+# validate the loader and ELF safety gates without weakening the Windows build.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    option(UE4SS_LINUX_MVP "Build the native headless Linux bootstrap" ON)
+else()
+    option(UE4SS_LINUX_MVP "Build the native headless Linux bootstrap" OFF)
+endif()
+
+if(UE4SS_LINUX_MVP)
+    include(CTest)
+    add_subdirectory("linux")
+    return()
+endif()
 include(CheckIPOSupported)
 include(GNUInstallDirs)
 

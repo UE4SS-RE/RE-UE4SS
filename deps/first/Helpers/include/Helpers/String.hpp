@@ -1,14 +1,16 @@
 #pragma once
 
+#include <algorithm>
+#include <cassert>
 #include <codecvt>
 #include <cwctype>
+#include <filesystem>
 #include <locale>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <filesystem>
-#include <cassert>
 
 #include <String/StringType.hpp>
 

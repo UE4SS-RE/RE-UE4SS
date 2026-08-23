@@ -3,6 +3,7 @@
 #include <Unreal/Common.hpp>
 #include <bit>
 #include <stdexcept>
+#include <utility>
 
 // Note: When we assign to 'm_function_address' from a function pointer, we're probably breaking some rules.
 //       Though it's likely, a function is not guaranteed to be represented as a pointer.
