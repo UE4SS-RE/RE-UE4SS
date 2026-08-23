@@ -37,15 +37,18 @@ auto static get_user_selection() -> int32_t
 // We're outside DllMain here
 auto thread_dll_start([[maybe_unused]] LPVOID thread_param) -> unsigned long
 {
+    // In DLL mode thread_param is the module handle; in exe mode GetModuleFileNameW(nullptr)
+    // resolves the executable path, so Config/ and the log always live next to the binary
+    // instead of depending on the current working directory
     std::filesystem::path module_path{};
-
-    if (thread_param)
     {
         auto module_handle = reinterpret_cast<HMODULE>(thread_param);
         wchar_t module_filename_buffer[1024]{'\0'};
-        GetModuleFileNameW(module_handle, module_filename_buffer, sizeof(module_filename_buffer) / sizeof(wchar_t));
-        module_path = module_filename_buffer;
-        module_path = module_path.parent_path();
+        if (GetModuleFileNameW(module_handle, module_filename_buffer, sizeof(module_filename_buffer) / sizeof(wchar_t)) > 0)
+        {
+            module_path = module_filename_buffer;
+            module_path = module_path.parent_path();
+        }
     }
 
     Output::set_default_devices<Output::DebugConsoleDevice, Output::NewFileDevice>();

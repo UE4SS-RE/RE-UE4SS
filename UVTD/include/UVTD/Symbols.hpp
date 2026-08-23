@@ -1,6 +1,7 @@
 #pragma once
 
 #include <format>
+#include <functional>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -161,6 +162,9 @@ namespace RC::UVTD
     struct MethodBody
     {
         File::StringType name;
+        // Plain (unmangled) base name. Emitted as an extra VTableLayoutMap entry when it is
+        // unambiguous within the class, so old call sites and user inis keep working.
+        File::StringType alias;
         MethodSignature signature;
         uint32_t offset;
         bool is_overload;
@@ -211,7 +215,14 @@ namespace RC::UVTD
     public:
         std::unordered_map<File::StringType, EnumEntry> enum_entries;
         std::unordered_map<File::StringType, Class> class_entries;
+        // Cache keys are raw TPI type indices, which are only meaningful within a single PDB.
+        // type_size_cache_source tracks which PDB the caches belong to so they can be invalidated
+        // when a different PDB is opened; entries must never survive across PDBs.
         static inline std::unordered_map<uint32_t, uint32_t> type_size_cache;
+        static inline std::filesystem::path type_size_cache_source;
+
+        // Clears every cache keyed by PDB-local data (type sizes, complete-type name index)
+        auto static clear_per_pdb_caches() -> void;
 
 
         Symbols() = delete;
@@ -242,6 +253,11 @@ namespace RC::UVTD
         auto static read_numeric(const uint8_t*& data) -> uint64_t;
         auto static get_numeric_leaf_size(const uint8_t* data) -> uint32_t;
         auto static get_field_record_size(const PDB::CodeView::TPI::FieldList* field) -> uint32_t;
+        // Walks every sub-record of an LF_FIELDLIST at true record boundaries,
+        // skipping alignment padding and following LF_INDEX continuation lists
+        auto static for_each_field(const PDB::TPIStream& tpi_stream,
+                                   const PDB::CodeView::TPI::Record* field_list_record,
+                                   const std::function<void(const PDB::CodeView::TPI::FieldList*)>& callback) -> void;
         auto static get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit = true) -> uint32_t;
         auto static get_type_size(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool is_64bit = true) -> uint32_t;
         auto static get_method_name(const PDB::CodeView::TPI::FieldList* method_record) -> File::StringType;

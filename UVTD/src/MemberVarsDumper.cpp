@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <format>
 #include <unordered_map>
 
@@ -27,16 +28,12 @@ namespace RC::UVTD
 
         auto fields = tpi_stream.GetTypeRecord(class_record->data.LF_CLASS.field);
 
-        auto list_size = fields->header.size - sizeof(uint16_t);
-        for (size_t i = 0; i < list_size; i++)
-        {
-            auto field_record = (PDB::CodeView::TPI::FieldList*)((uint8_t*)&fields->data.LF_FIELD.list + i);
-
+        Symbols::for_each_field(tpi_stream, fields, [&](const PDB::CodeView::TPI::FieldList* field_record) {
             if (field_record->kind == PDB::CodeView::TPI::TypeRecordKind::LF_MEMBER)
             {
                 process_member(tpi_stream, field_record, class_entry);
             }
-        }
+        });
     }
 
     auto MemberVarsDumper::process_member(const PDB::TPIStream& tpi_stream, const PDB::CodeView::TPI::FieldList* field_record, Class& class_entry) -> void
@@ -65,24 +62,29 @@ namespace RC::UVTD
         // Extract bitfield information if applicable
         auto bitfield_info = Symbols::get_bitfield_info(tpi_stream, field_record->data.LF_MEMBER.index);
 
+        // The offset is a variable-length numeric leaf, not a plain uint16
+        const uint8_t* offset_data = reinterpret_cast<const uint8_t*>(field_record->data.LF_MEMBER.offset);
+        uint32_t member_offset = static_cast<uint32_t>(Symbols::read_numeric(offset_data));
+
+        uint32_t member_size = Symbols::get_type_size(tpi_stream, field_record->data.LF_MEMBER.index, symbols.is_x64());
+
         if (existing != class_entry.variables.end())
         {
             // Update existing variable
             existing->type = type_name;
-            existing->offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+            existing->offset = member_offset;
+            existing->type_index = field_record->data.LF_MEMBER.index;
+            existing->size = member_size;
             existing->is_bitfield = bitfield_info.is_bitfield;
             existing->bit_position = bitfield_info.bit_position;
             existing->bit_length = bitfield_info.bit_length;
         }
         else
         {
-            // Calculate the size of this member
-            uint32_t member_size = Symbols::get_type_size(tpi_stream, field_record->data.LF_MEMBER.index, symbols.is_x64());
-
             MemberVariable variable;
             variable.type = type_name;
             variable.name = member_name;
-            variable.offset = *(uint16_t*)field_record->data.LF_MEMBER.offset;
+            variable.offset = member_offset;
             variable.type_index = field_record->data.LF_MEMBER.index;
             variable.size = member_size;
             variable.is_bitfield = bitfield_info.is_bitfield;
@@ -107,6 +109,8 @@ namespace RC::UVTD
                 if (type_record->data.LF_CLASS.property.fwdref) continue;
 
                 const File::StringType class_name = Symbols::get_leaf_name(type_record->data.LF_CLASS.data, type_record->data.LF_CLASS.lfEasy.kind);
+                if (is_inactive_uobject_array_variant(class_name, symbols.get_pdb_name_info())) continue;
+
                 auto class_name_final = class_name;
                 unify_uobject_array_if_needed(class_name_final);
                 if (!names.contains(class_name_final)) continue;
@@ -114,7 +118,7 @@ namespace RC::UVTD
                 const auto name_info = names.find(class_name_final);
                 if (name_info == names.end()) continue;
 
-                process_class(tpi_stream, type_record, class_name, name_info->second);
+                process_class(tpi_stream, type_record, class_name_final, name_info->second);
             }
         }
         return;
@@ -211,17 +215,24 @@ namespace RC::UVTD
             // Track variables we've already processed to avoid duplicates
             std::unordered_set<File::StringType> processed_variables;
 
+            // Padding calculation requires offset order; PDB declaration order usually matches
+            // but is not guaranteed, so sort explicitly
+            auto sorted_variables = class_entry.variables;
+            std::stable_sort(sorted_variables.begin(), sorted_variables.end(), [](const MemberVariable& a, const MemberVariable& b) {
+                return a.offset < b.offset;
+            });
+
             // Iterate through sorted variables with formatted type info
-            for (size_t i = 0; i < class_entry.variables.size(); ++i)
+            for (size_t i = 0; i < sorted_variables.size(); ++i)
             {
-                const auto& variable = class_entry.variables[i];
+                const auto& variable = sorted_variables[i];
 
                 // Calculate padding to next member
                 uint32_t padding = 0;
-                if (i + 1 < class_entry.variables.size())
+                if (i + 1 < sorted_variables.size())
                 {
                     uint32_t current_end = variable.offset + variable.size;
-                    uint32_t next_start = class_entry.variables[i + 1].offset;
+                    uint32_t next_start = sorted_variables[i + 1].offset;
                     if (next_start > current_end)
                     {
                         padding = next_start - current_end;

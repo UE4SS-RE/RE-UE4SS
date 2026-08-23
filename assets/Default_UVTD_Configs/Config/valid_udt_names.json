@@ -48,6 +48,8 @@
   "UClassProperty",
   "FSoftClassProperty",
   "USoftClassProperty",
+  "UAssetObjectProperty",
+  "UAssetClassProperty",
   "FDelegateProperty",
   "UDelegateProperty",
   "FInterfaceProperty",

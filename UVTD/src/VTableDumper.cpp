@@ -99,6 +99,54 @@ namespace RC::UVTD
         return cleaned;
     }
 
+    // Normalizes a type name before it is baked into a mangled identifier so the identifier is
+    // stable across engine versions. Equivalent types that renamed over time (allocators,
+    // TObjectPtr, the UObject array containers) must not change the mangled name.
+    static File::StringType normalize_type_for_mangling(File::StringType type)
+    {
+        unify_uobject_array_if_needed(type);
+
+        size_t pos = 0;
+        while ((pos = type.find(STR("TSizedDefaultAllocator<32>"), pos)) != File::StringType::npos)
+        {
+            type.replace(pos, 26, STR("FDefaultAllocator"));
+        }
+
+        // TObjectPtr<X> is layout-compatible with X* and replaced it in 5.0
+        size_t tobj_pos = 0;
+        while ((tobj_pos = type.find(STR("TObjectPtr<"), tobj_pos)) != File::StringType::npos)
+        {
+            size_t start = tobj_pos + 11;
+            int depth = 1;
+            size_t end = start;
+            while (end < type.size() && depth > 0)
+            {
+                if (type[end] == '<') depth++;
+                else if (type[end] == '>') depth--;
+                if (depth > 0) end++;
+            }
+
+            if (depth == 0)
+            {
+                File::StringType inner_type = type.substr(start, end - start);
+                type.replace(tobj_pos, end - tobj_pos + 1, inner_type + STR("*"));
+            }
+            else
+            {
+                tobj_pos++;
+            }
+        }
+
+        // Collapse "T >" style spacing so nested templates mangle identically everywhere
+        pos = 0;
+        while ((pos = type.find(STR(" >"), pos)) != File::StringType::npos)
+        {
+            type.erase(pos, 1);
+        }
+
+        return type;
+    }
+
     File::StringType generate_mangled_suffix(const MethodSignature& signature)
     {
         File::StringType suffix = STR("");
@@ -139,7 +187,7 @@ namespace RC::UVTD
             for (size_t i = 0; i < params.size(); ++i)
             {
                 if (i > 0) suffix += STR("__");
-                suffix += sanitize_type_for_identifier(params[i].type);
+                suffix += sanitize_type_for_identifier(normalize_type_for_mangling(params[i].type));
             }
         }
 
@@ -161,11 +209,7 @@ namespace RC::UVTD
 
         auto fields = tpi_stream.GetTypeRecord(class_record->data.LF_CLASS.field);
 
-        auto list_size = fields->header.size - sizeof(uint16_t);
-        for (size_t i = 0; i < list_size; i++)
-        {
-            auto field_record = (PDB::CodeView::TPI::FieldList*)((uint8_t*)&fields->data.LF_FIELD.list + i);
-
+        Symbols::for_each_field(tpi_stream, fields, [&](const PDB::CodeView::TPI::FieldList* field_record) {
             switch (field_record->kind)
             {
             case PDB::CodeView::TPI::TypeRecordKind::LF_METHOD:
@@ -175,7 +219,7 @@ namespace RC::UVTD
                 process_onemethod(tpi_stream, field_record, class_entry);
                 break;
             }
-        }
+        });
     }
 
     struct MethodListEntry
@@ -222,6 +266,7 @@ namespace RC::UVTD
 
             auto& function = class_entry.functions[vtable_offset];
             function.name = mangled_name;
+            function.alias = base_method_name_clean;
             function.signature = signature;
             function.offset = vtable_offset;
             function.is_overload = true;
@@ -242,9 +287,17 @@ namespace RC::UVTD
 
         File::StringType method_name_clean = Symbols::clean_name(method_name);
 
+        // The plain name stays primary for a single overload, but the mangled name is also
+        // recorded so a virtual that has overloads in other engine versions can be looked up
+        // by one stable mangled name in every version (e.g. FOutputDevice::Serialize before
+        // and after it gained overloads in 4.11).
+        MethodSignature signature = symbols.generate_method_signature(tpi_stream, function_record, method_name);
+        File::StringType mangled_name = method_name_clean + generate_mangled_suffix(signature);
+
         auto& function = class_entry.functions[vtable_offset];
         function.name = method_name_clean;
-        function.signature = symbols.generate_method_signature(tpi_stream, function_record, method_name);
+        function.alias = mangled_name;
+        function.signature = signature;
         function.offset = vtable_offset;
         function.is_overload = false;
     }
@@ -359,6 +412,18 @@ namespace RC::UVTD
             // Generate VTable offset entries with object_item order
             ini_dumper.send(STR("[{}]\n"), class_entry.class_name);
 
+            // Count alias usage so ambiguous aliases (a plain name shared by several overloads)
+            // are not emitted. Primary names also count: an alias must not shadow one.
+            std::unordered_map<File::StringType, int32_t> name_usage;
+            for (const auto& [function_index, function_entry] : class_entry.functions)
+            {
+                name_usage[function_entry.name]++;
+                if (!function_entry.alias.empty() && function_entry.alias != function_entry.name)
+                {
+                    name_usage[function_entry.alias]++;
+                }
+            }
+
             for (const auto& [function_index, function_entry] : class_entry.functions)
             {
                 auto local_class_name = class_entry.class_name;
@@ -378,6 +443,24 @@ namespace RC::UVTD
                         function_entry.name,
                         function_entry.offset);
                 function_body_dumper.send(STR("}\n\n"));
+
+                // Emit the alias as an extra map entry when unambiguous. Only in the generated
+                // function bodies; the ini template is order-based (one line per vtable slot),
+                // so alias lines must never appear there.
+                if (!function_entry.alias.empty() && function_entry.alias != function_entry.name && name_usage[function_entry.alias] == 1)
+                {
+                    function_body_dumper.send(STR("if (auto it = {}::VTableLayoutMap.find(STR(\"{}\")); it == {}::VTableLayoutMap.end())\n"),
+                                              local_class_name,
+                                              function_entry.alias,
+                                              local_class_name);
+                    function_body_dumper.send(STR("{\n"));
+                    function_body_dumper.send(
+                            STR("    {}::VTableLayoutMap.emplace(STR(\"{}\"), 0x{:X});\n"),
+                            local_class_name,
+                            function_entry.alias,
+                            function_entry.offset);
+                    function_body_dumper.send(STR("}\n\n"));
+                }
 
                 // Handle INI output for function entries
                 ini_dumper.send(STR("; {}\n"), function_entry.signature.to_string());

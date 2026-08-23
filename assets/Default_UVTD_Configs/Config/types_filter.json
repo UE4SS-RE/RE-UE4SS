@@ -105,6 +105,9 @@
     "UE::Tasks::Private::FTaskHandle"
   ],
   "exclude_from_getters": [
+    "FHeapAllocator::ForAnyElementType",
+    "TStatId",
+    "FGCDebugReferenceTokenMap",
     "TBaseDelegate",
     "FUniqueNetIdRepl",
     "FPlatformUserId",

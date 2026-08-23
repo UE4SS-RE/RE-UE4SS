@@ -48,6 +48,17 @@ namespace RC::UVTD
     auto to_string_type(const char* c_str) -> File::StringType;
     auto change_prefix(File::StringType input, bool is_425_plus) -> std::optional<File::StringType>;
 
+    // Normalizes a type name so that equivalent spellings across engine versions compare equal:
+    // TSizedDefaultAllocator<32> == FDefaultAllocator, TObjectPtr<T> == T* inside containers,
+    // and template whitespace differences. Used for type-change detection and getter dedup.
+    auto normalize_type_for_comparison(const File::StringType& type) -> File::StringType;
+
     // Workaround that lets us have a unified 'TUObjectArray' struct regardless if the engine version uses a chunked or non-chunked variant of TUObjectArray.
     auto unify_uobject_array_if_needed(StringType& out_variable_type) -> bool;
+
+    // Every PDB contains all UObject-array container variants, but only one is live per engine
+    // version (TStaticIndirectArray <= 4.10, FFixedUObjectArray 4.11 to 4.19, chunked 4.20+).
+    // Dumping an inactive variant would overwrite the unified TUObjectArray section with the
+    // wrong layout, with last-record-wins deciding arbitrarily.
+    auto is_inactive_uobject_array_variant(const File::StringType& class_name, const PDBNameInfo& pdb_info) -> bool;
 } // namespace RC::UVTD
