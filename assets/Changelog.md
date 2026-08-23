@@ -474,6 +474,8 @@ Fixed filters incorrectly being applied when not searching ([UE4SS #1089](https:
 ### UHT Dumper 
 Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https://github.com/UE4SS-RE/RE-UE4SS/pull/606)) - Buckminsterfullerene 
 
+Fix non-ascii characters in outputted .cpp files ([UE4SS #1378](https://github.com/UE4SS-RE/RE-UE4SS/pull/1378))  
+
 ### Lua API 
 Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/pull/425)) - localcc 
 
