@@ -2204,7 +2204,7 @@ namespace RC::UEGenerator
                         for (const auto& inner_param : TFieldRange<FProperty>(the_struct, EFieldIterationFlags::IncludeDeprecated))
                         {
                             write_line(std::format(STR("UE_COPY_STRUCT_INNER_PROPERTY_CUSTOM({}, {}.{}, 0x{:X}, 0x{:X})"),
-                                                   get_property_type_name(inner_param, the_struct, false),
+                                                   get_outered_type_name(inner_param, the_struct),
                                                    get_sanitized_object_or_property_name(param),
                                                    get_sanitized_object_or_property_name(inner_param),
                                                    param->GetOffset_Internal(),
@@ -2216,7 +2216,7 @@ namespace RC::UEGenerator
                 {
                     write_line(std::format(STR("UE_COPY_PROPERTY_CUSTOM({}, {}, 0x{:X})"),
                                            get_sanitized_object_or_property_name(param),
-                                           get_property_type_name(param, ufunction, false),
+                                           get_outered_type_name(param, ufunction),
                                            param->GetOffset_Internal()));
                 }
             }
