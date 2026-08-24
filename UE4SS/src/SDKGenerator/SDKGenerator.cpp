@@ -1335,7 +1335,7 @@ namespace RC::UEGenerator
             {
                 add_file_dependency(get_file_path_from_class(as_enum_property->GetEnum()));
                 m_underlying_enum_types.emplace(get_native_enum_name(as_enum_property->GetEnum(), false),
-                                                get_property_type_name(as_enum_property->GetUnderlyingProp(), struct_context, false));
+                                                get_property_type_name(as_enum_property->GetUnderlyingProp(), struct_context, false, true));
             }
             else if (property->IsA<FDelegateProperty>())
             {
@@ -2051,7 +2051,7 @@ namespace RC::UEGenerator
             }
         }
 
-        auto get_property_type_name(FProperty* property, UObject* class_context, bool can_be_ref) -> StringType
+        auto get_property_type_name(FProperty* property, UObject* class_context, bool can_be_ref, bool ignore_byte_enum_wrapper = false) -> StringType
         {
             if (property)
             {
@@ -2186,6 +2186,18 @@ namespace RC::UEGenerator
                             namespace_string = generate_namespace_for_object(unboxed_value) + STR("::");
                         }
                         name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
+                    }
+                    else if (auto as_typed_property = CastField<FByteProperty>(property); as_typed_property)
+                    {
+                        const auto enum_value = as_typed_property->GetEnum();
+                        if (enum_value && !ignore_byte_enum_wrapper)
+                        {
+                            return fmt::format(STR("TEnumAsByte<{}>"), get_native_enum_name(enum_value));
+                        }
+                        else
+                        {
+                            return STR("uint8");
+                        }
                     }
                     else
                     {
