@@ -1959,7 +1959,7 @@ namespace RC::UEGenerator
             {
                 name = generic_type->GetName();
             }
-            name.erase(std::remove(name.begin(), name.end(), STR(' ')), name.end());
+            std::ranges::replace(name, STR(' '), STR('_'));
             if constexpr (std::is_convertible_v<T, FProperty>)
             {
                 if (struct_context)
