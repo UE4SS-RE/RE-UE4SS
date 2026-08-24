@@ -1955,6 +1955,12 @@ namespace RC::UEGenerator
                     }
                 }
             }
+            else if constexpr (std::is_convertible_v<T, UFunction>)
+            {
+                name = generic_type->GetName();
+                std::erase(name, STR('('));
+                std::erase(name, STR(')'));
+            }
             else
             {
                 name = generic_type->GetName();
