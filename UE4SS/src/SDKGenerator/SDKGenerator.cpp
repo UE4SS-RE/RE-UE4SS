@@ -223,6 +223,7 @@ namespace RC::UEGenerator
         std::unordered_set<FName> m_unique_enum_names{};
         std::unordered_map<StringType, StringType> m_underlying_enum_types{};
         SDKBackendSettings* m_backend{};
+        std::unordered_set<UObject*> m_objects_requiring_namespacing{};
 
       public:
         SDKGenerator(std::filesystem::path output_dir, SDKBackendSettings* backend) : m_output_dir(std::move(output_dir)), m_backend(backend)
@@ -323,9 +324,22 @@ namespace RC::UEGenerator
             return found_files;
         }
 
+        auto generate_namespace_for_object(UObject* object) -> StringType
+        {
+            const std::filesystem::path package_path = object ? std::filesystem::path{object->GetOutermost()->GetName()} : std::filesystem::path{};
+            if (!package_path.empty())
+            {
+                StringType inner_namespace_name{};
+                inner_namespace_name = fmt::format(STR("{}"), to_generic_string(package_path.parent_path().stem()));
+                inner_namespace_name += fmt::format(STR("::{}"), to_generic_string(package_path.stem()));
+                return inner_namespace_name;
+            }
+            return {};
+        }
+
         auto generate_namespaces_for_classes_with_identical_names() -> void
         {
-            std::unordered_set<StringType> all_file_names{};
+            std::unordered_map<StringType, StringType> all_file_names{};
             std::vector<StringType> file_names_for_files_with_identical_names{};
             for (const auto& file : m_files)
             {
@@ -333,10 +347,15 @@ namespace RC::UEGenerator
                 {
                     continue;
                 }
-                auto [_, emplaced] = all_file_names.emplace(file->file_name());
+                auto [elem_it, emplaced] = all_file_names.emplace(file->file_name(), file->file_name());
                 if (!emplaced)
                 {
                     file_names_for_files_with_identical_names.emplace_back(file->file_name());
+                    if (!elem_it->second.empty())
+                    {
+                        file_names_for_files_with_identical_names.emplace_back(elem_it->second);
+                        elem_it->second.clear();
+                    }
                 }
             }
             for (const auto& file_name : file_names_for_files_with_identical_names)
@@ -345,15 +364,7 @@ namespace RC::UEGenerator
                 for (auto& file : files_with_identical_names)
                 {
                     Output::send(STR("File: {}\n"), file->full_file_path().wstring());
-                    std::filesystem::path package_path =
-                            file->related_uobject() ? std::filesystem::path{file->related_uobject()->GetOutermost()->GetName()} : std::filesystem::path{};
-                    if (!package_path.empty())
-                    {
-                        StringType inner_namespace_name{};
-                        inner_namespace_name = fmt::format(STR("{}"), to_generic_string(package_path.parent_path().stem()));
-                        inner_namespace_name += fmt::format(STR("::{}"), to_generic_string(package_path.stem()));
-                        file->namespace_suffix() = inner_namespace_name;
-                    }
+                    file->namespace_suffix() = generate_namespace_for_object(file->related_uobject());
                 }
             }
         }
@@ -367,6 +378,42 @@ namespace RC::UEGenerator
 
             std::vector<UEnum*> enums{};
 
+            // Temporary map for detecting duplicate files.
+            // The path determines whether it's a duplicate, and the UObject* represents the first object.
+            // The map is cleared to save memory after it's no longer needed.
+            std::unordered_map<std::filesystem::path, UObject*> all_files_for_namespacing{};
+
+            UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
+                // TODO: Change underlying type of 'ExcludedTypes' to be FName after adding FName as a custom type to glaze.
+                if (auto it = m_backend->ExcludedTypes.find(object->GetNamePrivate().ToString()); it != m_backend->ExcludedTypes.end())
+                {
+                    return LoopAction::Continue;
+                }
+                if (object->IsA<UStruct>())
+                {
+                    if (object->IsA<UFunction>() || object->HasAnyFlags(static_cast<EObjectFlags>(RF_DefaultSubObject | RF_ArchetypeObject)))
+                    {
+                        return LoopAction::Continue;
+                    }
+                    // Collect objects so that we can compute the required namespace.
+                    // Necessary so that we know which namespace to use when generating property type names in classes/structs.
+                    std::filesystem::path full_path = "src/UE4SS_SDK" / get_file_path_from_class(object);
+                    full_path.replace_extension(m_backend->HeaderFileExtension);
+                    const auto [elem_it, emplaced] = all_files_for_namespacing.emplace(full_path.filename(), object);
+                    if (!emplaced)
+                    {
+                        m_objects_requiring_namespacing.emplace(object);
+                        if (elem_it->second)
+                        {
+                            m_objects_requiring_namespacing.emplace(elem_it->second);
+                            elem_it->second = nullptr;
+                        }
+                    }
+                }
+                return LoopAction::Continue;
+            });
+            // Free memory used by the temporary map.
+            all_files_for_namespacing = std::unordered_map<std::filesystem::path, UObject*>();
             UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
                 // TODO: Change underlying type of 'ExcludedTypes' to be FName after adding FName as a custom type to glaze.
                 if (auto it = m_backend->ExcludedTypes.find(object->GetNamePrivate().ToString()); it != m_backend->ExcludedTypes.end())
@@ -2068,6 +2115,76 @@ namespace RC::UEGenerator
                         {
                             name = generate_property_cxx_name(property, true, class_context);
                         }
+                    }
+                    else if (auto as_typed_property = CastField<FClassProperty>(property); as_typed_property)
+                    {
+                        StringType namespace_string{};
+                        const auto boxed_value = as_typed_property->GetMetaClass();
+                        if (m_objects_requiring_namespacing.contains(boxed_value))
+                        {
+                            namespace_string = generate_namespace_for_object(as_typed_property->GetMetaClass()) + STR("::");
+                        }
+                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
+                    }
+                    else if (auto as_typed_property = CastField<FSoftClassProperty>(property); as_typed_property)
+                    {
+                        StringType namespace_string{};
+                        const auto boxed_value = as_typed_property->GetMetaClass();
+                        if (m_objects_requiring_namespacing.contains(boxed_value))
+                        {
+                            namespace_string = generate_namespace_for_object(as_typed_property->GetMetaClass()) + STR("::");
+                        }
+                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
+                    }
+                    else if (auto as_typed_property = CastField<FObjectProperty>(property); as_typed_property)
+                    {
+                        StringType namespace_string{};
+                        const auto boxed_value = as_typed_property->GetPropertyClass();
+                        if (m_objects_requiring_namespacing.contains(boxed_value))
+                        {
+                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
+                        }
+                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
+                    }
+                    else if (auto as_typed_property = CastField<FWeakObjectProperty>(property); as_typed_property)
+                    {
+                        StringType namespace_string{};
+                        const auto boxed_value = as_typed_property->GetPropertyClass();
+                        if (m_objects_requiring_namespacing.contains(boxed_value))
+                        {
+                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
+                        }
+                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
+                    }
+                    else if (auto as_typed_property = CastField<FLazyObjectProperty>(property); as_typed_property)
+                    {
+                        StringType namespace_string{};
+                        const auto boxed_value = as_typed_property->GetPropertyClass();
+                        if (m_objects_requiring_namespacing.contains(boxed_value))
+                        {
+                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
+                        }
+                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
+                    }
+                    else if (auto as_typed_property = CastField<FSoftObjectProperty>(property); as_typed_property)
+                    {
+                        StringType namespace_string{};
+                        const auto boxed_value = as_typed_property->GetPropertyClass();
+                        if (m_objects_requiring_namespacing.contains(boxed_value))
+                        {
+                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
+                        }
+                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
+                    }
+                    else if (auto as_typed_property = CastField<FStructProperty>(property); as_typed_property)
+                    {
+                        StringType namespace_string{};
+                        const auto unboxed_value = as_typed_property->GetStruct();
+                        if (m_objects_requiring_namespacing.contains(unboxed_value))
+                        {
+                            namespace_string = generate_namespace_for_object(unboxed_value) + STR("::");
+                        }
+                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
                     }
                     else
                     {
