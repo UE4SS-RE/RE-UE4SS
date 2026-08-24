@@ -34,6 +34,7 @@
 #pragma warning(disable : 4005)
 #include <GUI/Dumpers.hpp>
 #include <UE4SSProgram.hpp>
+#include <LoadAllAssets.hpp>
 #include <SDKGenerator/SDKGenerator.hpp>
 #include <JMapGenerator/JMapGenerator.hpp>
 #include <USMapGenerator/Generator.hpp>
@@ -1889,10 +1890,30 @@ Overloads:
             });
 
             lua.register_function("GenerateBPSDK", [](const LuaMadeSimple::Lua& lua) -> int {
+                // Off by default to match the GUI checkbox: force-loading costs gigabytes and leaves
+                // the game likely to crash if play continues, so the caller has to ask for it.
+                bool load_all_assets{false};
+                if (lua.is_bool())
+                {
+                    load_all_assets = lua.get_bool();
+                }
+
                 // Uses the compiled-in UE4SS backend so this works with no backend description on
                 // disk, which is what makes the generator scriptable rather than GUI-only.
-                auto backend_settings = UEGenerator::get_builtin_backend_settings();
-                UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK", backend_settings);
+                auto generate = [] {
+                    auto backend_settings = UEGenerator::get_builtin_backend_settings();
+                    UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK",
+                                              backend_settings);
+                };
+
+                if (load_all_assets)
+                {
+                    run_with_all_assets_loaded(generate);
+                }
+                else
+                {
+                    generate();
+                }
                 return 0;
             });
 

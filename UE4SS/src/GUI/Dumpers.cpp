@@ -9,6 +9,7 @@
 #include <File/Macros.hpp>
 #include <GUI/Dumpers.hpp>
 #include <JMapGenerator/JMapGenerator.hpp>
+#include <LoadAllAssets.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <FlagsStringifier.hpp>
 #ifdef TEXT

@@ -307,7 +307,9 @@ function DumpAllActors() end
 function DumpUSMAP(IncludeBlueprintTypes) end
 
 --- Generates the Blueprint SDK (C++ headers for all reflected types) into <working_dir>/UE4SS_SDK
-function GenerateBPSDK() end
+---@param LoadAllAssets boolean? Force-load every asset first so Blueprint types are present (default: false).
+---                              Costs several GB of memory and the game is likely to crash if play continues.
+function GenerateBPSDK(LoadAllAssets) end
 
 --- Generates .jmap file (JSON reflection dump, format by trumank)
 ---@param IncludeBlueprintTypes boolean? Whether to include Blueprint-generated classes/structs/enums (default: true)
