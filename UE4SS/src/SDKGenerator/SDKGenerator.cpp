@@ -2907,7 +2907,8 @@ namespace RC::UEGenerator
                 write_line(std::format(STR("struct RC_UE4SS_SDK_API {}{}{}"),
                                        alignment_string,
                                        struct_or_class_name,
-                                       super_struct ? std::format(STR(" : public {}"), get_super_class_or_script_struct_name(as_struct, is_script_struct))
+                                       super_struct ? std::format(STR(" : public {}"),
+                                                                  get_super_class_or_script_struct_name(super_struct, super_struct->IsA<UScriptStruct>()))
                                                     : STR("")));
             }
             else
