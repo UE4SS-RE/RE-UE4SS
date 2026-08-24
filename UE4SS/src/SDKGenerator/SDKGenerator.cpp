@@ -2249,11 +2249,12 @@ namespace RC::UEGenerator
             size_t next_index{};
             for (auto* param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
-                const auto i = next_index++;
                 if (param->HasAnyPropertyFlags(CPF_ReturnParm) || !param->HasAnyPropertyFlags(CPF_Parm))
                 {
                     continue;
                 }
+
+                const auto i = next_index++;
 
                 generate_dependency_requirements_for_property(param, ufunction);
 
