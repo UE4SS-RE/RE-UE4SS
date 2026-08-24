@@ -2223,6 +2223,11 @@ namespace RC::UEGenerator
         // costs that member instead of everything.
         auto try_get_property_type_name(FProperty* property, UObject* class_context, bool can_be_ref) -> std::optional<StringType>
         {
+            // Temporary! To bypass TMap GetTypeHash because we haven't implemented that.
+            if (property && property->IsA<FMapProperty>())
+            {
+                return std::nullopt;
+            }
             try
             {
                 return get_property_type_name(property, class_context, can_be_ref);
