@@ -1116,6 +1116,7 @@ namespace RC::UEGenerator
             auto file_path = std::filesystem::path{&package->GetName()[1]};
             file_path /= uobject->GetName();
             file_path = file_path.make_preferred();
+            file_path = sanitize_class_or_struct_name(file_path);
             return file_path;
         }
 
@@ -1560,11 +1561,11 @@ namespace RC::UEGenerator
             {
                 if (is_full_path == IsFullPath::Yes)
                 {
-                    write_prologue_line(std::format(STR("#include <{}>"), to_generic_string(file_path.c_str())));
+                    write_prologue_line(std::format(STR("#include <{}>"), sanitize_class_or_struct_name(to_generic_string(file_path.c_str()))));
                 }
                 else
                 {
-                    write_prologue_line(std::format(STR("#include <UE4SS_SDK/{}.{}>"), to_generic_string(file_path.c_str()), m_backend->HeaderFileExtension));
+                    write_prologue_line(std::format(STR("#include <UE4SS_SDK/{}.{}>"), sanitize_class_or_struct_name(to_generic_string(file_path.c_str())), m_backend->HeaderFileExtension));
                 }
             }
         }
@@ -1856,6 +1857,15 @@ namespace RC::UEGenerator
                 context.super_context = &get_struct_context(ustruct->GetSuperStruct());
             }
             return context;
+        }
+
+        auto sanitize_class_or_struct_name(const StringType& in_name) -> StringType
+        {
+            StringType name = in_name;
+            std::erase(name, STR('('));
+            std::erase(name, STR(')'));
+            std::ranges::replace(name, STR(' '), STR('_'));
+            return name;
         }
 
         template <typename T>
@@ -2295,12 +2305,12 @@ namespace RC::UEGenerator
         {
             if (is_script_struct)
             {
-                return get_native_struct_name(std::bit_cast<UScriptStruct*>(class_or_struct));
+                return sanitize_class_or_struct_name(get_native_struct_name(std::bit_cast<UScriptStruct*>(class_or_struct)));
             }
             else
             {
                 bool should_use_interface_prefix = class_or_struct != UInterface::StaticClass() && class_or_struct->IsChildOf<UInterface>();
-                return get_native_class_name(std::bit_cast<UClass*>(class_or_struct), should_use_interface_prefix);
+                return sanitize_class_or_struct_name(get_native_class_name(std::bit_cast<UClass*>(class_or_struct), should_use_interface_prefix));
             }
         }
 
