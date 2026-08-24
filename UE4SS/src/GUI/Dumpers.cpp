@@ -771,7 +771,7 @@ namespace RC::GUI::Dumpers
         }
         ImGui::SameLine();
         ImGui::BeginDisabled(s_selected_backend_index == 0);
-        if (ImGui::Button("Generate BP SDK"))
+        if (ImGui::Button("Generate BP SDK (WIP)"))
         {
             TRY([&] {
                 run_dump([] {
