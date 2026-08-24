@@ -345,13 +345,15 @@ namespace RC::UEGenerator
                 for (auto& file : files_with_identical_names)
                 {
                     Output::send(STR("File: {}\n"), file->full_file_path().wstring());
-                    std::filesystem::path inner_namespace_name =
+                    std::filesystem::path package_path =
                             file->related_uobject() ? std::filesystem::path{file->related_uobject()->GetOutermost()->GetName()} : std::filesystem::path{};
-                    if (!inner_namespace_name.empty())
+                    if (!package_path.empty())
                     {
-                        inner_namespace_name = inner_namespace_name.parent_path().stem();
+                        StringType inner_namespace_name{};
+                        inner_namespace_name = fmt::format(STR("{}"), to_generic_string(package_path.parent_path().stem()));
+                        inner_namespace_name += fmt::format(STR("::{}"), to_generic_string(package_path.stem()));
+                        file->namespace_suffix() = inner_namespace_name;
                     }
-                    file->namespace_suffix() = to_generic_string(inner_namespace_name.c_str());
                 }
             }
         }
