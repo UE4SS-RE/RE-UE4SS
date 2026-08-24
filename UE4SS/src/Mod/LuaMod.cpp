@@ -34,6 +34,7 @@
 #pragma warning(disable : 4005)
 #include <GUI/Dumpers.hpp>
 #include <UE4SSProgram.hpp>
+#include <SDKGenerator/SDKGenerator.hpp>
 #include <JMapGenerator/JMapGenerator.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <Unreal/Core/HAL/Platform.hpp>
@@ -1884,6 +1885,14 @@ Overloads:
                     include_blueprint_types = lua.get_bool();
                 }
                 OutTheShade::generate_usmap(include_blueprint_types);
+                return 0;
+            });
+
+            lua.register_function("GenerateBPSDK", [](const LuaMadeSimple::Lua& lua) -> int {
+                // Uses the compiled-in UE4SS backend so this works with no backend description on
+                // disk, which is what makes the generator scriptable rather than GUI-only.
+                auto backend_settings = UEGenerator::get_builtin_backend_settings();
+                UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK", backend_settings);
                 return 0;
             });
 

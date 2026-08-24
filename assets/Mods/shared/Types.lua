@@ -306,6 +306,9 @@ function DumpAllActors() end
 ---@param IncludeBlueprintTypes boolean? Whether to include Blueprint-generated classes/structs/enums (default: true)
 function DumpUSMAP(IncludeBlueprintTypes) end
 
+--- Generates the Blueprint SDK (C++ headers for all reflected types) into <working_dir>/UE4SS_SDK
+function GenerateBPSDK() end
+
 --- Generates .jmap file (JSON reflection dump, format by trumank)
 ---@param IncludeBlueprintTypes boolean? Whether to include Blueprint-generated classes/structs/enums (default: true)
 function DumpJMAP(IncludeBlueprintTypes) end
