@@ -2015,6 +2015,7 @@ namespace RC::UEGenerator
                 name = generic_type->GetName();
             }
             std::ranges::replace(name, STR(' '), STR('_'));
+            std::ranges::replace(name, STR('?'), STR('_'));
             if constexpr (std::is_convertible_v<T, FProperty>)
             {
                 if (struct_context)
