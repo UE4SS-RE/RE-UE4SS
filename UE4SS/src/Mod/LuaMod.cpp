@@ -1828,6 +1828,32 @@ Overloads:
                 return 0;
             });
 
+            lua.register_function("OnUnload", [](const LuaMadeSimple::Lua& lua) -> int {
+                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
+std::string error_overload_not_found{R"(
+No overload found for function 'OnUnload'.
+Overloads:
+#1: OnUnload(LuaFunction Callback))"};
+
+                if (!lua.is_function())
+                {
+                    lua.throw_error(error_overload_not_found);
+                }
+
+                LuaMod::LuaCallbackData* callback = nullptr;
+
+                auto mod = get_mod_ref(lua);
+                auto hook_lua = get_hook_lua(mod);
+
+                callback = &LuaMod::m_unload_callbacks.emplace_back(LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+                lua_xmove(lua.get_lua_state(), callback->lua->get_lua_state(), 1);
+                const int32_t lua_function_ref = callback->lua->registry().make_ref();
+                callback->registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_function_ref});
+
+                return 0;
+            });
+
             lua.register_function("DumpAllObjects", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
                 const Mod* mod = get_mod_ref(lua);
                 if (!mod)
@@ -6070,6 +6096,26 @@ Overloads:
         }
     }
 
+    auto LuaMod::fire_on_lua_stop() -> void
+    {
+        if (!is_started())
+        {
+            return;
+        }
+
+        TRY([&] {
+            for (const auto& callback_data : m_unload_callbacks)
+            {
+                for (const auto& [lua, registry_index] : callback_data.registry_indexes)
+                {
+                    callback_data.lua->registry().get_function_ref(registry_index.lua_index);
+                    callback_data.lua->call_function(0, 0);
+                }
+            }
+        });
+
+    }
+
     auto LuaMod::uninstall() -> void
     {
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
@@ -6085,6 +6131,7 @@ Overloads:
         // Now acquire mutex to safely modify shared data structures
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
+        fire_on_lua_stop();
         fire_on_lua_stop_for_cpp_mods();
 
         erase_from_container(this, m_static_construct_object_lua_callbacks);
@@ -6104,6 +6151,7 @@ Overloads:
         erase_from_container(this, m_call_function_by_name_with_arguments_post_callbacks);
         erase_from_container(this, m_local_player_exec_pre_callbacks);
         erase_from_container(this, m_local_player_exec_post_callbacks);
+        erase_from_container(this, m_unload_callbacks);
         erase_from_container(this, m_script_hook_callbacks);
 
         UE4SSProgram::get_program().get_all_input_events([&](auto& key_set) {

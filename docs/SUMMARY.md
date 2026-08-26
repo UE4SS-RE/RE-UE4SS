@@ -103,6 +103,7 @@
     - [RegisterULocalPlayerExecPostHook](./lua-api/global-functions/registerulocalplayerexecposthook.md)
     - [RegisterConsoleCommandHandler](./lua-api/global-functions/registerconsolecommandhandler.md)
     - [RegisterConsoleCommandGlobalHandler](./lua-api/global-functions/registerconsolecommandglobalhandler.md)
+    - [OnUnload](./lua-api/global-functions/onunload.md)
     - [DumpAllObjects](./lua-api/global-functions/dumpallobjects.md)
     - [GenerateSDK](./lua-api/global-functions/generatesdk.md)
     - [GenerateLuaTypes](./lua-api/global-functions/generateluatypes.md)

@@ -151,6 +151,7 @@ namespace RC
         static inline std::vector<LuaCallbackData> m_call_function_by_name_with_arguments_post_callbacks;
         static inline std::vector<LuaCallbackData> m_local_player_exec_pre_callbacks;
         static inline std::vector<LuaCallbackData> m_local_player_exec_post_callbacks;
+        static inline std::vector<LuaCallbackData> m_unload_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
@@ -212,6 +213,7 @@ namespace RC
         auto setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void;
         auto fire_on_lua_start_for_cpp_mods() -> void;
         auto fire_on_lua_stop_for_cpp_mods() -> void;
+        auto fire_on_lua_stop() -> void;
 
       public:
         auto start_mod() -> void override;

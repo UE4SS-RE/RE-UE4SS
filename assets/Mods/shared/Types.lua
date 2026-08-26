@@ -722,6 +722,11 @@ function RegisterConsoleCommandHandler(CommandName, Callback) end
 ---@param Callback fun(Cmd: string, CommandParts: table, Ar: FOutputDevice): boolean?
 function RegisterConsoleCommandGlobalHandler(CommandName, Callback) end
 
+---Registers a callback for unload/uninstall of your mod.
+---There's no callback params
+---The callback doesn't need to return anything
+function OnUnload(Callback) end
+
 ---Asynchronously executes the specified function
 ---@param Callback fun()
 function ExecuteAsync(Callback) end
