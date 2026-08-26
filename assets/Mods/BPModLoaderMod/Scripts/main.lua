@@ -289,8 +289,13 @@ RegisterBeginPlayPostHook(function(ContextParam)
     end
 end)
 
-RegisterLoadMapPostHook(function(Engine, World)
-    LoadMods(World:get())
+-- Retargeted from RegisterLoadMapPostHook: that hook's native FString&
+-- Error argument is bound to garbage on at least this engine build and
+-- crashes UE4SS's own glue code before this callback ever runs (see
+-- issue #1391). InitGameState has no FString parameter at all, so
+-- it's unaffected by that bug.
+RegisterInitGameStatePostHook(function(Context)
+    LoadMods(Context:GetWorld())
 end)
 
 ExecuteInGameThread(function()
