@@ -43,6 +43,19 @@ else
 end
 ```
 
+### OnUnload(function Callback)
+
+- Calls the callback right before this mod is unloaded.
+- Async operations are always waited on before the callback is called.
+- This function doesn't exist by default, and must be supplied by the mod, see example.
+
+**Example**
+```lua
+ModRef.OnUnload = function()
+    print("Mod is unloading.\n")
+end
+```
+
 ### type()
 
 - **Return type:** `string`

@@ -151,7 +151,6 @@ namespace RC
         static inline std::vector<LuaCallbackData> m_call_function_by_name_with_arguments_post_callbacks;
         static inline std::vector<LuaCallbackData> m_local_player_exec_pre_callbacks;
         static inline std::vector<LuaCallbackData> m_local_player_exec_post_callbacks;
-        static inline std::vector<LuaCallbackData> m_unload_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_global_command_lua_callbacks;
         static inline std::unordered_map<File::StringType, LuaCallbackData> m_custom_command_lua_pre_callbacks;
         static inline std::vector<SimpleLuaAction> m_game_thread_actions{};
@@ -189,6 +188,7 @@ namespace RC
         bool m_is_process_event_hooked{};
         static inline bool m_is_engine_tick_hooked{};
         std::mutex m_actions_lock{};
+        int32_t m_on_unload_lua_function_ref{LUA_NOREF};
 
       public:
         LuaMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
@@ -213,7 +213,7 @@ namespace RC
         auto setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void;
         auto fire_on_lua_start_for_cpp_mods() -> void;
         auto fire_on_lua_stop_for_cpp_mods() -> void;
-        auto fire_on_lua_stop() -> void;
+        auto fire_on_lua_stop_for_self() -> void;
 
       public:
         auto start_mod() -> void override;
@@ -259,6 +259,7 @@ namespace RC
 
         auto process_delayed_actions() -> void;
         auto clear_delayed_actions() -> void;
+        auto set_on_unload_callback(int32_t) -> void;
 
       public:
         static auto get_object_names(const Unreal::UObject*) -> std::vector<Unreal::FName>;

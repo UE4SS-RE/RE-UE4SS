@@ -109,8 +109,6 @@ Fixed the ingame console (Tilde, or F10 key) not working for some games - ([UE4S
 
 Fixed random crashes (use-after-free) caused by the string intern pool storing dangling pointers to caller-owned strings, most commonly Lua GC'd strings from UObject member access ([UE4SS #1271](https://github.com/UE4SS-RE/RE-UE4SS/pull/1271))
 
-Added `OnUnload` lua function, register callbacks to be called when the mods is uninstalled / reloaded
-
 ### Live View 
 Added search filter: `IncludeClassNames`. ([UE4SS #472](https://github.com/UE4SS-RE/RE-UE4SS/pull/472)) - Buckminsterfullerene
 
@@ -244,6 +242,8 @@ Added custom module searcher with UTF-8 path support for Lua `require()` ([UE4SS
 Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1036](https://github.com/UE4SS-RE/RE-UE4SS/pull/1036))
 
 Added support for handling structs as userdata (Fixed `StructData as userdata is not yet implemented`). ([UE4SS #1169](https://github.com/UE4SS-RE/RE-UE4SS/pull/1169)) - Corporalwill123
+
+Added `ModRef.OnUnload` lua function, registers a callback to be called when the mod is unloaded via hot reload or any other means ([UE4SS #1394](https://github.com/UE4SS-RE/RE-UE4SS/pull/1394))
 
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 

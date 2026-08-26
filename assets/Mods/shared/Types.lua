@@ -722,11 +722,6 @@ function RegisterConsoleCommandHandler(CommandName, Callback) end
 ---@param Callback fun(Cmd: string, CommandParts: table, Ar: FOutputDevice): boolean?
 function RegisterConsoleCommandGlobalHandler(CommandName, Callback) end
 
----Registers a callback for unload/uninstall of your mod.
----There's no callback params
----The callback doesn't need to return anything
-function OnUnload(Callback) end
-
 ---Asynchronously executes the specified function
 ---@param Callback fun()
 function ExecuteAsync(Callback) end
@@ -1561,3 +1556,26 @@ ThreadId = {}
 ---Returns the thread id as a string
 ---@return string
 function ThreadId:ToString() end
+
+---@class ModRef
+ModRef = {}
+
+---Registers a callback which is called when the mod is unloaded
+---@param Callback fun()
+function ModRef:OnUnload(Callback) end
+
+---Sets a variable that can be accessed by any mod.
+---The second parameter Value can only be one of the following types:
+---nil, string, number, bool, UObject (+derivatives), lightuserdata.
+---@param VariableName: string
+---@param Value: any
+function ModRef:SetSharedVariable(VariableName, Value) end
+
+---Returns a variable that could’ve been set from another mod.
+---The return value can only be one of the following types: nil, string, number, bool, UObject(+derivatives), lightuserdata.
+---@return any
+function ModRef:GetSharedVariable() end
+
+---Returns "ModRef"
+---@return 'ModRef'
+function ModRef:type() end
