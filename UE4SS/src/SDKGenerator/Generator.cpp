@@ -441,7 +441,7 @@ namespace RC::UEGenerator
 
             for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
             {
-                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                 {
                     continue;
                 }
@@ -741,7 +741,7 @@ namespace RC::UEGenerator
 
                 for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                     {
                         continue;
                     }
@@ -1125,7 +1125,7 @@ namespace RC::UEGenerator
 
                 for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                     {
                         continue;
                     }
@@ -1270,7 +1270,12 @@ namespace RC::UEGenerator
             else
             {
                 // `function MyClass:MyMethod(p1, p2)` is syntactical sugar for `function MyClass.MyMethod(self, p1, p2)`
-                current_class_content.append(fmt::format(STR("{}[{}] = function(self, "), class_name, quote_lua_symbol(function_name)));
+                current_class_content.append(fmt::format(STR("{}[{}] = function(self"), class_name, quote_lua_symbol(function_name)));
+
+                if (!function_info.params.empty())
+                {
+                    current_class_content.append(STR(", "));
+                }
             }
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
