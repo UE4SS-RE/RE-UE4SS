@@ -1135,7 +1135,7 @@ namespace RC::UEGenerator
                 }
             }
 
-            auto class_name = generate_class_name(native_class);
+            auto class_name = make_valid_symbol(generate_class_name(native_class));
 
             generate_class_declaration(content_buffer, native_class, inherits_from_class);
 
@@ -1173,7 +1173,7 @@ namespace RC::UEGenerator
             }
 
             int32_t class_size = native_class->GetPropertiesSize();
-            generate_class_struct_end(content_buffer, class_name, class_size, num_padding_elements, last_property_in_this_class);
+            generate_class_struct_end(content_buffer, make_valid_symbol(class_name), class_size, num_padding_elements, last_property_in_this_class);
 
             // Functions
             if (native_class->HasChildren())
@@ -1193,10 +1193,10 @@ namespace RC::UEGenerator
         }
         auto generate_class_declaration(File::StringType& content_buffer, UStruct* native_class, UStruct* inherits_from_class) -> void
         {
-            auto class_name = generate_class_name(native_class);
+            auto class_name = make_valid_symbol(generate_class_name(native_class));
             if (inherits_from_class)
             {
-                content_buffer.append(fmt::format(STR("---@class {} : {}\n"), class_name, generate_class_name(inherits_from_class)));
+                content_buffer.append(fmt::format(STR("---@class {} : {}\n"), class_name, make_valid_symbol(generate_class_name(inherits_from_class))));
             }
             else
             {
@@ -1261,7 +1261,7 @@ namespace RC::UEGenerator
                 }
             }
 
-            auto class_name = generate_class_name(static_cast<UStruct*>(owner.object));
+            auto class_name = make_valid_symbol(generate_class_name(static_cast<UStruct*>(owner.object)));
 
             if (is_valid_lua_symbol(function_name))
             {
