@@ -6079,8 +6079,10 @@ Overloads:
 
         if (m_on_unload_lua_function_ref != LUA_NOREF && m_on_unload_lua_function_ref != LUA_REFNIL)
         {
-            lua().registry().get_function_ref(m_on_unload_lua_function_ref);
-            lua().call_function(0, 0);
+            TRY([&]() {
+                lua().registry().get_function_ref(m_on_unload_lua_function_ref);
+                lua().call_function(0, 0);
+            });
         }
     }
 
