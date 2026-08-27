@@ -1193,10 +1193,10 @@ namespace RC::UEGenerator
         }
         auto generate_class_declaration(File::StringType& content_buffer, UStruct* native_class, UStruct* inherits_from_class) -> void
         {
-            auto class_name = make_valid_symbol(generate_class_name(native_class));
+            auto class_name = generate_class_name(native_class);
             if (inherits_from_class)
             {
-                content_buffer.append(fmt::format(STR("---@class {} : {}\n"), class_name, make_valid_symbol(generate_class_name(inherits_from_class))));
+                content_buffer.append(fmt::format(STR("---@class {} : {}\n"), class_name, generate_class_name(inherits_from_class)));
             }
             else
             {
