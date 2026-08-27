@@ -6101,8 +6101,8 @@ Overloads:
         // Now acquire mutex to safely modify shared data structures
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
-        fire_on_lua_stop_for_self();
         fire_on_lua_stop_for_cpp_mods();
+        fire_on_lua_stop_for_self();
 
         erase_from_container(this, m_static_construct_object_lua_callbacks);
         m_pending_notify_on_new_object_callbacks.clear();
