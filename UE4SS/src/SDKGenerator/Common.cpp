@@ -23,6 +23,25 @@ namespace RC::UEGenerator
 {
     using namespace Unreal;
 
+    static const std::unordered_map<UObject*, File::StringType>* s_type_name_suffixes{};
+
+    auto set_type_name_suffixes(const std::unordered_map<UObject*, File::StringType>* suffixes) -> void
+    {
+        s_type_name_suffixes = suffixes;
+    }
+
+    static auto append_type_name_suffix(File::StringType& name, UObject* uobject) -> void
+    {
+        if (!s_type_name_suffixes)
+        {
+            return;
+        }
+        if (auto it = s_type_name_suffixes->find(uobject); it != s_type_name_suffixes->end())
+        {
+            name.append(it->second);
+        }
+    }
+
     auto get_native_class_name(UClass* uclass, bool interface_name) -> File::StringType
     {
         File::StringType result_string;
@@ -45,6 +64,7 @@ namespace RC::UEGenerator
         }
 
         result_string.append(uclass->GetName());
+        append_type_name_suffix(result_string, uclass);
         return result_string;
     }
 
@@ -67,6 +87,7 @@ namespace RC::UEGenerator
         // Seems to be not needed, because enum objects, unlike classes or structs, retain their normal E prefix
         // ResultString.append(STR("E"));
         result_string.append(uenum->GetName());
+        append_type_name_suffix(result_string, uenum);
 
         // Namespaced enums need to have ::Type appended for the type
         if (uenum->GetCppForm() == UEnum::ECppForm::Namespaced && include_type)
@@ -82,6 +103,7 @@ namespace RC::UEGenerator
 
         result_string.append(STR("F"));
         result_string.append(script_struct->GetName());
+        append_type_name_suffix(result_string, script_struct);
 
         return result_string;
     }
@@ -118,6 +140,18 @@ namespace RC::UEGenerator
         if (enum_name_string_split != std::wstring::npos)
         {
             result_enum_name.erase(0, enum_name_string_split + 2);
+        }
+        // Names can be arbitrary user text, especially friendly display names.
+        for (auto& character : result_enum_name)
+        {
+            if (!std::iswalnum(character) && character != STR('_'))
+            {
+                character = STR('_');
+            }
+        }
+        if (!result_enum_name.empty() && std::iswdigit(result_enum_name[0]))
+        {
+            result_enum_name.insert(result_enum_name.begin(), STR('_'));
         }
         return result_enum_name;
     }

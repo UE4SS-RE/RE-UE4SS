@@ -31,7 +31,10 @@
 #include <Unreal/CoreUObject/UObject/UnrealType.hpp>
 #include <Unreal/Property/FEnumProperty.hpp>
 #include <Unreal/Property/FFieldPathProperty.hpp>
+#include <Unreal/Property/FOptionalProperty.hpp>
 #include <Unreal/Property/FTextProperty.hpp>
+#include <Unreal/FText.hpp>
+#include <Unreal/UnrealVersion.hpp>
 
 namespace RC::UEGenerator
 {
@@ -221,9 +224,19 @@ namespace RC::UEGenerator
         GeneratedSDKFile* m_current_file{};
         std::unordered_set<FName> m_non_code_file_ids{};
         std::unordered_set<FName> m_unique_enum_names{};
-        std::unordered_map<StringType, StringType> m_underlying_enum_types{};
+        // Emitted underlying type per enum, keyed by native name. The smallest storage seen across
+        // all referencing properties wins: a C++ enum wider than a property's slot shifts every
+        // following member, while a narrower one is covered by the emitted padding.
+        std::unordered_map<StringType, std::pair<StringType, int32_t>> m_underlying_enum_types{};
         SDKBackendSettings* m_backend{};
         std::unordered_set<UObject*> m_objects_requiring_namespacing{};
+        std::unordered_map<UObject*, StringType> m_type_name_suffixes{};
+        size_t m_ambiguous_runtime_property_count{};
+        size_t m_abi_storage_member_count{};
+        size_t m_non_owning_view_member_count{};
+        size_t m_omitted_function_count{};
+        std::map<StringType, size_t> m_omitted_reasons{};
+        int32_t m_ftext_view_size{};
 
       public:
         SDKGenerator(std::filesystem::path output_dir, SDKBackendSettings* backend) : m_output_dir(std::move(output_dir)), m_backend(backend)
@@ -324,49 +337,137 @@ namespace RC::UEGenerator
             return found_files;
         }
 
-        auto generate_namespace_for_object(UObject* object) -> StringType
+        auto is_in_native_package(UObject* object) -> bool
         {
-            const std::filesystem::path package_path = object ? std::filesystem::path{object->GetOutermost()->GetName()} : std::filesystem::path{};
-            if (!package_path.empty())
-            {
-                StringType inner_namespace_name{};
-                inner_namespace_name = fmt::format(STR("{}"), to_generic_string(package_path.parent_path().stem()));
-                inner_namespace_name += fmt::format(STR("::{}"), to_generic_string(package_path.stem()));
-                return inner_namespace_name;
-            }
-            return {};
+            return object && object->GetOutermost()->GetName().starts_with(STR("/Script/"));
         }
 
-        auto generate_namespaces_for_classes_with_identical_names() -> void
+        // Package path split into identifier-safe segments: '/Game/Pal/Demo/LS_Foo' becomes
+        // {Game, Pal, Demo, LS_Foo}.
+        auto get_package_segments(UObject* object) -> std::vector<StringType>
         {
-            std::unordered_map<StringType, StringType> all_file_names{};
-            std::vector<StringType> file_names_for_files_with_identical_names{};
-            for (const auto& file : m_files)
+            std::vector<StringType> segments{};
+            const auto package_name = object->GetOutermost()->GetName();
+            for (size_t start = 0; start <= package_name.size();)
             {
-                if (m_non_code_file_ids.contains(file->id()))
+                const auto end = std::min(package_name.find(STR('/'), start), package_name.size());
+                auto text = package_name.substr(start, end - start);
+                start = end + 1;
+                if (text.empty())
                 {
                     continue;
                 }
-                auto [elem_it, emplaced] = all_file_names.emplace(file->file_name(), file->file_name());
-                if (!emplaced)
+                for (auto& character : text)
                 {
-                    file_names_for_files_with_identical_names.emplace_back(file->file_name());
-                    if (!elem_it->second.empty())
+                    if (!std::iswalnum(character) && character != STR('_'))
                     {
-                        file_names_for_files_with_identical_names.emplace_back(elem_it->second);
-                        elem_it->second.clear();
+                        character = STR('_');
                     }
                 }
+                segments.emplace_back(std::move(text));
             }
-            for (const auto& file_name : file_names_for_files_with_identical_names)
+            return segments;
+        }
+
+        auto join_trailing_segments(const std::vector<StringType>& segments, size_t count) -> StringType
+        {
+            StringType joined{};
+            for (size_t i = segments.size() > count ? segments.size() - count : 0; i < segments.size(); ++i)
             {
-                auto files_with_identical_names = get_all_files_by_name(file_name);
-                for (auto& file : files_with_identical_names)
+                if (!joined.empty())
                 {
-                    Output::send(STR("File: {}\n"), file->full_file_path().wstring());
-                    file->namespace_suffix() = generate_namespace_for_object(file->related_uobject());
+                    joined.append(STR("_"));
+                }
+                joined.append(segments[i]);
+            }
+            return joined;
+        }
+
+        // Names are scoped by Outer, so distinct objects can share a short name. This SDK is one flat
+        // namespace, so colliding types are renamed here, before anything references them. The suffix
+        // comes from the owning package, not a position in the set, so it survives a changed asset set.
+        auto assign_unique_type_names() -> void
+        {
+            std::map<StringType, std::vector<UObject*>> objects_by_name{};
+            for (auto* object : m_objects_requiring_namespacing)
+            {
+                objects_by_name[object->GetName()].emplace_back(object);
+            }
+
+            for (auto& [name, objects] : objects_by_name)
+            {
+                std::sort(objects.begin(), objects.end(), [](UObject* a, UObject* b) {
+                    return a->GetFullName() < b->GetFullName();
+                });
+
+                // A single native type keeps the bare name. If the collision is between assets alone,
+                // none of them can claim it stably, so all are qualified.
+                UObject* primary{};
+                for (auto* object : objects)
+                {
+                    if (!is_in_native_package(object))
+                    {
+                        continue;
+                    }
+                    if (primary)
+                    {
+                        primary = nullptr;
+                        break;
+                    }
+                    primary = object;
+                }
+
+                std::vector<UObject*> objects_to_qualify{};
+                std::vector<std::vector<StringType>> segments_per_object{};
+                size_t deepest_package{};
+                for (auto* object : objects)
+                {
+                    if (object == primary)
+                    {
+                        continue;
+                    }
+                    objects_to_qualify.emplace_back(object);
+                    segments_per_object.emplace_back(get_package_segments(object));
+                    deepest_package = std::max(deepest_package, segments_per_object.back().size());
+                }
+
+                // As few trailing package segments as tell the group apart.
+                std::vector<StringType> qualifiers{};
+                for (size_t take = 1; take <= deepest_package; ++take)
+                {
+                    qualifiers.clear();
+                    std::unordered_set<StringType> seen{};
+                    bool all_unique = true;
+                    for (const auto& segments : segments_per_object)
+                    {
+                        auto qualifier = join_trailing_segments(segments, take);
+                        // Case-insensitive, so two names never differ only in case.
+                        auto folded = qualifier;
+                        std::ranges::transform(folded, folded.begin(), ::towlower);
+                        all_unique = all_unique && seen.emplace(std::move(folded)).second;
+                        qualifiers.emplace_back(std::move(qualifier));
+                    }
+                    if (all_unique)
+                    {
+                        break;
+                    }
+                }
+
+                // Two assets with the same name in the same package cannot be told apart by path.
+                std::unordered_map<StringType, size_t> qualifier_use_counts{};
+                for (size_t i = 0; i < objects_to_qualify.size(); ++i)
+                {
+                    auto qualifier = qualifiers[i];
+                    auto folded = qualifier;
+                    std::ranges::transform(folded, folded.begin(), ::towlower);
+                    if (auto use_count = ++qualifier_use_counts[folded]; use_count > 1)
+                    {
+                        qualifier.append(std::format(STR("_{}"), use_count));
+                    }
+                    m_type_name_suffixes.emplace(objects_to_qualify[i], std::format(STR("_{}"), qualifier));
                 }
             }
+            set_type_name_suffixes(&m_type_name_suffixes);
         }
 
       public:
@@ -382,6 +483,7 @@ namespace RC::UEGenerator
             // The path determines whether it's a duplicate, and the UObject* represents the first object.
             // The map is cleared to save memory after it's no longer needed.
             std::unordered_map<std::filesystem::path, UObject*> all_files_for_namespacing{};
+            std::vector<UObject*> objects_to_generate{};
 
             UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
                 // TODO: Change underlying type of 'ExcludedTypes' to be FName after adding FName as a custom type to glaze.
@@ -395,38 +497,40 @@ namespace RC::UEGenerator
                     {
                         return LoopAction::Continue;
                     }
-                    // Collect objects so that we can compute the required namespace.
-                    // Necessary so that we know which namespace to use when generating property type names in classes/structs.
-                    std::filesystem::path full_path = "src/UE4SS_SDK" / get_file_path_from_class(object);
-                    full_path.replace_extension(m_backend->HeaderFileExtension);
-                    const auto [elem_it, emplaced] = all_files_for_namespacing.emplace(full_path.filename(), object);
-                    if (!emplaced)
+                }
+                else if (!object->IsA<UEnum>())
+                {
+                    return LoopAction::Continue;
+                }
+                // Generate exactly this snapshot. Calling the emitter can materialize additional
+                // transient Blueprint helper types; a second live object-array walk would see types
+                // that were absent from the duplicate-name pre-pass and emit colliding plain names.
+                objects_to_generate.emplace_back(object);
+                // Collect name collisions so duplicate-name types can be given unique names before
+                // anything references them.
+                std::filesystem::path full_path = "src/UE4SS_SDK" / get_file_path_from_class(object);
+                full_path.replace_extension(m_backend->HeaderFileExtension);
+                const auto [elem_it, emplaced] = all_files_for_namespacing.emplace(full_path.filename(), object);
+                if (!emplaced)
+                {
+                    m_objects_requiring_namespacing.emplace(object);
+                    if (elem_it->second)
                     {
-                        m_objects_requiring_namespacing.emplace(object);
-                        if (elem_it->second)
-                        {
-                            m_objects_requiring_namespacing.emplace(elem_it->second);
-                            elem_it->second = nullptr;
-                        }
+                        m_objects_requiring_namespacing.emplace(elem_it->second);
+                        elem_it->second = nullptr;
                     }
                 }
                 return LoopAction::Continue;
             });
             // Free memory used by the temporary map.
             all_files_for_namespacing = std::unordered_map<std::filesystem::path, UObject*>();
-            UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
-                // TODO: Change underlying type of 'ExcludedTypes' to be FName after adding FName as a custom type to glaze.
-                if (auto it = m_backend->ExcludedTypes.find(object->GetNamePrivate().ToString()); it != m_backend->ExcludedTypes.end())
-                {
-                    return LoopAction::Continue;
-                }
 
+            // Must run before any emission so every reference to a renamed type uses its unique name.
+            assign_unique_type_names();
+            for (auto* object : objects_to_generate)
+            {
                 if (object->IsA<UStruct>())
                 {
-                    if (object->IsA<UFunction>() || object->HasAnyFlags(static_cast<EObjectFlags>(RF_DefaultSubObject | RF_ArchetypeObject)))
-                    {
-                        return LoopAction::Continue;
-                    }
                     generate_class(std::bit_cast<UClass*>(object), object->IsA<UScriptStruct>());
                 }
                 else if (object->IsA<UEnum>())
@@ -434,15 +538,12 @@ namespace RC::UEGenerator
                     // Delay generation of enums to allow FEnumProperty to define underlying types first.
                     enums.emplace_back(std::bit_cast<UEnum*>(object));
                 }
-                return LoopAction::Continue;
-            });
+            }
 
             for (const auto& uenum : enums)
             {
                 generate_enum(uenum);
             }
-
-            generate_namespaces_for_classes_with_identical_names();
 
             // Must follow class generation: the registry is filled as members are emitted.
             generate_opaque_placeholder_types();
@@ -453,26 +554,24 @@ namespace RC::UEGenerator
             generate_runtime_sdk_test();
             generate_layout_asserts();
 
-            Output::send<LogLevel::Verbose>(
-                    STR("Structs/classes not memory accurate because of hidden padding at the end of base being used by this struct/class:\n"));
-            UObjectGlobals::ForEachUObject([&](UObject* object, ...) {
-                if (!object->IsA<UStruct>() || object->IsA<UFunction>())
-                {
-                    return LoopAction::Continue;
-                }
-                auto as_ustruct = (UStruct*)object;
-                if (!as_ustruct->GetSuperStruct() || !as_ustruct->GetFirstProperty())
-                {
-                    return LoopAction::Continue;
-                }
-                if (as_ustruct->GetFirstProperty()->GetOffset_Internal() < as_ustruct->GetSuperStruct()->GetStructureSize())
-                {
-                    Output::send<LogLevel::Warning>(STR("'{}' uses hidden padding from base '{}'\n"),
-                                                    as_ustruct->GetName(),
-                                                    as_ustruct->GetSuperStruct()->GetName());
-                }
-                return LoopAction::Continue;
-            });
+            set_type_name_suffixes(nullptr);
+
+            if (m_abi_storage_member_count > 0 || m_non_owning_view_member_count > 0 || m_omitted_function_count > 0)
+            {
+                Output::send<LogLevel::Warning>(STR("SDKGenerator: {} members emitted as layout storage, {} recovered as non-owning views, and {} functions omitted for types the backend cannot safely inline\n"),
+                                                m_abi_storage_member_count,
+                                                m_non_owning_view_member_count,
+                                                m_omitted_function_count);
+            }
+            if (m_ambiguous_runtime_property_count > 0)
+            {
+                Output::send<LogLevel::Verbose>(STR("SDKGenerator: {} properties left out of the runtime test because their reflected name is not unique within their struct\n"),
+                                                m_ambiguous_runtime_property_count);
+            }
+            for (const auto& [reason, count] : m_omitted_reasons)
+            {
+                Output::send<LogLevel::Verbose>(STR("SDKGenerator:   {} omitted for: {}\n"), count, reason);
+            }
         }
 
         auto start_prologue_scope() -> void
@@ -685,7 +784,9 @@ namespace RC::UEGenerator
 
         auto generate_ue_with_outer_macro() -> void
         {
-            write_line(STR("#define UE_WITH_OUTER(Outer, ...) Outer __VA_OPT__(<__VA_ARGS__>)"));
+            // No __VA_OPT__: it requires /Zc:preprocessor on MSVC, which consumers won't have by
+            // default. Every emitted call site passes at least one template argument.
+            write_line(STR("#define UE_WITH_OUTER(Outer, ...) Outer<__VA_ARGS__>"));
             write_line();
         }
 
@@ -705,7 +806,121 @@ namespace RC::UEGenerator
             generate_ue_return_vector_custom_macro();
             generate_ue_return_string_custom_macro();
             generate_ue_copy_vector_custom_macro();
+            generate_ftext_marshaling_macros();
             generate_ue_with_outer_macro();
+            generate_layout_storage_types();
+        }
+
+        auto generate_ftext_marshaling_macros() -> void
+        {
+            write_line(STR("#define UE_COPY_FTEXT(CXXPropertyName, PropertyValueOffset) \\"));
+            write_line(STR("CXXPropertyName.CopyBorrowedTo(&ParamData[PropertyValueOffset]);"));
+            write_line();
+            write_line(STR("#define UE_COPY_OUT_FTEXT(CXXPropertyName, PropertyValueOffset) \\"));
+            write_line(STR("CXXPropertyName = FText::StealFromBuffer(&ParamData[PropertyValueOffset]);"));
+            write_line();
+            write_line(STR("#define UE_RETURN_FTEXT(PropertyValueOffset) \\"));
+            write_line(STR("return FText::StealFromBuffer(&ParamData[PropertyValueOffset]);"));
+            write_line();
+        }
+
+        auto generate_layout_storage_types() -> void
+        {
+            write_line(STR("// Sized stand-in for a type whose backend representation does not match the running engine."));
+            write_line(STR("template <unsigned long long Size, unsigned long long Align, typename Tag>"));
+            write_line(STR("struct alignas(Align) TOpaqueStorage"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("unsigned char Storage[Size]{};"));
+            write_line();
+            write_line(STR("template <typename T> T& GetTyped() { return *reinterpret_cast<T*>(this); }"));
+            write_line(STR("template <typename T> const T& GetTyped() const { return *reinterpret_cast<const T*>(this); }"));
+            end_scope();
+            write_line(STR("};"));
+            write_line();
+            write_line(STR("// The backend's type when its layout matches the reflected one, sized storage otherwise."));
+            write_line(STR("template <typename T, unsigned long long Size, unsigned long long Align>"));
+            write_line(STR("using TLayoutStorage = std::conditional_t<sizeof(T) == Size && alignof(T) <= Align, T, TOpaqueStorage<Size, Align, T>>;"));
+            write_line();
+
+            write_line(STR("// Non-owning view of the running engine's FText bytes. It deliberately has no"));
+            write_line(STR("// constructors, destructor, or copying API; use the backend FText marshaler for ownership."));
+            if (m_ftext_view_size == 0x10)
+            {
+                write_line(STR("struct alignas(8) FTextView"));
+                write_line(STR("{"));
+                start_scope();
+                write_line(STR("void* TextData{};"));
+                write_line(STR("uint32_t Flags{};"));
+                end_scope();
+                write_line(STR("};"));
+                write_line(STR("static_assert(sizeof(FTextView) == 0x10);"));
+            }
+            else if (m_ftext_view_size == 0x18)
+            {
+                write_line(STR("struct alignas(8) FTextView"));
+                write_line(STR("{"));
+                start_scope();
+                write_line(STR("void* TextData{};"));
+                write_line(STR("void* SharedReferenceController{};"));
+                write_line(STR("uint32_t Flags{};"));
+                end_scope();
+                write_line(STR("};"));
+                write_line(STR("static_assert(sizeof(FTextView) == 0x18);"));
+            }
+            else if (m_ftext_view_size == 0x28)
+            {
+                write_line(STR("struct alignas(8) FTextView"));
+                write_line(STR("{"));
+                start_scope();
+                write_line(STR("void* DisplayString{};"));
+                write_line(STR("void* DisplayStringReferenceController{};"));
+                write_line(STR("void* History{};"));
+                write_line(STR("void* HistoryReferenceController{};"));
+                write_line(STR("uint32_t Flags{};"));
+                end_scope();
+                write_line(STR("};"));
+                write_line(STR("static_assert(sizeof(FTextView) == 0x28);"));
+            }
+            if (m_ftext_view_size != 0)
+            {
+                write_line();
+            }
+
+            write_line(STR("// Non-owning persistent soft-pointer views. ObjectID stays byte storage so headers"));
+            write_line(STR("// need only a forward declaration of the generated FSoftObjectPath, avoiding cycles."));
+            write_line(STR("template <typename Tag, unsigned long long PathSize, unsigned long long PathAlign, bool HasTagAtLastTest>"));
+            write_line(STR("struct TSoftObjectPtrView;"));
+            write_line();
+            write_line(STR("template <typename Tag, unsigned long long PathSize, unsigned long long PathAlign>"));
+            write_line(STR("struct alignas(PathAlign) TSoftObjectPtrView<Tag, PathSize, PathAlign, false>"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("unsigned char WeakPtrStorage[0x8]{};"));
+            write_line(STR("alignas(PathAlign) unsigned char ObjectIDStorage[PathSize]{};"));
+            write_line();
+            write_line(STR("template <typename T> T& GetWeakPtr() { return *reinterpret_cast<T*>(WeakPtrStorage); }"));
+            write_line(STR("template <typename T> const T& GetWeakPtr() const { return *reinterpret_cast<const T*>(WeakPtrStorage); }"));
+            write_line(STR("template <typename T> T& GetObjectID() { return *reinterpret_cast<T*>(ObjectIDStorage); }"));
+            write_line(STR("template <typename T> const T& GetObjectID() const { return *reinterpret_cast<const T*>(ObjectIDStorage); }"));
+            end_scope();
+            write_line(STR("};"));
+            write_line();
+            write_line(STR("template <typename Tag, unsigned long long PathSize, unsigned long long PathAlign>"));
+            write_line(STR("struct alignas(PathAlign) TSoftObjectPtrView<Tag, PathSize, PathAlign, true>"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("unsigned char WeakPtrStorage[0x8]{};"));
+            write_line(STR("int32_t TagAtLastTest{};"));
+            write_line(STR("alignas(PathAlign) unsigned char ObjectIDStorage[PathSize]{};"));
+            write_line();
+            write_line(STR("template <typename T> T& GetWeakPtr() { return *reinterpret_cast<T*>(WeakPtrStorage); }"));
+            write_line(STR("template <typename T> const T& GetWeakPtr() const { return *reinterpret_cast<const T*>(WeakPtrStorage); }"));
+            write_line(STR("template <typename T> T& GetObjectID() { return *reinterpret_cast<T*>(ObjectIDStorage); }"));
+            write_line(STR("template <typename T> const T& GetObjectID() const { return *reinterpret_cast<const T*>(ObjectIDStorage); }"));
+            end_scope();
+            write_line(STR("};"));
+            write_line();
         }
 
         auto generate_includes_for_platform_generic_types() -> void
@@ -761,6 +976,7 @@ namespace RC::UEGenerator
             write_prologue_line();
             write_prologue_line(STR("#include <cstring>"));
             write_prologue_line(STR("#include <cstdint>"));
+            write_prologue_line(STR("#include <type_traits>"));
             write_prologue_line(STR("#include <unordered_map>"));
             write_prologue_line(STR("#include <malloc.h>"));
             // These should probably be changed to either use the ini file for the file name, or they should always use the exact same file name as in UE.
@@ -826,31 +1042,24 @@ namespace RC::UEGenerator
             std::sort(file->forward_declarations().begin(), file->forward_declarations().end());
             auto last = std::unique(file->forward_declarations().begin(), file->forward_declarations().end());
             file->forward_declarations().erase(last, file->forward_declarations().end());
-            if (!file->forward_declarations().empty())
+            if (file->forward_declarations().empty())
             {
-                ++file->prologue_scope_level();
+                return;
             }
+            ++file->prologue_scope_level();
             for (const auto& forward_declaration : file->forward_declarations())
             {
-                write_line_internal(file->prologue(), file->prologue_scope_level(), std::format(STR("{}"), forward_declaration));
+                write_line_internal(file->prologue(), file->prologue_scope_level(), forward_declaration);
             }
-            if (!file->forward_declarations().empty())
-            {
-                --file->prologue_scope_level();
-                write_line_internal(file->prologue());
-            }
+            --file->prologue_scope_level();
+            write_line_internal(file->prologue());
         }
 
         auto get_namespace(UStruct* ustruct, bool is_script_struct, GeneratedSDKFile* file_in = nullptr) -> StringType
         {
             auto file = file_in ? file_in : &current_file();
             StringType namespace_to_use{};
-            static auto coreuobject_object = UObjectGlobals::FindObject<UStruct>(nullptr, STR("/Script/CoreUObject.Object"));
-            if (ustruct == coreuobject_object)
-            {
-                namespace_to_use = m_backend->UnrealImplementationNamespace;
-            }
-            else if (auto it = m_backend->UnreflectedTypes.find(get_native_class_or_struct_name(ustruct, is_script_struct));
+            if (auto it = m_backend->UnreflectedTypes.find(get_native_class_or_struct_name(ustruct, is_script_struct));
                      it != m_backend->UnreflectedTypes.end())
             {
                 namespace_to_use = m_backend->UnrealImplementationNamespace;
@@ -986,7 +1195,8 @@ namespace RC::UEGenerator
                 write_line(std::format(STR("struct alignas(0x{:X}) {}"), info.alignment, type_name));
                 write_line(STR("{"));
                 start_scope();
-                write_line(std::format(STR("uint8 Pad[0x{:X}]{{}};"), info.size));
+                // 'unsigned char' rather than 'uint8': this file includes nothing, so no alias is in scope.
+                write_line(std::format(STR("unsigned char Pad[0x{:X}]{{}};"), info.size));
                 write_line();
                 write_line(STR("template <typename T> T& GetTyped() { return *reinterpret_cast<T*>(this); }"));
                 write_line(STR("template <typename T> const T& GetTyped() const { return *reinterpret_cast<const T*>(this); }"));
@@ -1054,47 +1264,187 @@ namespace RC::UEGenerator
         {
             new_file(STR("src/UE4SS_SDK/RuntimeSDKTest"), STR("hpp"));
             current_file().set_has_non_boilerplate_content(true);
+            write_prologue_line(STR("#pragma once"));
+            write_prologue_line();
+            write_prologue_line(STR("#include <UE4SS_SDK/Include.hpp>"));
+            write_prologue_line(STR("#include <DynamicOutput/DynamicOutput.hpp>"));
+            write_prologue_line(STR("#include <unordered_map>"));
+            write_prologue_line(STR("#include <Unreal/UObjectGlobals.hpp>"));
+            write_prologue_line();
             start_scope(); // Namespace
-            write_line(STR("void run_test()"));
-            write_line(STR("{"));
-            start_scope();
-            write_line(STR(R"(Output::send<LogLevel::Verbose>(STR("Running runtime SDK test\n"));)"));
+
+            struct RuntimeFileInfo
+            {
+                GeneratedSDKFile* file{};
+                UStruct* reflected_struct{};
+                StringType cpp_name{};
+                StringType reflected_path{};
+            };
+            std::vector<RuntimeFileInfo> runtime_files{};
             for (const auto& file : m_files)
             {
                 if (!file->related_uobject() || !file->related_uobject()->IsA<UStruct>())
                 {
                     continue;
                 }
-                auto as_ustruct = static_cast<UStruct*>(file->related_uobject());
-                StringType namespace_to_use = std::format(STR("{}"), get_namespace(as_ustruct, as_ustruct->IsA<UScriptStruct>(), file.get()));
-                StringType struct_name = namespace_to_use + file->runtime_sdk_test_data().struct_name;
-                for (const auto& property_data : file->runtime_sdk_test_data().properties)
+                auto* reflected_struct = static_cast<UStruct*>(file->related_uobject());
+                auto reflected_path = get_typeless_object_name(reflected_struct);
+                std::replace(reflected_path.begin(), reflected_path.end(), STR('\\'), STR('/'));
+                // Transient objects do not have stable identities across processes. Property bags in
+                // particular are synthesized with run-specific names, so a later live test cannot
+                // meaningfully look them up by the path captured during generation.
+                if (reflected_path.starts_with(STR("/Engine/Transient.")))
                 {
-                    if (auto as_bool_property = CastField<FBoolProperty>(property_data.property); as_bool_property)
+                    continue;
+                }
+                runtime_files.emplace_back(RuntimeFileInfo{
+                        file.get(),
+                        reflected_struct,
+                        std::format(STR("{}{}"),
+                                    get_namespace(reflected_struct, reflected_struct->IsA<UScriptStruct>(), file.get()),
+                                    file->runtime_sdk_test_data().struct_name),
+                        std::move(reflected_path)});
+            }
+
+            write_line(STR("struct FRuntimeStructTest"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("const wchar_t* Path;"));
+            write_line(STR("unsigned long long CppSize;"));
+            write_line(STR("unsigned long long CppAlignment;"));
+            end_scope();
+            write_line(STR("};"));
+            write_line(STR("struct FRuntimePropertyTest"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("unsigned long long StructIndex;"));
+            write_line(STR("const wchar_t* Name;"));
+            write_line(STR("unsigned long long CppOffset;"));
+            end_scope();
+            write_line(STR("};"));
+            write_line();
+
+            write_line(STR("inline constexpr FRuntimeStructTest RuntimeStructTests[]{"));
+            start_scope();
+            for (const auto& info : runtime_files)
+            {
+                write_line(std::format(STR("{{L\"{}\", sizeof({}), alignof({})}},"), info.reflected_path, info.cpp_name, info.cpp_name));
+            }
+            end_scope();
+            write_line(STR("};"));
+            write_line(STR("inline constexpr FRuntimePropertyTest RuntimePropertyTests[]{"));
+            start_scope();
+            for (size_t struct_index{}; struct_index < runtime_files.size(); ++struct_index)
+            {
+                const auto& info = runtime_files[struct_index];
+                // Several properties in one struct can share a reflected name. The C++ members carry a
+                // numbered suffix, but a runtime lookup by name cannot say which one it found.
+                std::unordered_map<StringType, size_t> name_counts{};
+                for (const auto& property_data : info.file->runtime_sdk_test_data().properties)
+                {
+                    ++name_counts[property_data.property->GetName()];
+                }
+                for (const auto& property_data : info.file->runtime_sdk_test_data().properties)
+                {
+                    if (auto* bool_property = CastField<FBoolProperty>(property_data.property); bool_property && bool_property->GetFieldMask() != 255)
                     {
-                        if (as_bool_property->GetFieldMask() != 255)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
-                    write_line(std::format(STR("if (offsetof({}, {}) != 0x{:X})"),
-                                           struct_name,
-                                           property_data.property_name,
-                                           property_data.property->GetOffset_Internal()));
-                    write_line(STR("{"));
-                    start_scope();
-                    write_line(std::format(STR("Output::send<LogLevel::Error>(STR(\"Class '{}' not memory accurate because of property '{}', 0x{{:X}} != "
-                                               "0x{:X}\\n\"), offsetof({}, {}));"),
-                                           struct_name,
-                                           property_data.property_name,
-                                           property_data.property->GetOffset_Internal(),
-                                           struct_name,
+                    if (name_counts[property_data.property->GetName()] > 1)
+                    {
+                        ++m_ambiguous_runtime_property_count;
+                        continue;
+                    }
+                    write_line(std::format(STR("{{{}, L\"{}\", offsetof({}, {})}},"),
+                                           struct_index,
+                                           property_data.property->GetName(),
+                                           info.cpp_name,
                                            property_data.property_name));
-                    end_scope();
-                    write_line(STR("}"));
                 }
             }
-            write_line(STR(R"(Output::send<LogLevel::Verbose>(STR("Runtime SDK test done!\n"));)"));
+            end_scope();
+            write_line(STR("};"));
+            write_line();
+
+            write_line(STR("inline void run_test()"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("::RC::Output::send<::RC::LogLevel::Verbose>(STR(\"Running live runtime SDK test\\n\"));"));
+            write_line(STR("unsigned long long ErrorCount{};"));
+            write_line(STR("constexpr unsigned long long StructTestCount = sizeof(RuntimeStructTests) / sizeof(RuntimeStructTests[0]);"));
+            write_line(STR("::RC::Unreal::UStruct* ReflectedStructs[StructTestCount]{};"));
+            // One pass over the object array. A FindObject per struct scans the array each time.
+            write_line(STR("std::unordered_map<::RC::StringType, unsigned long long> TestIndexByPath{};"));
+            write_line(STR("TestIndexByPath.reserve(StructTestCount);"));
+            write_line(STR("for (unsigned long long Index{}; Index < StructTestCount; ++Index)"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("TestIndexByPath.emplace(RuntimeStructTests[Index].Path, Index);"));
+            end_scope();
+            write_line(STR("}"));
+            write_line(STR("::RC::Unreal::UObjectGlobals::ForEachUObject([&](::RC::Unreal::UObject* Object, ::RC::Unreal::int32, ::RC::Unreal::int32) {"));
+            start_scope();
+            write_line(STR("if (Object->IsA<::RC::Unreal::UStruct>())"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("if (auto It = TestIndexByPath.find(Object->GetPathName()); It != TestIndexByPath.end())"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("ReflectedStructs[It->second] = static_cast<::RC::Unreal::UStruct*>(Object);"));
+            end_scope();
+            write_line(STR("}"));
+            end_scope();
+            write_line(STR("}"));
+            write_line(STR("return ::RC::LoopAction::Continue;"));
+            end_scope();
+            write_line(STR("});"));
+            write_line(STR("for (unsigned long long Index{}; Index < StructTestCount; ++Index)"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("const auto& Test = RuntimeStructTests[Index];"));
+            write_line(STR("auto* Reflected = ReflectedStructs[Index];"));
+            write_line(STR("if (!Reflected)"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("++ErrorCount;"));
+            write_line(STR("::RC::Output::send<::RC::LogLevel::Error>(STR(\"Runtime SDK test could not find '{}'\\n\"), Test.Path);"));
+            end_scope();
+            write_line(STR("}"));
+            // UClass::MinAlignment describes Unreal's object allocation/reflection contract, not the
+            // C++ alignof of an SDK wrapper (UObject-derived types are only ever used through pointers).
+            // For UScriptStruct, which can be embedded by value, the two alignment contracts must agree.
+            write_line(STR("else if (Reflected->GetStructureSize() != Test.CppSize || (Reflected->IsA<::RC::Unreal::UScriptStruct>() && Reflected->GetMinAlignment() != Test.CppAlignment))"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("++ErrorCount;"));
+            write_line(STR("::RC::Output::send<::RC::LogLevel::Error>(STR(\"Runtime layout mismatch on '{}': size 0x{:X}/0x{:X}, alignment 0x{:X}/0x{:X}\\n\"), Test.Path, Reflected->GetStructureSize(), Test.CppSize, Reflected->GetMinAlignment(), Test.CppAlignment);"));
+            end_scope();
+            write_line(STR("}"));
+            end_scope();
+            write_line(STR("}"));
+            write_line(STR("for (const auto& Test : RuntimePropertyTests)"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("auto* ReflectedStruct = ReflectedStructs[Test.StructIndex];"));
+            write_line(STR("if (!ReflectedStruct) { continue; }"));
+            write_line(STR("auto* ReflectedProperty = ReflectedStruct->FindProperty(::RC::Unreal::FName(Test.Name, ::RC::Unreal::FNAME_Find));"));
+            write_line(STR("if (!ReflectedProperty)"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("++ErrorCount;"));
+            write_line(STR("::RC::Output::send<::RC::LogLevel::Error>(STR(\"Runtime SDK test could not find '{}:{}'\\n\"), RuntimeStructTests[Test.StructIndex].Path, Test.Name);"));
+            end_scope();
+            write_line(STR("}"));
+            write_line(STR("else if (ReflectedProperty->GetOffset_Internal() != Test.CppOffset)"));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("++ErrorCount;"));
+            write_line(STR("::RC::Output::send<::RC::LogLevel::Error>(STR(\"Runtime offset mismatch on '{}:{}': 0x{:X} != 0x{:X}\\n\"), RuntimeStructTests[Test.StructIndex].Path, Test.Name, ReflectedProperty->GetOffset_Internal(), Test.CppOffset);"));
+            end_scope();
+            write_line(STR("}"));
+            end_scope();
+            write_line(STR("}"));
+            write_line(STR("::RC::Output::send<::RC::LogLevel::Verbose>(STR(\"Live runtime SDK test done: {} errors\\n\"), ErrorCount);"));
             end_scope();
             write_line(STR("}"));
             end_scope(); // Namespace
@@ -1209,6 +1559,11 @@ namespace RC::UEGenerator
                 return;
             }
             auto file_path_with_forward_slashes = convert_file_path_slashes_to_forward_slashes(file_path);
+            // A file never depends on itself (e.g. a soft/lazy pointer property whose class is the owning class).
+            if (is_full_path == IsFullPath::No && file_path_with_forward_slashes == current_file().include_path())
+            {
+                return;
+            }
             current_file().file_dependencies().emplace_back(file_path_with_forward_slashes, is_full_path);
         }
 
@@ -1231,6 +1586,21 @@ namespace RC::UEGenerator
             }
         }
 
+        // Never forward-declare an excluded type: the declaration lands inside the SDK namespace and
+        // would shadow the backend's type there. Excluded types come from the backend headers instead.
+        auto add_forward_declaration(UStruct* class_or_struct) -> void
+        {
+            if (!class_or_struct)
+            {
+                return;
+            }
+            if (m_backend->ExcludedTypes.contains(class_or_struct->GetNamePrivate().ToString()))
+            {
+                return;
+            }
+            current_file().forward_declarations().emplace_back(std::format(STR("class {};"), get_native_class_or_struct_name(class_or_struct, false)));
+        }
+
         auto get_unreflected_file_dependency(const StringType& dependency_name) -> const std::filesystem::path
         {
             if (auto it = m_backend->UnreflectedTypes.find(dependency_name); it != m_backend->UnreflectedTypes.end())
@@ -1244,6 +1614,39 @@ namespace RC::UEGenerator
             }
         }
 
+        auto get_backend_object_property_type(FProperty* property) -> std::optional<std::pair<StringType, std::filesystem::path>>
+        {
+            // Some native FField types are reflected as UObject classes: UberGraphFramePointerProperty
+            // reflects as a pointer to "StructProperty" but is really FStructProperty*. Resolve an
+            // excluded pointee through the backend table rather than inventing a U-prefixed class.
+            if (!property || property->IsA<FClassProperty>() || property->IsA<FAssetClassProperty>())
+            {
+                return std::nullopt;
+            }
+            auto* object_property = CastField<FObjectProperty>(property);
+            UClass* property_class = object_property ? object_property->GetPropertyClass().Get() : nullptr;
+            if (!property_class)
+            {
+                return std::nullopt;
+            }
+
+            const auto reflected_name = property_class->GetNamePrivate().ToString();
+            if (!m_backend->ExcludedTypes.contains(reflected_name))
+            {
+                return std::nullopt;
+            }
+
+            const std::array<StringType, 3> candidates{STR("F") + reflected_name, STR("U") + reflected_name, reflected_name};
+            for (const auto& candidate : candidates)
+            {
+                if (auto it = m_backend->UnreflectedTypes.find(candidate); it != m_backend->UnreflectedTypes.end())
+                {
+                    return std::pair{candidate, it->second};
+                }
+            }
+            return std::nullopt;
+        }
+
         auto generate_dependency_requirements_for_property(FProperty* property, UStruct* struct_context) -> void
         {
             if (!property)
@@ -1255,51 +1658,50 @@ namespace RC::UEGenerator
             {
                 static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TSubclassOf"));
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(std::bit_cast<FClassProperty*>(property)->GetMetaClass(), false)));
+                add_forward_declaration(std::bit_cast<FClassProperty*>(property)->GetMetaClass());
             }
             else if (auto as_soft_class_property = CastField<FSoftClassProperty>(property); as_soft_class_property)
             {
                 static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TSoftClassPtr"));
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
-                generate_dependency_based_on_banned_deps(as_soft_class_property->GetMetaClass());
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(as_soft_class_property->GetMetaClass(), false)));
+                // Forward declaration only; a soft pointer never needs the pointee complete, and the
+                // hard include creates include cycles.
+                add_forward_declaration(as_soft_class_property->GetMetaClass());
             }
             else if (auto as_lazy_object_property = CastField<FLazyObjectProperty>(property); as_lazy_object_property)
             {
                 static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TLazyObjectPtr"));
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
-                generate_dependency_based_on_banned_deps(as_lazy_object_property->GetPropertyClass());
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(as_lazy_object_property->GetPropertyClass(), false)));
+                add_forward_declaration(as_lazy_object_property->GetPropertyClass());
             }
             else if (auto as_soft_object_property = CastField<FSoftObjectProperty>(property); as_soft_object_property)
             {
                 static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TSoftObjectPtr"));
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
-                generate_dependency_based_on_banned_deps(as_soft_object_property->GetPropertyClass());
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(as_soft_object_property->GetPropertyClass(), false)));
+                add_forward_declaration(as_soft_object_property->GetPropertyClass());
             }
             else if (auto as_weak_object_ptr_property = CastField<FWeakObjectProperty>(property); as_weak_object_ptr_property)
             {
                 static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TWeakObjectPtr"));
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(as_weak_object_ptr_property->GetPropertyClass(), false)));
+                add_forward_declaration(as_weak_object_ptr_property->GetPropertyClass());
             }
             else if (auto as_object_ptr_property = CastField<FObjectPtrProperty>(property); as_object_ptr_property)
             {
                 static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TObjectPtr"));
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(as_object_ptr_property->GetPropertyClass(), false)));
+                add_forward_declaration(as_object_ptr_property->GetPropertyClass());
             }
             else if (auto as_object_property_base = CastField<FObjectPropertyBase>(property); as_object_property_base)
             {
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(as_object_property_base->GetPropertyClass(), false)));
+                if (auto backend_type = get_backend_object_property_type(property); backend_type)
+                {
+                    add_file_dependency(backend_type->second, IsFullPath::Yes);
+                }
+                else
+                {
+                    add_forward_declaration(as_object_property_base->GetPropertyClass());
+                }
             }
             else if (auto as_struct_property = CastField<FStructProperty>(property); as_struct_property)
             {
@@ -1325,17 +1727,29 @@ namespace RC::UEGenerator
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
                 generate_dependency_requirements_for_property(as_set_property->GetElementProp(), struct_context);
             }
+            else if (auto as_optional_property = CastField<FOptionalProperty>(property); as_optional_property)
+            {
+                static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TOptional"));
+                add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
+                generate_dependency_requirements_for_property(as_optional_property->GetValueProperty(), struct_context);
+            }
             else if (auto as_byte_property = CastField<FByteProperty>(property); as_byte_property && as_byte_property->GetEnum())
             {
                 static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TEnumAsByte"));
                 add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
                 add_file_dependency(get_file_path_from_class(as_byte_property->GetEnum()));
+                // No underlying-type record here: TEnumAsByte members are one byte whatever the
+                // enum's underlying type is, and the enum's values may not fit in a byte.
             }
             else if (auto as_enum_property = CastField<FEnumProperty>(property); as_enum_property)
             {
                 add_file_dependency(get_file_path_from_class(as_enum_property->GetEnum()));
-                m_underlying_enum_types.emplace(get_native_enum_name(as_enum_property->GetEnum(), false),
-                                                get_property_type_name(as_enum_property->GetUnderlyingProp(), struct_context, false, true));
+                if (auto* underlying_property = as_enum_property->GetUnderlyingProp(); underlying_property)
+                {
+                    record_enum_underlying_type(as_enum_property->GetEnum(),
+                                                get_property_type_name(underlying_property, struct_context, false, true),
+                                                underlying_property->GetElementSize());
+                }
             }
             else if (property->IsA<FDelegateProperty>())
             {
@@ -1365,8 +1779,7 @@ namespace RC::UEGenerator
                     static const std::filesystem::path unreflected_file_dependency = get_unreflected_file_dependency(STR("TScriptInterface"));
                     add_file_dependency(unreflected_file_dependency, IsFullPath::Yes);
                 }
-                current_file().forward_declarations().emplace_back(
-                        std::format(STR("class {};"), get_native_class_or_struct_name(as_interface_property->GetInterfaceClass(), false)));
+                add_forward_declaration(as_interface_property->GetInterfaceClass());
             }
             else if (property->IsA<FNameProperty>())
             {
@@ -1401,7 +1814,8 @@ namespace RC::UEGenerator
             }
             else
             {
-                super_name = std::format(STR("{}UObject"), get_namespace(as_struct, is_script_struct));
+                // Only the root has no reflected super; it derives from the backend's UObject.
+                super_name = std::format(STR("{}::UObject"), m_backend->UnrealImplementationNamespace);
             }
             return super_name;
         }
@@ -1475,9 +1889,28 @@ namespace RC::UEGenerator
             }
         }
 
+        auto record_enum_underlying_type(UEnum* uenum, StringType type_name, int32_t size) -> void
+        {
+            auto [it, emplaced] = m_underlying_enum_types.emplace(get_native_enum_name(uenum, false), std::pair{type_name, size});
+            if (!emplaced && size < it->second.second)
+            {
+                it->second = {std::move(type_name), size};
+            }
+        }
+
+        // ": uint8" etc. when any referencing property told us the storage width, empty otherwise.
+        auto get_enum_underlying_type_suffix(UEnum* uenum) -> StringType
+        {
+            if (auto it = m_underlying_enum_types.find(get_native_enum_name(uenum, false)); it != m_underlying_enum_types.end())
+            {
+                return std::format(STR(" : {}"), it->second.first);
+            }
+            return {};
+        }
+
         auto generate_regular_enum_definition(UEnum* uenum) -> void
         {
-            write_line(std::format(STR("enum {}"), get_native_enum_name(uenum, false)));
+            write_line(std::format(STR("enum {}{}"), get_native_enum_name(uenum, false), get_enum_underlying_type_suffix(uenum)));
             write_line(STR("{"));
             start_scope();
             generate_enum_value_definitions(
@@ -1497,7 +1930,7 @@ namespace RC::UEGenerator
             write_line(std::format(STR("namespace {}"), get_native_enum_name(uenum, false)));
             write_line(STR("{"));
             start_scope();
-            write_line(STR("enum Type"));
+            write_line(std::format(STR("enum Type{}"), get_enum_underlying_type_suffix(uenum)));
             write_line(STR("{"));
             start_scope();
             generate_enum_value_definitions(
@@ -1553,7 +1986,7 @@ namespace RC::UEGenerator
             }
             else
             {
-                write_line(std::format(STR("enum class {} : {}"), get_native_enum_name(uenum, false), underlying_type->second));
+                write_line(std::format(STR("enum class {} : {}"), get_native_enum_name(uenum, false), underlying_type->second.first));
             }
             write_line(STR("{"));
             start_scope();
@@ -1590,8 +2023,12 @@ namespace RC::UEGenerator
                 generate_class_enum_definition(uenum);
                 break;
             default:
-                throw std::runtime_error(std::format("SDKGenerator::generate_enum_header: Unknown enum CppForm: {}",
-                                                     static_cast<std::underlying_type_t<UEnum::ECppForm>>(uenum->GetCppForm())));
+                // An unknown CppForm must not abort the whole dump.
+                Output::send<LogLevel::Warning>(STR("SDKGenerator: Unknown enum CppForm {} on '{}', emitting as enum class\n"),
+                                                static_cast<std::underlying_type_t<UEnum::ECppForm>>(uenum->GetCppForm()),
+                                                uenum->GetFullName());
+                generate_class_enum_definition(uenum);
+                break;
             }
 
             end_scope(); // Namespace
@@ -1913,7 +2350,14 @@ namespace RC::UEGenerator
             StringType name = in_name;
             std::erase(name, STR('('));
             std::erase(name, STR(')'));
-            std::ranges::replace(name, STR(' '), STR('_'));
+            // Also applied to include paths, so path separators and dots stay.
+            for (auto& character : name)
+            {
+                if (!std::iswalnum(character) && character != STR('_') && character != STR('/') && character != STR('\\') && character != STR('.'))
+                {
+                    character = STR('_');
+                }
+            }
             return name;
         }
 
@@ -2014,10 +2458,52 @@ namespace RC::UEGenerator
             {
                 name = generic_type->GetName();
             }
-            std::ranges::replace(name, STR(' '), STR('_'));
-            std::ranges::replace(name, STR('?'), STR('_'));
+            // Names are arbitrary user text; anything that is not valid in an identifier becomes '_'.
+            for (auto& character : name)
+            {
+                if (!std::iswalnum(character) && character != STR('_'))
+                {
+                    character = STR('_');
+                }
+            }
+            if (!name.empty() && std::iswdigit(name[0]))
+            {
+                name.insert(name.begin(), STR('_'));
+            }
+            // A name that is a C++ keyword or a typedef the SDK relies on cannot be used verbatim,
+            // whatever the property's type is. Capitalizing the first letter makes it usable.
+            static const std::unordered_set<StringType> reserved_names{
+                    STR("bool"),     STR("break"),    STR("case"),     STR("catch"),   STR("char"),      STR("class"),   STR("const"),
+                    STR("continue"), STR("default"),  STR("delete"),   STR("do"),      STR("double"),    STR("else"),    STR("enum"),
+                    STR("explicit"), STR("extern"),   STR("false"),    STR("float"),   STR("for"),       STR("friend"),  STR("goto"),
+                    STR("if"),       STR("inline"),   STR("int"),      STR("long"),    STR("mutable"),   STR("namespace"), STR("new"),
+                    STR("operator"), STR("private"),  STR("protected"), STR("public"), STR("register"),  STR("return"),  STR("short"),
+                    STR("signed"),   STR("sizeof"),   STR("static"),   STR("struct"),  STR("switch"),    STR("template"), STR("this"),
+                    STR("throw"),    STR("true"),     STR("try"),      STR("typedef"), STR("typeid"),    STR("typename"), STR("union"),
+                    STR("unsigned"), STR("using"),    STR("virtual"),  STR("void"),    STR("volatile"),  STR("while"),
+                    STR("int8"),     STR("int16"),    STR("int32"),    STR("int64"),
+                    STR("uint8"),    STR("uint16"),   STR("uint32"),   STR("uint64")};
+            if (!name.empty() && reserved_names.contains(name))
+            {
+                name[0] = towupper(name[0]);
+            }
             if constexpr (std::is_convertible_v<T, FProperty>)
             {
+                // A property named exactly like its own enum type would shadow the type inside
+                // generated function bodies.
+                UEnum* property_enum{};
+                if (auto* as_enum_property = CastField<FEnumProperty>(generic_type); as_enum_property)
+                {
+                    property_enum = as_enum_property->GetEnum();
+                }
+                else if (auto* as_byte_property = CastField<FByteProperty>(generic_type); as_byte_property)
+                {
+                    property_enum = as_byte_property->GetEnum();
+                }
+                if (property_enum && name == get_native_enum_name(property_enum, false))
+                {
+                    name.append(STR("_"));
+                }
                 if (struct_context)
                 {
                     auto [it, was_emplaced] = struct_context->unique_property_number.emplace(name, 0);
@@ -2057,8 +2543,9 @@ namespace RC::UEGenerator
             {
                 StringType name{};
                 auto has_out_parm_or_reference_parm = property->HasAnyPropertyFlags(CPF_OutParm | CPF_ReferenceParm);
-                auto force_const_ref = !has_out_parm_or_reference_parm && property->IsA<FStrProperty>();
-                if (force_const_ref)
+                auto is_const_param = property->HasAnyPropertyFlags(CPF_ConstParm);
+                auto force_const_ref = !has_out_parm_or_reference_parm && (property->IsA<FStrProperty>() || property->IsA<FTextProperty>());
+                if (force_const_ref || is_const_param)
                 {
                     name.append(STR("const "));
                 }
@@ -2067,9 +2554,41 @@ namespace RC::UEGenerator
                 {
                     name = delegate_type;
                 }
+                else if (auto backend_type = get_backend_object_property_type(property); backend_type)
+                {
+                    name = std::format(STR("{}*"), backend_type->first);
+                }
                 else
                 {
-                    if (auto as_array_property = CastField<FArrayProperty>(property); as_array_property)
+                    if (auto* unsafe_property = get_abi_unsafe_inline_property(property); unsafe_property)
+                    {
+                        auto bare_name = generate_property_cxx_name(property, true, class_context);
+                        if (class_context && class_context->IsA<UFunction>() && has_function_marshaler(property))
+                        {
+                            name = std::move(bare_name);
+                        }
+                        else if (unsafe_property == property)
+                        {
+                            if (auto view_name = get_non_owning_view_type_name(property, bare_name); view_name)
+                            {
+                                name = std::move(*view_name);
+                                ++m_non_owning_view_member_count;
+                            }
+                            else
+                            {
+                                name = std::format(STR("TLayoutStorage<{}, 0x{:X}, 0x{:X}>"), bare_name, property->GetElementSize(), property->GetMinAlignment());
+                                ++m_abi_storage_member_count;
+                            }
+                        }
+                        else
+                        {
+                            // A container of an unsafe type has a stable header, but an element stride
+                            // the size check cannot see, so it gets sized storage outright.
+                            name = std::format(STR("TOpaqueStorage<0x{:X}, 0x{:X}, {}>"), property->GetElementSize(), property->GetMinAlignment(), bare_name);
+                            ++m_abi_storage_member_count;
+                        }
+                    }
+                    else if (auto as_array_property = CastField<FArrayProperty>(property); as_array_property)
                     {
                         auto [inner_delegate_type, is_inner_delegate] = get_delegate_type_if_property_is_delegate(as_array_property->GetInner());
                         if (is_inner_delegate)
@@ -2117,76 +2636,6 @@ namespace RC::UEGenerator
                             name = generate_property_cxx_name(property, true, class_context);
                         }
                     }
-                    else if (auto as_typed_property = CastField<FClassProperty>(property); as_typed_property)
-                    {
-                        StringType namespace_string{};
-                        const auto boxed_value = as_typed_property->GetMetaClass();
-                        if (m_objects_requiring_namespacing.contains(boxed_value))
-                        {
-                            namespace_string = generate_namespace_for_object(as_typed_property->GetMetaClass()) + STR("::");
-                        }
-                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
-                    }
-                    else if (auto as_typed_property = CastField<FSoftClassProperty>(property); as_typed_property)
-                    {
-                        StringType namespace_string{};
-                        const auto boxed_value = as_typed_property->GetMetaClass();
-                        if (m_objects_requiring_namespacing.contains(boxed_value))
-                        {
-                            namespace_string = generate_namespace_for_object(as_typed_property->GetMetaClass()) + STR("::");
-                        }
-                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
-                    }
-                    else if (auto as_typed_property = CastField<FObjectProperty>(property); as_typed_property)
-                    {
-                        StringType namespace_string{};
-                        const auto boxed_value = as_typed_property->GetPropertyClass();
-                        if (m_objects_requiring_namespacing.contains(boxed_value))
-                        {
-                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
-                        }
-                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
-                    }
-                    else if (auto as_typed_property = CastField<FWeakObjectProperty>(property); as_typed_property)
-                    {
-                        StringType namespace_string{};
-                        const auto boxed_value = as_typed_property->GetPropertyClass();
-                        if (m_objects_requiring_namespacing.contains(boxed_value))
-                        {
-                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
-                        }
-                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
-                    }
-                    else if (auto as_typed_property = CastField<FLazyObjectProperty>(property); as_typed_property)
-                    {
-                        StringType namespace_string{};
-                        const auto boxed_value = as_typed_property->GetPropertyClass();
-                        if (m_objects_requiring_namespacing.contains(boxed_value))
-                        {
-                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
-                        }
-                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
-                    }
-                    else if (auto as_typed_property = CastField<FSoftObjectProperty>(property); as_typed_property)
-                    {
-                        StringType namespace_string{};
-                        const auto boxed_value = as_typed_property->GetPropertyClass();
-                        if (m_objects_requiring_namespacing.contains(boxed_value))
-                        {
-                            namespace_string = generate_namespace_for_object(as_typed_property->GetPropertyClass()) + STR("::");
-                        }
-                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
-                    }
-                    else if (auto as_typed_property = CastField<FStructProperty>(property); as_typed_property)
-                    {
-                        StringType namespace_string{};
-                        const auto unboxed_value = as_typed_property->GetStruct();
-                        if (m_objects_requiring_namespacing.contains(unboxed_value))
-                        {
-                            namespace_string = generate_namespace_for_object(unboxed_value) + STR("::");
-                        }
-                        name = generate_property_cxx_name(property, true, class_context, EnableForwardDeclarations::No, ForceForwardDeclarations::No, namespace_string);
-                    }
                     else if (auto as_typed_property = CastField<FByteProperty>(property); as_typed_property)
                     {
                         const auto enum_value = as_typed_property->GetEnum();
@@ -2206,6 +2655,10 @@ namespace RC::UEGenerator
                 }
                 if (can_be_ref && (has_out_parm_or_reference_parm || force_const_ref))
                 {
+                    if ((force_const_ref || is_const_param) && !name.starts_with(STR("const ")))
+                    {
+                        name.insert(0, STR("const "));
+                    }
                     name.append(STR("&"));
                 }
                 return name;
@@ -2223,11 +2676,6 @@ namespace RC::UEGenerator
         // costs that member instead of everything.
         auto try_get_property_type_name(FProperty* property, UObject* class_context, bool can_be_ref) -> std::optional<StringType>
         {
-            // Temporary! To bypass TMap GetTypeHash because we haven't implemented that.
-            if (property && property->IsA<FMapProperty>())
-            {
-                return std::nullopt;
-            }
             try
             {
                 return get_property_type_name(property, class_context, can_be_ref);
@@ -2324,7 +2772,13 @@ namespace RC::UEGenerator
             //       Right now, TArray<T> is implicitly used.
             for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
-                if (!param->HasAnyPropertyFlags(CPF_Parm) || param->HasAnyPropertyFlags(CPF_ReturnParm | CPF_OutParm))
+                if (!param->HasAnyPropertyFlags(CPF_Parm) || param->HasAnyPropertyFlags(CPF_ReturnParm))
+                {
+                    continue;
+                }
+                // Const-reference inputs also carry CPF_OutParm in reflection. They are borrowed
+                // into ParamData but must not be stolen back out after ProcessEvent.
+                if (param->HasAnyPropertyFlags(CPF_OutParm) && !param->HasAnyPropertyFlags(CPF_ConstParm))
                 {
                     continue;
                 }
@@ -2341,6 +2795,9 @@ namespace RC::UEGenerator
                     {
                         for (const auto& inner_param : TFieldRange<FProperty>(the_struct, EFieldIterationFlags::IncludeDeprecated))
                         {
+                            // The macro spells out the inner property's type, so this file needs the same
+                            // forward declarations the struct's own header used.
+                            generate_dependency_requirements_for_property(inner_param, the_struct);
                             write_line(std::format(STR("UE_COPY_STRUCT_INNER_PROPERTY_CUSTOM({}, {}.{}, 0x{:X}, 0x{:X})"),
                                                    get_outered_type_name(inner_param, the_struct),
                                                    get_sanitized_object_or_property_name(param),
@@ -2349,6 +2806,10 @@ namespace RC::UEGenerator
                                                    inner_param->GetOffset_Internal()));
                         }
                     }
+                }
+                else if (param->IsA<FTextProperty>())
+                {
+                    write_line(std::format(STR("UE_COPY_FTEXT({}, 0x{:X})"), get_sanitized_object_or_property_name(param), param->GetOffset_Internal()));
                 }
                 else
                 {
@@ -2392,15 +2853,23 @@ namespace RC::UEGenerator
         {
             for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
             {
-                if (param->HasAnyPropertyFlags(CPF_ReturnParm) || !param->HasAnyPropertyFlags(CPF_OutParm))
+                if (param->HasAnyPropertyFlags(CPF_ReturnParm) || !param->HasAnyPropertyFlags(CPF_OutParm) ||
+                    param->HasAnyPropertyFlags(CPF_ConstParm))
                 {
                     continue;
                 }
 
-                write_line(std::format(STR("UE_COPY_OUT_PROPERTY_CUSTOM({}, {}, 0x{:X})"),
-                                       get_sanitized_object_or_property_name(param),
-                                       get_outered_type_name(param, ufunction),
-                                       param->GetOffset_Internal()));
+                if (param->IsA<FTextProperty>())
+                {
+                    write_line(std::format(STR("UE_COPY_OUT_FTEXT({}, 0x{:X})"), get_sanitized_object_or_property_name(param), param->GetOffset_Internal()));
+                }
+                else
+                {
+                    write_line(std::format(STR("UE_COPY_OUT_PROPERTY_CUSTOM({}, {}, 0x{:X})"),
+                                           get_sanitized_object_or_property_name(param),
+                                           get_outered_type_name(param, ufunction),
+                                           param->GetOffset_Internal()));
+                }
             }
         }
 
@@ -2411,9 +2880,16 @@ namespace RC::UEGenerator
             {
                 return;
             }
-            write_line(std::format(STR("UE_RETURN_PROPERTY_CUSTOM({}, 0x{:X})"),
-                                   get_outered_type_name(return_property, ufunction),
-                                   return_property->GetOffset_Internal()));
+            if (return_property->IsA<FTextProperty>())
+            {
+                write_line(std::format(STR("UE_RETURN_FTEXT(0x{:X})"), return_property->GetOffset_Internal()));
+            }
+            else
+            {
+                write_line(std::format(STR("UE_RETURN_PROPERTY_CUSTOM({}, 0x{:X})"),
+                                       get_outered_type_name(return_property, ufunction),
+                                       return_property->GetOffset_Internal()));
+            }
         }
 
         auto generate_ufunction_body(UClass* uclass, UFunction* ufunction, bool class_is_native, bool class_contains_only_static_functions) -> void
@@ -2483,6 +2959,28 @@ namespace RC::UEGenerator
             // That wouldn't be ideal as we should allow backends to retrieve this data if they support the types even if the generator doesn't support them.
             write_line(STR("memcpy(this, &Other, StaticSize());"));
             write_line(STR("return *this;"));
+            end_scope();
+            write_line(STR("}"));
+            write_line();
+        }
+
+        // TMap/TSet keyed by this struct need GetTypeHash to instantiate. Byte-wise and self-contained
+        // because a backend is not required to define GetTypeHash for anything.
+        auto generate_type_hash_for_struct(UStruct* ustruct) -> void
+        {
+            const auto name = get_native_class_or_struct_name(ustruct, true);
+            write_line(std::format(STR("friend unsigned int GetTypeHash(const {}& Value)"), name));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("unsigned int Hash = 0x811C9DC5u;"));
+            write_line(STR("const unsigned char* Bytes = reinterpret_cast<const unsigned char*>(&Value);"));
+            write_line(std::format(STR("for (unsigned long long i = 0; i < sizeof({}); ++i)"), name));
+            write_line(STR("{"));
+            start_scope();
+            write_line(STR("Hash = (Hash ^ Bytes[i]) * 0x01000193u;"));
+            end_scope();
+            write_line(STR("}"));
+            write_line(STR("return Hash;"));
             end_scope();
             write_line(STR("}"));
             write_line();
@@ -2799,9 +3297,170 @@ namespace RC::UEGenerator
         {
             return ban_type == BanType::Full || ban_type == BanType::MemberFunctionOnly;
         }
+        // Backend value types whose compile-time size can differ from the running engine's, and
+        // containers of them. Members hold them through TLayoutStorage so a mismatched build gets
+        // sized storage instead of shifted offsets; functions touching them are omitted, because a
+        // bitwise parameter copy of an owning type is unsound even when the layout matches.
+        // Returns the unsafe property, which is the inner one for containers.
+        auto get_abi_unsafe_inline_property(FProperty* property) -> FProperty*
+        {
+            if (!property)
+            {
+                return nullptr;
+            }
+            if (property->IsA<FTextProperty>() || property->IsA<FSoftObjectProperty>() || property->IsA<FLazyObjectProperty>() ||
+                property->IsA<FOptionalProperty>())
+            {
+                return property;
+            }
+            if (auto as_array_property = CastField<FArrayProperty>(property); as_array_property)
+            {
+                return get_abi_unsafe_inline_property(as_array_property->GetInner());
+            }
+            if (auto as_map_property = CastField<FMapProperty>(property); as_map_property)
+            {
+                if (auto* unsafe_property = get_abi_unsafe_inline_property(as_map_property->GetKeyProp()); unsafe_property)
+                {
+                    return unsafe_property;
+                }
+                return get_abi_unsafe_inline_property(as_map_property->GetValueProp());
+            }
+            if (auto as_set_property = CastField<FSetProperty>(property); as_set_property)
+            {
+                return get_abi_unsafe_inline_property(as_set_property->GetElementProp());
+            }
+            return nullptr;
+        }
+
+        auto get_non_owning_view_type_name(FProperty* property, const StringType& backend_type_name) -> std::optional<StringType>
+        {
+            if (property->IsA<FTextProperty>())
+            {
+                const int32_t version_size = Version::IsAtMost(4, 10) ? 0x28 : Version::IsBelow(5, 4) ? 0x18 : 0x10;
+                const int32_t reflected_size = property->GetElementSize();
+                const int32_t runtime_size = FText::StaticSize();
+                if (reflected_size == version_size && runtime_size == version_size && property->GetMinAlignment() == 8)
+                {
+                    m_ftext_view_size = version_size;
+                    return STR("FTextView");
+                }
+
+                static bool warned_about_ftext_view = false;
+                if (!warned_about_ftext_view)
+                {
+                    warned_about_ftext_view = true;
+                    Output::send<LogLevel::Warning>(
+                            STR("SDKGenerator: FTextView rejected (version table 0x{:X}, reflection 0x{:X}, runtime FText 0x{:X}, alignment 0x{:X}); using layout storage\n"),
+                            version_size,
+                            reflected_size,
+                            runtime_size,
+                            property->GetMinAlignment());
+                }
+                return std::nullopt;
+            }
+
+            if (property->IsA<FSoftObjectProperty>())
+            {
+                static auto* soft_object_path = UObjectGlobals::FindObject<UScriptStruct>(nullptr, STR("/Script/CoreUObject.SoftObjectPath"));
+                if (!soft_object_path)
+                {
+                    return std::nullopt;
+                }
+
+                const int32_t path_size = soft_object_path->GetStructureSize();
+                const int32_t path_alignment = soft_object_path->GetMinAlignment();
+                const int32_t pointer_alignment = property->GetMinAlignment();
+                if (path_size <= 0 || path_alignment <= 0 || pointer_alignment != path_alignment)
+                {
+                    return std::nullopt;
+                }
+
+                // TPersistentObjectPtr is WeakPtr, optional TagAtLastTest, then ObjectID. The two
+                // possible totals let reflection verify which shape this build uses. If neither
+                // total matches, retain the opaque fallback rather than guessing constituent offsets.
+                const int32_t without_tag_size = align_up(align_up(0x8, path_alignment) + path_size, pointer_alignment);
+                const int32_t with_tag_size = align_up(align_up(0xC, path_alignment) + path_size, pointer_alignment);
+                const int32_t reflected_size = property->GetElementSize();
+                if (reflected_size == without_tag_size)
+                {
+                    return std::format(STR("TSoftObjectPtrView<{}, 0x{:X}, 0x{:X}, false>"), backend_type_name, path_size, path_alignment);
+                }
+                if (reflected_size == with_tag_size)
+                {
+                    return std::format(STR("TSoftObjectPtrView<{}, 0x{:X}, 0x{:X}, true>"), backend_type_name, path_size, path_alignment);
+                }
+            }
+            return std::nullopt;
+        }
+
+        auto has_function_marshaler(FProperty* property) -> bool
+        {
+            // Direct FText values have explicit borrowed-copy and steal operations in the backend.
+            // Containers and structs containing FText still need property-recursive lifecycle handling.
+            if (!property || !property->IsA<FTextProperty>())
+            {
+                return false;
+            }
+            const bool is_out = property->HasAnyPropertyFlags(CPF_OutParm);
+            const bool is_reference = property->HasAnyPropertyFlags(CPF_ReferenceParm);
+            const bool is_const = property->HasAnyPropertyFlags(CPF_ConstParm);
+            // A mutable in/out reference needs an owning copy in ParamData before the engine may
+            // replace or destroy it. CopyBorrowedTo is intentionally insufficient for that case.
+            return !is_out || !is_reference || is_const || property->HasAnyPropertyFlags(CPF_ReturnParm);
+        }
+
+        // Names the first ABI-unsafe member inside a struct parameter. Depth-capped.
+        auto describe_struct_member(UStruct* ustruct, int32_t depth) -> StringType
+        {
+            if (!ustruct || depth > 3) { return STR("an ABI-unsafe member"); }
+            for (auto* member : TFieldRange<FProperty>(ustruct, EFieldIterationFlags::None))
+            {
+                if (auto* unsafe_member = get_abi_unsafe_inline_property(member); unsafe_member)
+                {
+                    if (unsafe_member->IsA<FTextProperty>()) { return STR("FText"); }
+                    if (unsafe_member->IsA<FSoftObjectProperty>()) { return STR("a soft object or class pointer"); }
+                    if (unsafe_member->IsA<FLazyObjectProperty>()) { return STR("a lazy object pointer"); }
+                    if (unsafe_member->IsA<FOptionalProperty>()) { return STR("a TOptional"); }
+                    return STR("an ABI-unsafe member");
+                }
+                if (auto* nested = CastField<FStructProperty>(member); nested)
+                {
+                    if (get_banned_type(member) == BanType::MemberFunctionOnly)
+                    {
+                        return describe_struct_member(nested->GetStruct(), depth + 1);
+                    }
+                }
+            }
+            return STR("an ABI-unsafe member");
+        }
+
+        // Groups omitted functions by what stopped them. The caller has already identified the
+        // property, so these are direct checks.
+        auto describe_omission(FProperty* property) -> StringType
+        {
+            if (!property) { return STR("unknown"); }
+            if (property->GetArrayDim() > 1) { return STR("static array parameter"); }
+            if (property->IsA<FTextProperty>()) { return STR("FText as a mutable out reference"); }
+            if (property->IsA<FSoftObjectProperty>()) { return STR("soft object or class pointer"); }
+            if (property->IsA<FLazyObjectProperty>()) { return STR("lazy object pointer"); }
+            if (property->IsA<FOptionalProperty>()) { return STR("TOptional"); }
+            if (property->IsA<FArrayProperty>()) { return STR("array of an ABI-unsafe type"); }
+            if (property->IsA<FMapProperty>()) { return STR("map with an ABI-unsafe key or value"); }
+            if (property->IsA<FSetProperty>()) { return STR("set of an ABI-unsafe type"); }
+            if (auto* as_struct_property = CastField<FStructProperty>(property); as_struct_property)
+            {
+                return std::format(STR("struct holding {}"), describe_struct_member(as_struct_property->GetStruct(), 0));
+            }
+            return STR("other");
+        }
+
         auto get_banned_type(FProperty* property) -> BanType
         {
             if (property && property->GetArrayDim() > 1)
+            {
+                return BanType::MemberFunctionOnly;
+            }
+            if (property && get_abi_unsafe_inline_property(property) && !has_function_marshaler(property))
             {
                 return BanType::MemberFunctionOnly;
             }
@@ -2901,8 +3560,10 @@ namespace RC::UEGenerator
             {
                 write_line(STR("#pragma pack(push, 0x1)"));
             }
+            // A backend-provided super guarantees nothing about alignment, so it is always explicit.
+            const bool super_is_backend_provided = super_struct && m_backend->ExcludedTypes.contains(super_struct->GetNamePrivate().ToString());
             StringType alignment_string{};
-            if (struct_layout.use_explicit_alignment || struct_layout.has_reused_trailing_padding)
+            if (struct_layout.use_explicit_alignment || struct_layout.has_reused_trailing_padding || super_is_backend_provided)
             {
                 alignment_string = std::format(STR("alignas(0x{:X}) "), struct_layout.alignment);
             }
@@ -2913,7 +3574,7 @@ namespace RC::UEGenerator
                                        alignment_string,
                                        struct_or_class_name,
                                        super_struct ? std::format(STR(" : public {}"),
-                                                                  get_super_class_or_script_struct_name(super_struct, super_struct->IsA<UScriptStruct>()))
+                                                                  get_super_class_or_script_struct_name(as_struct, super_struct->IsA<UScriptStruct>()))
                                                     : STR("")));
             }
             else
@@ -2926,10 +3587,25 @@ namespace RC::UEGenerator
             write_line(STR("{"));
             write_line(STR("public:"));
             start_scope();
+            // A super the backend provides has its own C++ size, which is not knowable here, so the
+            // compiler computes the padding that puts this type's members at their reflected offsets.
+            // An empty base contributes zero bytes, not sizeof.
+            if (super_is_backend_provided)
+            {
+                if (auto start_offset = get_struct_start_offset(as_struct); start_offset > 0)
+                {
+                    auto super_name = get_super_class_or_script_struct_name(as_struct, is_script_struct);
+                    write_line(std::format(STR("unsigned char padding_base_[0x{:X} - (std::is_empty_v<{}> ? 0 : sizeof({}))]{{}}; // 0x0"),
+                                           start_offset,
+                                           super_name,
+                                           super_name));
+                }
+            }
             if (is_script_struct)
             {
                 generate_static_size_for_struct(as_struct);
                 generate_copy_assignment_operator(as_struct);
+                generate_type_hash_for_struct(as_struct);
             }
             write_line(STR("// Properties."));
             std::unordered_set<FName> getter_functions_generated{};
@@ -2953,11 +3629,13 @@ namespace RC::UEGenerator
             for (const auto& ufunction : TFieldRange<UFunction>(as_struct, EFieldIterationFlags::None))
             {
                 auto banned_type = get_banned_type(ufunction->GetReturnProperty());
+                FProperty* offending_property = ufunction->GetReturnProperty();
                 if (!is_member_function_type_banned(banned_type))
                 {
                     for (const auto& param : TFieldRange<FProperty>(ufunction, EFieldIterationFlags::IncludeDeprecated))
                     {
                         banned_type = get_banned_type(param);
+                        offending_property = param;
                         if (is_member_function_type_banned(banned_type))
                         {
                             break;
@@ -2974,6 +3652,8 @@ namespace RC::UEGenerator
                     // call working, so the function is omitted rather than emitted commented out.
                     write_line(std::format(STR("// Function '{}' omitted: a parameter or return type is not representable in this SDK."),
                                            ufunction->GetName()));
+                    ++m_omitted_function_count;
+                    ++m_omitted_reasons[describe_omission(offending_property)];
                     continue;
                 }
                 generate_ufunction_definition(std::bit_cast<UClass*>(class_or_struct), ufunction, class_is_native, class_contains_only_static_functions, is_script_struct);

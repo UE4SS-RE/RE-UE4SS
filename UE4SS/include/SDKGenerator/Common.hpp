@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <unordered_map>
 #include <unordered_set>
 
 #include <File/File.hpp>
@@ -39,6 +40,9 @@ namespace RC
         using UseFriendlyEnumNames = EnableForwardDeclarations;
 
         auto is_integral_type(Unreal::FProperty* property) -> bool;
+        // While set, get_native_*_name appends the mapped suffix to a type's name. The SDK generator
+        // uses this to give duplicate-name types unique names in every context they are spelled in.
+        auto set_type_name_suffixes(const std::unordered_map<Unreal::UObject*, File::StringType>* suffixes) -> void;
         auto get_native_enum_name(Unreal::UEnum* uenum, bool include_type = true) -> File::StringType;
         auto generate_property_cxx_name(Unreal::FProperty* property,
                                         bool is_top_level_declaration,
