@@ -1186,8 +1186,6 @@ if (auto val = parser.get_int64(STR("UClass"), STR("bNeedsPostLoadSubobjectInsta
     Unreal::UClass::MemberOffsets.emplace(STR("bNeedsPostLoadSubobjectInstancing"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("PropertiesStartOffset"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("PropertiesStartOffset"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UClass"), STR("Partials"), -1); val != -1)
-    Unreal::UClass::MemberOffsets.emplace(STR("Partials"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("CppType"), -1); val != -1)
