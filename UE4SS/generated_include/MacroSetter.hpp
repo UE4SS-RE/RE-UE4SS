@@ -749,16 +749,6 @@ if (auto val_str = parser.get_string(STR("AActor"), STR("bActorIsPendingPostNetI
     ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bActorIsPendingPostNetInit"));
 if (auto val = parser.get_int64(STR("AActor"), STR("HLODLayer"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("HLODLayer"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("AActor"), STR("ActorLabel"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("ActorLabel"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("AActor"), STR("NetPushId_Internal"), -1); val != -1)
-    Unreal::AActor::MemberOffsets.emplace(STR("NetPushId_Internal"), static_cast<int32_t>(val));
-if (auto val_str = parser.get_string(STR("AActor"), STR("bHasCachedTransform"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bHasCachedTransform"));
-if (auto val_str = parser.get_string(STR("AActor"), STR("bNotifyOfActorChannelClosure"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bNotifyOfActorChannelClosure"));
-if (auto val_str = parser.get_string(STR("AActor"), STR("bDeferBeginPlay"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::AActor::MemberOffsets, Unreal::AActor::BitfieldInfos, STR("bDeferBeginPlay"));
 if (auto val = parser.get_int64(STR("AActor"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::AActor::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UPlayer"), STR("CurrentNetSpeed"), -1); val != -1)
@@ -1038,8 +1028,8 @@ if (auto val = parser.get_int64(STR("UWorld"), STR("AudioDeviceHandle"), -1); va
     Unreal::UWorld::MemberOffsets.emplace(STR("AudioDeviceHandle"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("AsyncPreRegisterLevelStreamingTasks"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("AsyncPreRegisterLevelStreamingTasks"), static_cast<int32_t>(val));
-if (auto val_str = parser.get_string(STR("UWorld"), STR("bCreateRenderStateForHiddenComponents"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bCreateRenderStateForHiddenComponents"));
+if (auto val = parser.get_int64(STR("UWorld"), STR("bCreateRenderStateForHiddenComponents"), -1); val != -1)
+    Unreal::UWorld::MemberOffsets.emplace(STR("bCreateRenderStateForHiddenComponents"), static_cast<int32_t>(val));
 if (auto val_str = parser.get_string(STR("UWorld"), STR("bShouldTick"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bShouldTick"));
 if (auto val = parser.get_int64(STR("UWorld"), STR("UnpausedTimeSeconds"), -1); val != -1)
@@ -1108,10 +1098,6 @@ if (auto val = parser.get_int64(STR("UWorld"), STR("AddToWorldTimeout"), -1); va
     Unreal::UWorld::MemberOffsets.emplace(STR("AddToWorldTimeout"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("RemoveFromWorldTimeout"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("RemoveFromWorldTimeout"), static_cast<int32_t>(val));
-if (auto val_str = parser.get_string(STR("UWorld"), STR("bCreateRenderStateForHiddenComponentsWithCollsion"), {}); !val_str.empty())
-    ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bCreateRenderStateForHiddenComponentsWithCollsion"));
-if (auto val = parser.get_int64(STR("UWorld"), STR("AsyncDelegateHitchLoggingLastTimestamp"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("AsyncDelegateHitchLoggingLastTimestamp"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("FunctionFlags"), -1); val != -1)
@@ -1136,8 +1122,6 @@ if (auto val = parser.get_int64(STR("UFunction"), STR("EventGraphFunction"), -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("EventGraphFunction"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("EventGraphCallOffset"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("EventGraphCallOffset"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UFunction"), STR("SingletonPtr"), -1); val != -1)
-    Unreal::UFunction::MemberOffsets.emplace(STR("SingletonPtr"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UFunction::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("ClassConstructor"), -1); val != -1)
