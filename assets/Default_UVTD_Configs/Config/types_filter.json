@@ -102,7 +102,11 @@
     "UWorld::FAddLevelToWorldExtensionEvent",
     "UWorld::FRemoveLevelFromWorldExtensionEvent",
     "UWorld::FEndOfFrameUpdateContext",
-    "UE::Tasks::Private::FTaskHandle"
+    "UE::Tasks::Private::FTaskHandle",
+    "UE::CoreUObject::Private::FPartialClass",
+    "FWorldSubsystemCollection",
+    "UE::FTimeout",
+    "UScriptViewportClient"
   ],
   "exclude_from_getters": [
     "FHeapAllocator::ForAnyElementType",

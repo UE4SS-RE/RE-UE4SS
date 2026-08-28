@@ -23,6 +23,8 @@ SDK generator: property types that cannot be expressed in C++ are now emitted as
 
 Added an SDK generator that produces memory-accurate C++ headers for reflected classes, structs and enums, intended to be dropped into a UE4SS C++ mod (`add_subdirectory(UE4SS_SDK)`). Types that UE4SS already provides are referenced from the Unreal module rather than redefined, so a generated SDK composes with an existing mod instead of colliding with it. Leading, inter-member and trailing padding, static arrays, bitfields, computed alignment and base-class trailing-padding reuse are all handled. Generated SDKs can be verified against a build at compile time via `UE4SS_SDK/LayoutAsserts.hpp` or at runtime via `UE4SS_SDK/RuntimeSDKTest.hpp`.
 
+Added support for UE Version 5.8
+
 Added support for UE Version 5.7
 
 Added support for UE Version 5.6 - ([UE4SS #977](https://github.com/UE4SS-RE/RE-UE4SS/pull/977)) 

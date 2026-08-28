@@ -171,6 +171,14 @@ if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("CurrentGroomVis
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("CurrentGroomVisualizationMode"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("CurrentSubstrateVisualizationMode"), -1); val != -1)
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("CurrentSubstrateVisualizationMode"), static_cast<int32_t>(val));
+if (auto val_str = parser.get_string(STR("UGameViewportClient"), STR("bEnablePlayersSplitRT"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::UGameViewportClient::MemberOffsets, Unreal::UGameViewportClient::BitfieldInfos, STR("bEnablePlayersSplitRT"));
+if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("GameLayerManager"), -1); val != -1)
+    Unreal::UGameViewportClient::MemberOffsets.emplace(STR("GameLayerManager"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("CurrentMegaLightsVisualizationMode"), -1); val != -1)
+    Unreal::UGameViewportClient::MemberOffsets.emplace(STR("CurrentMegaLightsVisualizationMode"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("StatThermalsData"), -1); val != -1)
+    Unreal::UGameViewportClient::MemberOffsets.emplace(STR("StatThermalsData"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UGameViewportClient"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UGameViewportClient::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectItem"), STR("Object"), -1); val != -1)
@@ -1078,6 +1086,10 @@ if (auto val = parser.get_int64(STR("UWorld"), STR("PendingVisibilityLock"), -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("PendingVisibilityLock"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("PostProcessVolumeCachedSizes"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("PostProcessVolumeCachedSizes"), static_cast<int32_t>(val));
+if (auto val_str = parser.get_string(STR("UWorld"), STR("bAllowLumenPrimitiveTrackingInPreviewWorld"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bAllowLumenPrimitiveTrackingInPreviewWorld"));
+if (auto val_str = parser.get_string(STR("UWorld"), STR("bIsThePostGCDelegateRegistered"), {}); !val_str.empty())
+    ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bIsThePostGCDelegateRegistered"));
 if (auto val = parser.get_int64(STR("UWorld"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("FunctionFlags"), -1); val != -1)
@@ -1162,6 +1174,10 @@ if (auto val = parser.get_int64(STR("UClass"), STR("AllFunctionsCacheLock"), -1)
     Unreal::UClass::MemberOffsets.emplace(STR("AllFunctionsCacheLock"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("bNeedsDynamicSubobjectInstancing"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("bNeedsDynamicSubobjectInstancing"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UClass"), STR("bNeedsPostLoadSubobjectInstancing"), -1); val != -1)
+    Unreal::UClass::MemberOffsets.emplace(STR("bNeedsPostLoadSubobjectInstancing"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UClass"), STR("PropertiesStartOffset"), -1); val != -1)
+    Unreal::UClass::MemberOffsets.emplace(STR("PropertiesStartOffset"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("CppType"), -1); val != -1)
@@ -1179,6 +1195,8 @@ if (auto val = parser.get_int64(STR("UEnum"), STR("EnumFlags_Internal"), -1); va
     Unreal::UEnum::MemberOffsets.emplace(STR("EnumFlags_Internal"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("EnumPackage"), -1); val != -1)
     Unreal::UEnum::MemberOffsets.emplace(STR("EnumPackage"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UEnum"), STR("UnderlyingType"), -1); val != -1)
+    Unreal::UEnum::MemberOffsets.emplace(STR("UnderlyingType"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UEnum::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FStructProperty"), STR("Struct"), -1); val != -1)
