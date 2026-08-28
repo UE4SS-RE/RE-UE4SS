@@ -3290,6 +3290,7 @@ namespace RC::UEGenerator
             MemberVariableOnly,
             MemberFunctionOnly,
         };
+        std::unordered_map<UStruct*, BanType> m_struct_ban_types{};
         auto is_member_variable_type_banned(BanType ban_type) -> bool
         {
             return ban_type == BanType::Full || ban_type == BanType::MemberVariableOnly;
@@ -3504,20 +3505,32 @@ namespace RC::UEGenerator
             else if (auto as_struct_property = CastField<FStructProperty>(property); as_struct_property)
             {
                 // A struct is only a problem in a function signature if one of its own members is,
-                // so inherit the strongest ban found anywhere in the chain.
+                // so inherit the strongest ban found anywhere in the chain. The answer depends only
+                // on the struct, so it is cached: without that, the walk is repeated for every
+                // property mentioning the struct, and a struct reaching itself through a container
+                // never terminates.
+                UScriptStruct* inner_struct = as_struct_property->GetStruct();
+                if (auto it = m_struct_ban_types.find(inner_struct); it != m_struct_ban_types.end())
+                {
+                    return it->second;
+                }
+                // Provisional entry, so a struct that reaches itself stops here.
+                m_struct_ban_types.emplace(inner_struct, BanType::NotBanned);
                 BanType inner_ban_type{};
-                for (const auto& inner_property : TFieldRange<FProperty>(as_struct_property->GetStruct(), EFieldIterationFlags::Default))
+                for (const auto& inner_property : TFieldRange<FProperty>(inner_struct, EFieldIterationFlags::Default))
                 {
                     auto next_inner_ban_type = get_banned_type(inner_property);
                     if (next_inner_ban_type == BanType::Full)
                     {
-                        return BanType::Full;
+                        inner_ban_type = BanType::Full;
+                        break;
                     }
                     else if (next_inner_ban_type != BanType::NotBanned)
                     {
                         inner_ban_type = next_inner_ban_type;
                     }
                 }
+                m_struct_ban_types[inner_struct] = inner_ban_type;
                 return inner_ban_type;
             }
             return BanType::NotBanned;
