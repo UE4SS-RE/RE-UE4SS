@@ -188,6 +188,7 @@ namespace RC
         bool m_is_process_event_hooked{};
         static inline bool m_is_engine_tick_hooked{};
         std::mutex m_actions_lock{};
+        int32_t m_on_unload_lua_function_ref{LUA_NOREF};
 
       public:
         LuaMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
@@ -212,6 +213,7 @@ namespace RC
         auto setup_lua_classes(const LuaMadeSimple::Lua& lua) const -> void;
         auto fire_on_lua_start_for_cpp_mods() -> void;
         auto fire_on_lua_stop_for_cpp_mods() -> void;
+        auto fire_on_lua_stop_for_self() -> void;
 
       public:
         auto start_mod() -> void override;
@@ -257,6 +259,7 @@ namespace RC
 
         auto process_delayed_actions() -> void;
         auto clear_delayed_actions() -> void;
+        auto set_on_unload_callback(int32_t) -> void;
 
       public:
         static auto get_object_names(const Unreal::UObject*) -> std::vector<Unreal::FName>;

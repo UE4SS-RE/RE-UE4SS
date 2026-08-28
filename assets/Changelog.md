@@ -243,6 +243,8 @@ Added support for `UScriptStruct` when using `RegisterCustomProprety` ([UE4SS #1
 
 Added support for handling structs as userdata (Fixed `StructData as userdata is not yet implemented`). ([UE4SS #1169](https://github.com/UE4SS-RE/RE-UE4SS/pull/1169)) - Corporalwill123
 
+Added `ModRef.OnUnload` lua function, registers a callback to be called when the mod is unloaded via hot reload or any other means ([UE4SS #1394](https://github.com/UE4SS-RE/RE-UE4SS/pull/1394))
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 

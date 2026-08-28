@@ -31,9 +31,28 @@ namespace RC::LuaType
         return table;
     }
 
-    auto LuaModRef::setup_metamethods(BaseObject&) -> void
+    auto LuaModRef::setup_metamethods(BaseObject& base_object) -> void
     {
-        // Mod has no metamethods
+        base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::NewIndex, [](const LuaMadeSimple::Lua& lua) -> int {
+            auto& lua_object = lua.get_userdata<LuaModRef>();
+            if (!lua.is_string())
+            {
+                return 0;
+            }
+            const auto field_name = ensure_str(lua.get_string());
+            if (field_name == STR("OnUnload"))
+            {
+                if (lua.is_function())
+                {
+                    lua_object.get_remote_cpp_object()->set_on_unload_callback(lua.registry().make_ref());
+                }
+                else if (lua.is_nil())
+                {
+                    lua_object.get_remote_cpp_object()->set_on_unload_callback(LUA_REFNIL);
+                }
+            }
+            return 0;
+        });
     }
 
     template <LuaMadeSimple::Type::IsFinal is_final>

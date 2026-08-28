@@ -6070,6 +6070,22 @@ Overloads:
         }
     }
 
+    auto LuaMod::fire_on_lua_stop_for_self() -> void
+    {
+        if (!is_started())
+        {
+            return;
+        }
+
+        if (m_on_unload_lua_function_ref != LUA_NOREF && m_on_unload_lua_function_ref != LUA_REFNIL)
+        {
+            TRY([&]() {
+                lua().registry().get_function_ref(m_on_unload_lua_function_ref);
+                lua().call_function(0, 0);
+            });
+        }
+    }
+
     auto LuaMod::uninstall() -> void
     {
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
@@ -6086,6 +6102,7 @@ Overloads:
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
         fire_on_lua_stop_for_cpp_mods();
+        fire_on_lua_stop_for_self();
 
         erase_from_container(this, m_static_construct_object_lua_callbacks);
         m_pending_notify_on_new_object_callbacks.clear();
@@ -7276,6 +7293,11 @@ Overloads:
         m_pending_actions.clear();
         m_delayed_actions.clear();
         actions_unlock();
+    }
+
+    auto LuaMod::set_on_unload_callback(int32_t ref) -> void
+    {
+        m_on_unload_lua_function_ref = ref;
     }
 } // namespace RC
 
