@@ -131,7 +131,7 @@ auto dll_process_attached(HMODULE moduleHandle) -> void
     }
 }
 
-auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_unused]] LPVOID lpReserved) -> BOOL
+auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) -> BOOL
 {
     switch (ul_reason_for_call)
     {
@@ -143,7 +143,15 @@ auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, [[maybe_un
     case DLL_THREAD_DETACH:
         break;
     case DLL_PROCESS_DETACH:
-        UE4SSProgram::static_cleanup();
+        // A non-null reserved pointer means the entire process is terminating.
+        // Avoid running the program destructor from DllMain in that case: the
+        // CRT and dependency statics may already be partially torn down, and
+        // Windows will reclaim all remaining process resources anyway.
+        // Preserve explicit cleanup when UE4SS is unloaded via FreeLibrary.
+        if (lpReserved == nullptr)
+        {
+            UE4SSProgram::static_cleanup();
+        }
         break;
     }
     return TRUE;
