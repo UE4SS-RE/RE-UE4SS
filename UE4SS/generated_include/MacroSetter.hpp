@@ -775,8 +775,6 @@ if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("bEmulateSplitscreen"),
     Unreal::ULocalPlayer::MemberOffsets.emplace(STR("bEmulateSplitscreen"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("ConnectionIdentifier"), -1); val != -1)
     Unreal::ULocalPlayer::MemberOffsets.emplace(STR("ConnectionIdentifier"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("ViewportClientOverride"), -1); val != -1)
-    Unreal::ULocalPlayer::MemberOffsets.emplace(STR("ViewportClientOverride"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("ULocalPlayer"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::ULocalPlayer::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FFieldClass"), STR("Name"), -1); val != -1)
@@ -1092,12 +1090,6 @@ if (auto val_str = parser.get_string(STR("UWorld"), STR("bAllowLumenPrimitiveTra
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bAllowLumenPrimitiveTrackingInPreviewWorld"));
 if (auto val_str = parser.get_string(STR("UWorld"), STR("bIsThePostGCDelegateRegistered"), {}); !val_str.empty())
     ParseMemberOffset(val_str, Unreal::UWorld::MemberOffsets, Unreal::UWorld::BitfieldInfos, STR("bIsThePostGCDelegateRegistered"));
-if (auto val = parser.get_int64(STR("UWorld"), STR("SubsystemCollection"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("SubsystemCollection"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("AddToWorldTimeout"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("AddToWorldTimeout"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UWorld"), STR("RemoveFromWorldTimeout"), -1); val != -1)
-    Unreal::UWorld::MemberOffsets.emplace(STR("RemoveFromWorldTimeout"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UWorld"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UWorld::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UFunction"), STR("FunctionFlags"), -1); val != -1)
