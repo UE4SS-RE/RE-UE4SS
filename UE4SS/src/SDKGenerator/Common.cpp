@@ -165,7 +165,7 @@ namespace RC::UEGenerator
 
         int64_t highest_enum_value = 0;
         const auto enum_prefix = uenum->GenerateEnumPrefix();
-        const auto expected_max_name = std::format(STR("{}_MAX"), enum_prefix);
+        const auto expected_max_name = fmt::format(STR("{}_MAX"), enum_prefix);
         auto expected_max_name_lower = expected_max_name;
         std::transform(expected_max_name_lower.begin(), expected_max_name_lower.end(), expected_max_name_lower.begin(), ::towlower);
 
@@ -241,14 +241,14 @@ namespace RC::UEGenerator
 
             if (unique_name_set && unique_name_set->contains(Name))
             {
-                result_enumeration_line.append(std::format(STR("_{}"), ++s_unique_id));
+                result_enumeration_line.append(fmt::format(STR("_{}"), ++s_unique_id));
             }
 
             auto pre_append_result_line = result_enumeration_line;
             if (Value != expected_next_enum_value /*|| last_value_was_negative*/)
             {
                 const auto MinusSign = Value < 0 ? STR("-") : STR("");
-                result_enumeration_line.append(std::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
+                result_enumeration_line.append(fmt::format(STR(" = {}0x{:X}"), MinusSign, std::abs(Value)));
             }
             expected_next_enum_value = Value + 1;
             last_value_was_negative = Value < 0;
@@ -257,7 +257,7 @@ namespace RC::UEGenerator
             std::transform(pre_append_result_line_lower.begin(), pre_append_result_line_lower.end(), pre_append_result_line_lower.begin(), ::towlower);
             if (pre_append_result_line_lower.ends_with(STR("_max")))
             {
-                const StringType expected_full_constant_name = std::format(STR("{}_MAX"), enum_prefix);
+                const StringType expected_full_constant_name = fmt::format(STR("{}_MAX"), enum_prefix);
                 auto expected_full_constant_name_lower = expected_full_constant_name;
                 std::transform(expected_full_constant_name_lower.begin(), expected_full_constant_name_lower.end(), expected_full_constant_name_lower.begin(), ::towlower);
 
@@ -422,7 +422,7 @@ namespace RC::UEGenerator
             }
             meta_class_name.append(use_this_namespace);
             meta_class_name.append(get_native_class_name(meta_class, meta_class != UInterface::StaticClass() && meta_class->IsChildOf<UInterface>()));
-            return std::format(STR("TSubclassOf<{}>"), meta_class_name);
+            return fmt::format(STR("TSubclassOf<{}>"), meta_class_name);
         }
 
         if (auto* class_property = CastField<FClassPtrProperty>(property); class_property)
@@ -453,7 +453,7 @@ namespace RC::UEGenerator
 
             meta_class_name.append(use_this_namespace);
             meta_class_name.append(get_native_class_name(meta_class, false));
-            return std::format(STR("TSoftClassPtr<{}>"), meta_class_name);
+            return fmt::format(STR("TSoftClassPtr<{}>"), meta_class_name);
         }
 
         // Object Properties
@@ -482,7 +482,7 @@ namespace RC::UEGenerator
                 property_class_name = STR("class ");
             }
             property_class_name.append(get_native_class_name(property_class, false));
-            return std::format(STR("{}*"), property_class_name);
+            return fmt::format(STR("{}*"), property_class_name);
         }
 
         if (auto* object_property = CastField<FObjectPtrProperty>(property); object_property)
@@ -502,7 +502,7 @@ namespace RC::UEGenerator
                 }
                 property_class_name.append(use_this_namespace);
                 property_class_name.append(get_native_class_name(property_class, false));
-                return std::format(STR("TObjectPtr<{}>"), property_class_name);
+                return fmt::format(STR("TObjectPtr<{}>"), property_class_name);
             }
         }
 
@@ -563,7 +563,7 @@ namespace RC::UEGenerator
             }
             property_class_name.append(use_this_namespace);
             property_class_name.append(get_native_class_name(property_class, false));
-            return std::format(STR("TSoftObjectPtr<{}>"), property_class_name);
+            return fmt::format(STR("TSoftObjectPtr<{}>"), property_class_name);
         }
 
         // Interface Property
@@ -665,7 +665,7 @@ namespace RC::UEGenerator
             }
             inner_property_type.append(
                     generate_property_cxx_name(inner_property, is_top_level_declaration, class_context, enable_forward_declarations, force_forward_declarations));
-            return std::format(STR("TArray<{}>"), inner_property_type);
+            return fmt::format(STR("TArray<{}>"), inner_property_type);
         }
 
         if (property->IsA<FSetProperty>())
@@ -675,7 +675,7 @@ namespace RC::UEGenerator
 
             const std::wstring element_property_type =
                     generate_property_cxx_name(element_prop, is_top_level_declaration, class_context, enable_forward_declarations, force_forward_declarations);
-            return std::format(STR("TSet<{}>"), element_property_type);
+            return fmt::format(STR("TSet<{}>"), element_property_type);
         }
 
         // TODO: This is missing support for freeze image map properties because XMapProperty is incomplete. (low priority)
