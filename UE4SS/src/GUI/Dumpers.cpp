@@ -619,6 +619,25 @@ namespace RC::GUI::Dumpers
         }
     }
 
+    // Blueprint classes, structs and enums only exist in memory once their asset is loaded, so a
+    // dump taken at the main menu sees almost none of them. Applies to the dumpers that cover
+    // Blueprint types. The actor dumps read the live world, and UHT headers cover only native
+    // /Script/ packages, so neither uses this.
+    static bool s_load_all_assets_first{};
+
+    template <typename Callable>
+    auto run_dumper(Callable&& dump) -> void
+    {
+        if (s_load_all_assets_first)
+        {
+            run_with_all_assets_loaded(dump);
+        }
+        else
+        {
+            dump();
+        }
+    }
+
     auto render() -> void
     {
         if (!UnrealInitializer::StaticStorage::bIsInitialized)
@@ -682,8 +701,8 @@ namespace RC::GUI::Dumpers
 
         if (ImGui::Button("Generate .usmap file\nUnrealMappingsDumper by OutTheShade"))
         {
-            TRY([&] {
-                run_dump([] {
+            TRY([] {
+                run_dumper([] {
                     OutTheShade::generate_usmap(s_include_blueprint_types);
                 });
             });
@@ -691,8 +710,8 @@ namespace RC::GUI::Dumpers
         ImGui::SameLine();
         if (ImGui::Button("Generate .jmap file\njmap format by trumank"))
         {
-            TRY([&] {
-                run_dump([] {
+            TRY([] {
+                run_dumper([] {
                     JMapGenerator::generate_jmap(s_include_blueprint_types, s_skip_property_values);
                 });
             });
@@ -704,20 +723,25 @@ namespace RC::GUI::Dumpers
         ImGui::Checkbox("Load all assets first", &s_load_all_assets_first);
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip("Applies to the .usmap, .jmap and BP SDK dumps below.\n"
-                              "Force-loads every asset so Blueprint types are present in the dump.\n"
-                              "Can need several GB of extra memory, and the game is likely to crash\n"
-                              "if you keep playing afterwards.");
+            ImGui::BeginTooltip();
+            ImGui::Text("Blueprint types only exist once their asset is loaded, so without this a dump taken at the");
+            ImGui::Text("main menu contains almost none of them. Applies to the dumpers that cover Blueprint types.");
+            ImGui::Separator();
+            ImGui::Text("Costs several gigabytes of memory, and the game is likely to crash if you keep playing.");
+            ImGui::EndTooltip();
         }
         ImGui::EndGroup();
 
         if (ImGui::Button("Generate TMapOverride file\n"))
         {
             TRY([] {
-                UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
+                run_dumper([] {
+                    UEGenerator::TMapOverrideGenerator::generate_tmapoverride();
+                });
             });
         }
 
+        // UHT headers cover native /Script/ packages only, so loading assets adds nothing.
         if (ImGui::Button("Generate UHT Compatible Headers\n"))
         {
             TRY([] {
@@ -728,16 +752,20 @@ namespace RC::GUI::Dumpers
         if (ImGui::Button("Dump CXX Headers\n"))
         {
             TRY([] {
-                File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
-                UE4SSProgram::get_program().generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+                run_dumper([] {
+                    File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
+                    UE4SSProgram::get_program().generate_cxx_headers(working_dir + STR("\\CXXHeaderDump"));
+                });
             });
         }
 
         if (ImGui::Button("Generate Lua Types\n"))
         {
             TRY([] {
-                File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
-                UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
+                run_dumper([] {
+                    File::StringType working_dir{UE4SSProgram::get_program().get_working_directory()};
+                    UE4SSProgram::get_program().generate_lua_types(working_dir + STR("\\Mods\\shared\\types"));
+                });
             });
         }
 
@@ -774,11 +802,10 @@ namespace RC::GUI::Dumpers
         ImGui::BeginDisabled(s_selected_backend_index == 0);
         if (ImGui::Button("Generate BP SDK (WIP)"))
         {
-            TRY([&] {
-                run_dump([] {
-                    auto& selected_backend = s_sdk_generator_backends[s_selected_backend_index];
-                    UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK",
-                                              selected_backend.second);
+            TRY([] {
+                auto& selected_backend = s_sdk_generator_backends[s_selected_backend_index];
+                run_dumper([&selected_backend] {
+                    UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK", selected_backend.second);
                 });
             });
         }
