@@ -43,8 +43,6 @@ if (auto val = parser.get_int64(STR("UObjectBase"), STR("Outer"), -1); val != -1
 // Also support using the renamed version in the INI file
 if (auto val = parser.get_int64(STR("UObjectBase"), STR("OuterPrivate"), -1); val != -1)
     Unreal::UObjectBase::MemberOffsets.emplace(STR("OuterPrivate"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UObjectBase"), STR("StatID"), -1); val != -1)
-    Unreal::UObjectBase::MemberOffsets.emplace(STR("StatID"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UObjectBase"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UObjectBase::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UScriptStruct::ICppStructOps"), STR("Size"), -1); val != -1)
@@ -203,8 +201,6 @@ if (auto val = parser.get_int64(STR("FUObjectItem"), STR("RemoteId"), -1); val !
     Unreal::FUObjectItem::MemberOffsets.emplace(STR("RemoteId"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectItem"), STR("ObjectPtrLow"), -1); val != -1)
     Unreal::FUObjectItem::MemberOffsets.emplace(STR("ObjectPtrLow"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("FUObjectItem"), STR("StatID"), -1); val != -1)
-    Unreal::FUObjectItem::MemberOffsets.emplace(STR("StatID"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectItem"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::FUObjectItem::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjFirstGCIndex"), -1); val != -1)
@@ -235,22 +231,22 @@ if (auto val = parser.get_int64(STR("FUObjectArray"), STR("ObjAvailableListEstim
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("ObjAvailableListEstimateCount"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FUObjectArray"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::FUObjectArray::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("AllocatorInstance"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("AllocatorInstance"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("ArrayNum"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("ArrayNum"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("ArrayMax"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("ArrayMax"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Chunks"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Chunks"), static_cast<int32_t>(val));
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
+// Also support using the renamed version in the INI file
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumElements"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("ArrayMax"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
+// Also support using the renamed version in the INI file
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Chunks"), -1); val != -1)
+    Unreal::TUObjectArray::MemberOffsets.emplace(STR("Chunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("NumChunks"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("NumChunks"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("Objects"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("Objects"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxElements"), -1); val != -1)
-    Unreal::TUObjectArray::MemberOffsets.emplace(STR("MaxElements"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("PreAllocatedObjects"), -1); val != -1)
     Unreal::TUObjectArray::MemberOffsets.emplace(STR("PreAllocatedObjects"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("TUObjectArray"), STR("MaxChunks"), -1); val != -1)
@@ -1208,8 +1204,6 @@ if (auto val = parser.get_int64(STR("UClass"), STR("PropertiesStartOffset"), -1)
     Unreal::UClass::MemberOffsets.emplace(STR("PropertiesStartOffset"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("Partials"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("Partials"), static_cast<int32_t>(val));
-if (auto val = parser.get_int64(STR("UClass"), STR("DebugTokenMap"), -1); val != -1)
-    Unreal::UClass::MemberOffsets.emplace(STR("DebugTokenMap"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UClass"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UClass::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UEnum"), STR("CppType"), -1); val != -1)
