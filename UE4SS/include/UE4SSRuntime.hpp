@@ -42,6 +42,21 @@ namespace RC
          */
         static auto IsProcessEventAvailable() -> bool;
 
+        /**
+         * Check if the engine's FUObjectHashTables can be used.
+         * Requires FUObjectHashTables::Get to have been found, a dumped layout for this engine version,
+         * and the startup self test to have passed.
+         * @return true if hash table lookups and iteration are available
+         */
+        static auto IsFUObjectHashTablesAvailable() -> bool;
+
+        /**
+         * Check if object iteration should go through the hash tables instead of GUObjectArray.
+         * False when the tables are unavailable or bForceGUObjectArrayForIteration is set.
+         * @return true if hash table iteration is available and enabled
+         */
+        static auto ShouldUseHashTableIteration() -> bool;
+
         // Add more runtime checks here as needed, e.g.,:
         // - User preferences (FavorVirtualWrappers vs FavorExplicitImplementation, etc.)
         // - Feature availability (FText constructor found, specific UE version features, etc.)

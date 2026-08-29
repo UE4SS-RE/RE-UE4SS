@@ -59,6 +59,8 @@
 #include <Unreal/FWorldContext.hpp>
 #include <Unreal/Engine/UDataTable.hpp>
 #include <Unreal/BitfieldProxy.hpp>
+#include <Unreal/FOutputDevice.hpp>
+#include <Unreal/UObjectHashTables.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
@@ -977,6 +979,19 @@ namespace RC
         }
 
         output_all_member_offsets(IsCoalesced::Yes);
+
+        if (settings_manager.General.ForceGUObjectArrayForIteration)
+        {
+            Output::send<LogLevel::Warning>(STR("[HashTables] Iteration forced to GUObjectArray by settings\n"));
+        }
+        else if (Unreal::FUObjectHashTables::IsAvailable())
+        {
+            Unreal::FUObjectHashTables::RunSelfTest();
+        }
+        else
+        {
+            Output::send<LogLevel::Warning>(STR("[HashTables] FUObjectHashTables unavailable, object lookups use GUObjectArray\n"));
+        }
 
         bool can_create_custom_events{true};
         if (!UObject::ProcessLocalScriptFunctionInternal.is_ready() && Unreal::Version::IsAtLeast(4, 22))

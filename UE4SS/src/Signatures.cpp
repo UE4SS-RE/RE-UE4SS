@@ -13,6 +13,7 @@
 #include <Unreal/Signatures.hpp>
 #include <Unreal/UObject.hpp>
 #include <Unreal/UObjectArray.hpp>
+#include <Unreal/UObjectHashTables.hpp>
 #include <Unreal/UEngine.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
@@ -276,7 +277,7 @@ namespace RC
                         signature_containers,
                         [](void* address) {
                             Output::send(STR("GUObjectHashTables_Get address: {} <- Lua Script\n"), address);
-
+                            Unreal::FUObjectHashTables::SetupGetAddress(address);
                             return DidLuaScanSucceed::Yes;
                         },
                         [&](DidLuaScanSucceed did_lua_scan_succeed) {
