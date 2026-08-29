@@ -116,7 +116,9 @@
     "FUniqueNetIdRepl",
     "FPlatformUserId",
     "FVector2D",
-    "FReply"
+    "FReply",
+    "CriticalSection",
+    "RecursiveMutex"
   ],
   "exclude_from_sol_bindings": [
     "FUObjectCppClassStaticFunctions",

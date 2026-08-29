@@ -87,6 +87,33 @@ namespace RC::UVTD
             normalized.replace(pos, 26, STR("FDefaultAllocator"));
         }
 
+        // TBucketMap<K> is a TMap<K, FHashBucket> with a non-shipping read lock, and FSetHashBucket is the
+        // 5.6 name for FHashBucket. Rewrite both so the map spelling compares equal across versions.
+        pos = 0;
+        while ((pos = normalized.find(STR("TBucketMap<"), pos)) != File::StringType::npos)
+        {
+            size_t depth = 0;
+            size_t end = pos + 11;
+            bool has_value_arg = false;
+            for (; end < normalized.size(); ++end)
+            {
+                if (normalized[end] == STR('<')) depth++;
+                else if (normalized[end] == STR('>') && depth == 0) break;
+                else if (normalized[end] == STR('>')) depth--;
+                else if (normalized[end] == STR(',') && depth == 0) has_value_arg = true;
+            }
+            if (end < normalized.size() && !has_value_arg)
+            {
+                normalized.insert(end, STR(", FHashBucket"));
+            }
+            normalized.replace(pos, 11, STR("TMap<"));
+        }
+        pos = 0;
+        while ((pos = normalized.find(STR("FSetHashBucket"), pos)) != File::StringType::npos)
+        {
+            normalized.replace(pos, 14, STR("FHashBucket"));
+        }
+
         // Remove spaces before '>' (e.g. "TArray<T >" vs "TArray<T>")
         pos = 0;
         while ((pos = normalized.find(STR(" >"), pos)) != File::StringType::npos)

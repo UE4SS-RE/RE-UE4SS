@@ -77,5 +77,8 @@
   "FText",
   "FSoftObjectPath",
   "FTopLevelAssetPath",
-  "FStaticConstructObjectParameters"
+  "FStaticConstructObjectParameters",
+  "FUObjectHashTables",
+  "FHashBucket",
+  "FSetHashBucket"
 ]

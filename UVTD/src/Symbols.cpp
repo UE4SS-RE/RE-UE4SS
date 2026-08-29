@@ -964,6 +964,35 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
 }
     
 
+    // Rewrites UE container spellings from the PDB into their public template form so a member gets the
+    // same type name in every engine version. Allocator and KeyFuncs arguments are dropped because the
+    // runtime templates default them, and nested containers are rewritten the same way.
+    static auto normalize_container_type_name(File::StringType name) -> File::StringType
+    {
+        while (!name.empty() && name.back() == STR(' ')) name.pop_back();
+        while (!name.empty() && name.front() == STR(' ')) name.erase(0, 1);
+
+        ParsedTemplateClass parsed = TemplateClassParser::Parse(name);
+        size_t args_to_keep = 0;
+        if (parsed.class_name == STR("TMap") || parsed.class_name == STR("TMultiMap") || parsed.class_name == STR("TBucketMap"))
+        {
+            args_to_keep = 2;
+        }
+        else if (parsed.class_name == STR("TSet"))
+        {
+            args_to_keep = 1;
+        }
+        if (args_to_keep == 0 || parsed.template_args.size() < args_to_keep) return name;
+
+        File::StringType result = parsed.class_name + STR("<");
+        for (size_t i = 0; i < args_to_keep; ++i)
+        {
+            if (i > 0) result += STR(", ");
+            result += normalize_container_type_name(parsed.template_args[i]);
+        }
+        return result + STR(">");
+    }
+
     auto Symbols::get_type_name(const PDB::TPIStream& tpi_stream, uint32_t record_index, bool check_valid, bool is_64bit) -> File::StringType
 {
     if (record_index < tpi_stream.GetFirstTypeIndex())
@@ -1096,13 +1125,7 @@ auto Symbols::get_type_size_impl(const PDB::TPIStream& tpi_stream, uint32_t reco
     {
     case PDB::CodeView::TPI::TypeRecordKind::LF_CLASS:
     case PDB::CodeView::TPI::TypeRecordKind::LF_STRUCTURE: {
-        File::StringType name = get_leaf_name(record->data.LF_CLASS.data, record->data.LF_CLASS.lfEasy.kind);
-        ParsedTemplateClass parsed = TemplateClassParser::Parse(name);
-
-        if (parsed.class_name == STR("TMap"))
-        {
-            name = STR("TMap<") + parsed.template_args[0] + STR(", ") + parsed.template_args[1] + STR(">");
-        }
+        File::StringType name = normalize_container_type_name(get_leaf_name(record->data.LF_CLASS.data, record->data.LF_CLASS.lfEasy.kind));
         
         // Use ConfigUtil instead of hardcoded list
         if (check_valid && !ConfigUtil::GetValidUDTNames().contains(name)) return STR("void");
