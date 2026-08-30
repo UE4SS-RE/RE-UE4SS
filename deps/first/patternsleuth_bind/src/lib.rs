@@ -102,7 +102,7 @@ pub struct PsScanResults {
     gnatives: u64,
     console_manager_singleton: u64,
     gameengine_tick: u64,
-    // 0 unknown, 1 shipping, 2 development (DebugGame, Development, Test)
+    // 0 unknown, 1 shipping, 2 development, 3 test
     build_configuration: u32,
 }
 
@@ -181,6 +181,10 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
             Ok(BuildConfiguration::Development) => {
                 default!(ctx, "Found BuildConfiguration: Development");
                 results.build_configuration = 2;
+            }
+            Ok(BuildConfiguration::Test) => {
+                default!(ctx, "Found BuildConfiguration: Test");
+                results.build_configuration = 3;
             }
             Err(err) => {
                 warning!(ctx, "Failed to find BuildConfiguration: {err}");
