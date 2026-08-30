@@ -123,7 +123,17 @@ namespace RC
         constexpr static File::CharType section_engine_version_override[] = STR("EngineVersionOverride");
         REGISTER_INT64_SETTING(EngineVersionOverride.MajorVersion, section_engine_version_override, MajorVersion)
         REGISTER_INT64_SETTING(EngineVersionOverride.MinorVersion, section_engine_version_override, MinorVersion)
-        REGISTER_BOOL_SETTING(EngineVersionOverride.DebugBuild, section_engine_version_override, DebugBuild)
+        // Empty means detect from the game, true or false force the debug or shipping layouts
+        StringType debug_build_string{};
+        REGISTER_STRING_SETTING(debug_build_string, section_engine_version_override, DebugBuild)
+        if (String::iequal(debug_build_string, STR("true")) || debug_build_string == STR("1"))
+        {
+            EngineVersionOverride.DebugBuild = Unreal::UnrealInitializer::DebugBuildMode::ForceDebug;
+        }
+        else if (String::iequal(debug_build_string, STR("false")) || debug_build_string == STR("0"))
+        {
+            EngineVersionOverride.DebugBuild = Unreal::UnrealInitializer::DebugBuildMode::ForceShipping;
+        }
 
         constexpr static File::CharType section_object_dumper[] = STR("ObjectDumper");
         REGISTER_BOOL_SETTING(ObjectDumper.LoadAllAssetsBeforeDumpingObjects, section_object_dumper, LoadAllAssetsBeforeDumpingObjects)
