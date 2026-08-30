@@ -895,7 +895,7 @@ namespace RC
         {
             Output::send<LogLevel::Warning>(STR("[HashTables] Iteration forced to GUObjectArray by settings\n"));
         }
-        else if (Unreal::FUObjectHashTables::IsAvailable())
+        else if (Unreal::FUObjectHashTables::IsConfigured())
         {
             // The game thread edits the tables without locking, so the walk has to happen on it
             if (UE4SSRuntime::IsEngineTickAvailable())
