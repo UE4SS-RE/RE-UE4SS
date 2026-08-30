@@ -31,17 +31,11 @@ end
 
 ## Performance
 
-How much this costs depends far more on how broad the class is, and on how you
-compare names afterwards, than on `FindAllOf` itself. All of it runs on the game
-thread, so it is a frame hitch rather than background work.
+How much this costs depends far more on how broad the class is, and on how you compare names afterwards, than on `FindAllOf` itself. All of it runs on the game thread, so it is a frame hitch rather than background work.
 
-In one level of a single-corridor game, `"Actor"` returned 255 instances while
-`"Object"` returned 23,919 — roughly 94x, from the same call in the same level.
-The count tracks how much is loaded rather than how large the map is, so a small
-game is no guarantee of a small result.
+In one level of The Exit 8 — a short game whose playable space is a single looping corridor — `"Actor"` returned 255 instances while `"Object"` returned 23,919. That is roughly 94x, from the same call in the same level. The count tracks how much is loaded rather than how large the map is, so a small game is no guarantee of a small result.
 
-Working through a large result is dominated by name comparison. Measured over
-23,919 instances, averaged across 7 rounds:
+Working through a large result is dominated by name comparison. Measured over 23,919 instances, averaged across 7 rounds:
 
 | Loop body | Total | Per instance |
 |-----------|-------|--------------|
@@ -49,11 +43,7 @@ Working through a large result is dominated by name comparison. Measured over
 | `GetFullName()` compared to a string | 42.1 ms | 1.76 µs |
 | `GetFName()` compared to an `FName` | 19.4 ms | 0.81 µs |
 
-**Avoid `GetFullName` in production code.** It builds a full path string for
-every instance. If you need to match by name, use `GetFName` and construct the
-`FName` you compare against once, outside the loop — unlike `UObject`, two
-`FName` values compare correctly with `==`. If the leaf name is not specific
-enough on its own, walk the outer chain and compare `FName`s along it.
+**Avoid `GetFullName` in production code.** It builds a full path string for every instance. If you need to match by name, use `GetFName` and construct the `FName` you compare against once, outside the loop — unlike `UObject`, two `FName` values compare correctly with `==`. If the leaf name is not specific enough on its own, walk the outer chain and compare `FName`s along it.
 
 ```lua
 -- Construct the FName once, not per instance.
@@ -67,6 +57,4 @@ end
 
 If you look the same objects up repeatedly, cache them rather than re-scanning.
 
-> Figures above are from The Exit 8 (UE 5.2) with UE4SS v3.0.1 on a Ryzen 9
-> 9950X3D, and are meant to show the shape of the cost rather than to be exact
-> for any other title.
+> Figures above are from The Exit 8 (UE 5.2) with UE4SS **v3.0.1 Beta #0, Git SHA `d7e7826d`** — an experimental build, not 3.0.1 stable — on a Ryzen 9 9950X3D. They are meant to show the shape of the cost rather than to be exact for any other title, engine version, or UE4SS build.
