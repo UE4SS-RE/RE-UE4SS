@@ -61,6 +61,7 @@
 #include <Unreal/BitfieldProxy.hpp>
 #include <Unreal/FOutputDevice.hpp>
 #include <Unreal/UObjectHashTables.hpp>
+#include <UE4SSRuntime.hpp>
 #include <UnrealDef.hpp>
 
 #include <polyhook2/PE/IatHook.hpp>
@@ -986,7 +987,24 @@ namespace RC
         }
         else if (Unreal::FUObjectHashTables::IsAvailable())
         {
-            Unreal::FUObjectHashTables::RunSelfTest();
+            // The game thread edits the tables without locking, so the walk has to happen on it
+            if (UE4SSRuntime::IsEngineTickAvailable())
+            {
+                Unreal::Hook::RegisterEngineTickPostCallback(
+                        [](auto&, ...) {
+                            static bool Done = false;
+                            if (!Done)
+                            {
+                                Done = true;
+                                Unreal::FUObjectHashTables::RunSelfTest();
+                            }
+                        },
+                        {false, false, STR("UE4SS"), STR("HashTableSelfTest")});
+            }
+            else
+            {
+                Unreal::FUObjectHashTables::RunSelfTest();
+            }
         }
         else
         {
