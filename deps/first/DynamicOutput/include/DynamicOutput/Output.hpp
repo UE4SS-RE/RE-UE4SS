@@ -17,7 +17,6 @@
 #include <DynamicOutput/Macros.hpp>
 #include <DynamicOutput/OutputDevice.hpp>
 #include <File/InternalFile.hpp>
-#include <CallStackDebug/CallStackDebug.hpp>
 
 #if RC_IS_ANSI == 1
 #define RC_STD_MAKE_FORMAT_ARGS fmt::make_format_args
@@ -233,11 +232,6 @@ namespace RC::Output
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
             }
 
-            if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
-            {
-                CallStackDebug::generate_new_call_stack();
-            }
-
             for (const auto& device : m_opened_devices)
             {
                 ASSERT_OUTPUT_DEVICE_IS_VALID(device)
@@ -258,11 +252,6 @@ namespace RC::Output
             if (m_opened_devices.empty())
             {
                 THROW_INTERNAL_FILE_ERROR("[Output::send] Attempted to send but there were no opened devices.");
-            }
-
-            if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
-            {
-                CallStackDebug::generate_new_call_stack();
             }
 
             for (const auto& device : m_opened_devices)
@@ -374,10 +363,6 @@ namespace RC::Output
     template <int32_t optional_arg, typename... FmtArgs>
     auto send(File::StringViewType content, FmtArgs... fmt_args) -> void
     {
-        if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
-        {
-            CallStackDebug::generate_new_call_stack();
-        }
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
@@ -396,10 +381,6 @@ namespace RC::Output
     template <int32_t optional_arg>
     auto send(File::StringViewType content) -> void
     {
-        if (static_cast<LogLevel::LogLevel>(optional_arg) == LogLevel::Error)
-        {
-            CallStackDebug::generate_new_call_stack();
-        }
         for (const auto& device : DefaultTargets::get_default_devices_ref())
         {
             ASSERT_DEFAULT_OUTPUT_DEVICE_IS_VALID(device)
