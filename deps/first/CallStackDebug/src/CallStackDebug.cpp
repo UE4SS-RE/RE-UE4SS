@@ -20,8 +20,34 @@ namespace RC::CallStackDebug
 {
     thread_local StringType s_call_stack_cache{};
 
+    template <typename Callable>
+    struct Cleanup
+    {
+        Callable cleanup_callable{};
+        ~Cleanup()
+        {
+            cleanup_callable();
+        }
+    };
+
     auto generate_new_call_stack() -> void
     {
+        SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+        const HANDLE current_process = GetCurrentProcess();
+        HANDLE debug_handle{};
+        if (!DuplicateHandle(current_process, current_process, current_process, &debug_handle, 0, false, DUPLICATE_SAME_ACCESS))
+        {
+            s_call_stack_cache = fmt::format(STR("Error when generating call stack: DuplicateHandle returned error: 0x{:X}\n"), GetLastError());
+            return;
+        }
+        if (!SymInitialize(debug_handle, nullptr, true))
+        {
+            s_call_stack_cache = fmt::format(STR("Error when generating call stack: SymInitialize returned error: 0x{:X}\n"), GetLastError());
+            return;
+        }
+        auto cleanup = Cleanup([&]() {
+            SymCleanup(debug_handle);
+        });
         s_call_stack_cache.clear();
         const auto trace = std::stacktrace::current();
         // Skipping entry 0 because that's this function, and we're assuming the user is not interested in this code.
@@ -30,19 +56,6 @@ namespace RC::CallStackDebug
             const auto& current_frame = trace[i];
             const auto original_address = reinterpret_cast<uintptr_t>(current_frame.native_handle());
             {
-                SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
-                const HANDLE current_process = GetCurrentProcess();
-                HANDLE debug_handle{};
-                if (!DuplicateHandle(current_process, current_process, current_process, &debug_handle, 0, false, DUPLICATE_SAME_ACCESS))
-                {
-                    s_call_stack_cache = fmt::format(STR("Error when generating call stack: DuplicateHandle returned error: 0x{:X}\n"), GetLastError());
-                    return;
-                }
-                if (!SymInitialize(debug_handle, nullptr, true))
-                {
-                    s_call_stack_cache = fmt::format(STR("Error when generating call stack: SymInitialize returned error: 0x{:X}\n"), GetLastError());
-                    return;
-                }
                 s_call_stack_cache.append(fmt::format(STR("[{}] "), i - 1));
                 char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
                 auto symbol_info = reinterpret_cast<PSYMBOL_INFO>(buffer);
