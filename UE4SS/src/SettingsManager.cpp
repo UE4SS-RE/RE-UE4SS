@@ -86,6 +86,15 @@ namespace RC
         REGISTER_BOOL_SETTING(General.InvalidateCacheIfDLLDiffers, section_general, InvalidateCacheIfDLLDiffers)
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
         REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
+        if (General.SecondsToScanBeforeGivingUp == 30)
+        {
+            // We used to have '30' as the default.
+            // Now we use '120' as the default, but because our config file is set up without default overloading,
+            // we'll just check for the old default value here.
+            // It's not great, but we have no other way to forcefully change the default.
+            // Ideally we should've set the config file up to always use empty values for defaults, instead of hard-coding them.
+            General.SecondsToScanBeforeGivingUp = 120;
+        }
         REGISTER_BOOL_SETTING(General.UseUObjectArrayCache, section_general, bUseUObjectArrayCache)
         REGISTER_BOOL_SETTING(General.ForceGUObjectArrayForIteration, section_general, bForceGUObjectArrayForIteration)
         REGISTER_BOOL_SETTING(General.DoEarlyScan, section_general, DoEarlyScan)
