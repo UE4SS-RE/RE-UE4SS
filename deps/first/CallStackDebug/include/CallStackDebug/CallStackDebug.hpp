@@ -22,8 +22,8 @@ namespace RC::CallStackDebug
     // Leave the CallStackWithoutSymbols param empty to use the current stack context.
     auto RC_CALL_STACK_DEBUG_API generate_new_call_stack(const CallStackWithoutSymbols& = {}) -> void;
 
-    // Get the latest call stack trace.
-    // Remember to generate a trace before calling this function.
+    // Get the last call stack trace.
+    // Will generate a stack trace only if one has never been generated before.
     auto RC_CALL_STACK_DEBUG_API get_call_stack() -> StringType;
 
     // Returns a call stack without symbols attached, useful when debugging symbols are unavailable.
