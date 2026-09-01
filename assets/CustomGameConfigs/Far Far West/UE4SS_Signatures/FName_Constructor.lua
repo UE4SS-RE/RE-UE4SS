@@ -1,4 +1,4 @@
--- FName::FName(wchar_t const *, enum EFindName) for UE 5.7 (Far Far West launch)
+-- FName::FName(wchar_t const *, enum EFindName) for UE 5.8 (Far Far West launch)
 -- Direct scan starting at the function entry. Single wildcard added on the
 -- "08" stack-offset byte to make UE4SS's Lua scanner actually find the
 -- pattern (the no-wildcard prologue version is not picked up by the scanner
