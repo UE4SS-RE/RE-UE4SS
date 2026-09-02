@@ -1,11 +1,7 @@
 function Register()
-    return "41 B8 01 00 00 00 48 8D 4C 24 ?? E8 ?? ?? ?? ?? C6 44 24 48 00"
+    return "48 89 5C 24 10 48 89 6C 24 18 56 57 41 56 B8 40 04 00 00 E8 ?? ?? ?? ?? 48 2B E0 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 30 04 00 00 45 33 F6"
 end
 
 function OnMatchFound(matchAddress)
-    local nextInstr = matchAddress + 16
-    local offset = matchAddress + 12
-    local dataMoved = nextInstr + DerefToInt32(offset)
-    
-    return dataMoved
+    return matchAddress
 end
