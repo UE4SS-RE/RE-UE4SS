@@ -126,10 +126,20 @@ namespace RC::FF7MMA {
             return p == pattern.size();
         }
 
+        // Accepts a plain object name or a full object path and yields the
+        // lowercase short name ("/Game/X/CharaSpec.CharaSpec" -> "charaspec")
+        std::string NormalizeTableKey(const std::string& name);
+
         std::string ToLower(std::string s) {
             std::transform(s.begin(), s.end(), s.begin(),
                            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
             return s;
+        }
+
+        std::string NormalizeTableKey(const std::string& name) {
+            size_t start = name.find_last_of("/.");
+            std::string shortName = start == std::string::npos ? name : name.substr(start + 1);
+            return ToLower(shortName);
         }
 
         std::string SanitizeFileName(const std::string& name) {
@@ -801,8 +811,8 @@ namespace RC::FF7MMA {
             for (auto& [tableName, rowsVal] : json.get_object()) {
                 if (!tableName.empty() && tableName[0] == '$') continue; // metadata like "$schema"
                 if (!rowsVal.is_object()) continue;
-                s_tableModNames[ToLower(tableName)] = tableName;
-                auto& dest = s_tableMods[ToLower(tableName)];
+                s_tableModNames[NormalizeTableKey(tableName)] = tableName;
+                auto& dest = s_tableMods[NormalizeTableKey(tableName)];
                 for (auto& [rowName, rowVal] : rowsVal.get_object()) {
                     // merge per property so two mods can edit different properties
                     // of the same row; a $delete replaces earlier edits outright
@@ -1154,13 +1164,13 @@ namespace RC::FF7MMA {
             auto& entries = rowsVal.get_object();
 
             Unreal::UObject* obj = nullptr;
-            auto found = byName.find(ToLower(tableName));
+            auto found = byName.find(NormalizeTableKey(tableName));
             if (found != byName.end()) {
                 obj = found->second;
             } else {
                 auto createIt = entries.find("$create");
                 if (createIt != entries.end() && createIt->second.holds<std::string>()) {
-                    auto source = byName.find(ToLower(createIt->second.get<std::string>()));
+                    auto source = byName.find(NormalizeTableKey(createIt->second.get<std::string>()));
                     if (source != byName.end()) {
                         std::string createMessage;
                         obj = CreateDataObject(source->second, tableName, false, createMessage);
@@ -1412,7 +1422,7 @@ namespace RC::FF7MMA {
 
         std::scoped_lock lock(m_opMutex);
         if (isTypedSet) {
-            std::string tableName = ToLower(to_utf8_string(ReadStrParam(stack, node, STR("Table"))));
+            std::string tableName = NormalizeTableKey(to_utf8_string(ReadStrParam(stack, node, STR("Table"))));
             std::string rowName = to_utf8_string(ReadStrParam(stack, node, STR("Row")));
             std::string propName = to_utf8_string(ReadStrParam(stack, node, STR("Prop")));
             std::string result = "table not loaded";
@@ -1466,7 +1476,7 @@ namespace RC::FF7MMA {
             std::string result = ApplyJsonText(doc);
             WriteStrParam(stack, node, STR("Result"), to_generic_string(result));
         } else {
-            std::string tableName = ToLower(to_utf8_string(ReadStrParam(stack, node, STR("Table"))));
+            std::string tableName = NormalizeTableKey(to_utf8_string(ReadStrParam(stack, node, STR("Table"))));
             MMADataTable* table = nullptr;
             for (auto* candidate : FindAllMMAObjects()) {
                 if (candidate && ToLower(to_utf8_string(candidate->GetName())) == tableName) {
@@ -2199,7 +2209,7 @@ namespace RC::FF7MMA {
             std::string sourceName = createIt->second.get<std::string>();
             Unreal::UObject* sourceObj = nullptr;
             for (auto* candidate : objects) {
-                if (candidate && ToLower(to_utf8_string(candidate->GetName())) == ToLower(sourceName)) {
+                if (candidate && ToLower(to_utf8_string(candidate->GetName())) == NormalizeTableKey(sourceName)) {
                     sourceObj = candidate;
                     break;
                 }
