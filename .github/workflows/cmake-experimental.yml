@@ -22,6 +22,7 @@ permissions:
 
 concurrency:
   group: experimental-release
+  # Cancelling is safe: check-changes diffs against the last released commit, so a superseded build is always rebuilt
   cancel-in-progress: true
 
 jobs:
@@ -36,10 +37,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # Need previous commit for diff
+          fetch-depth: 0  # Need full history to diff against the last released commit
 
       - name: Check what changed
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # For workflow_dispatch, always build everything
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
@@ -50,11 +53,40 @@ jobs:
             exit 0
           fi
 
-          # Get changed files compared to previous commit
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null || echo "")
+          # Reuse is only safe when no code changed since the commit the published binaries were built from
+          BASE=$(gh release view experimental-latest --repo "$GITHUB_REPOSITORY" --json body -q .body 2>/dev/null \
+                 | grep -o "built-from-sha: [0-9a-f]*" | head -1 | cut -d" " -f2 || true)
+
+          if [ -z "$BASE" ]; then
+            echo "experimental-latest has no built-from-sha marker - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if ! git merge-base --is-ancestor "$BASE" HEAD 2>/dev/null; then
+            echo "Released commit $BASE is not an ancestor of HEAD - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # The reuse path downloads the zDEV zip from this release; a cancel mid-publish can leave it without one
+          if ! gh release view experimental-latest --repo "$GITHUB_REPOSITORY" --json assets -q ".assets[].name" 2>/dev/null | grep -q "^zDEV-UE4SS_.*zip$"; then
+            echo "experimental-latest has no zDEV zip to reuse - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Last release was built from $BASE; diffing that against HEAD"
+          CHANGED_FILES=$(git diff --name-only "$BASE" HEAD 2>/dev/null || echo "")
 
           if [ -z "$CHANGED_FILES" ]; then
-            echo "No changed files detected - full build"
+            echo "No changes since the last release - full build"
             echo "build-ue4ss=true" >> $GITHUB_OUTPUT
             echo "build-cppmods=true" >> $GITHUB_OUTPUT
             echo "assets-only=false" >> $GITHUB_OUTPUT
@@ -208,6 +240,13 @@ jobs:
 
       - name: Package
         run: python tools/buildscripts/release.py package -e
+
+      # Read back by check-changes; correct on the reuse path too, since reuse means no code changed
+      - name: Record source commit in release notes
+        shell: bash
+        run: |
+          echo "" >> release/release_notes.md
+          echo "<!-- built-from-sha: ${{ github.sha }} -->" >> release/release_notes.md
 
       - name: Make Archival Experimental Release
         uses: softprops/action-gh-release@v1
