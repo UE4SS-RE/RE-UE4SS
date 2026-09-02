@@ -185,12 +185,16 @@ namespace RC
                             }
                             Unreal::UnrealInitializer::VerifyFNameConstructor(address);
                             Unreal::FName name{};
-                            SEH_TRY({ name = Unreal::FName(STR("bCanBeDamaged"), Unreal::FNAME_Find, address); })
+                            // ByteProperty is a hardcoded EName, registered by the name pool itself, so it is
+                            // findable as soon as any FName exists. bCanBeDamaged only appears once AActor
+                            // is registered, which made this fail and re-run the whole Lua scan phase
+                            // dozens of times on games that reach this point early.
+                            SEH_TRY({ name = Unreal::FName(STR("ByteProperty"), Unreal::FNAME_Find, address); })
                             SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FName constructor.\n")); });
 
                             DidLuaScanSucceed did_succeed{};
                             SEH_TRY({
-                                if (name == STR("bCanBeDamaged"))
+                                if (name == STR("ByteProperty"))
                                 {
                                     Output::send(STR("FName::FName address: {} <- Lua Script\n"), address);
                                     Unreal::FName::ConstructorInternal.assign_address(address);
