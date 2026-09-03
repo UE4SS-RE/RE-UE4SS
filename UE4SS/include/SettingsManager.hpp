@@ -50,6 +50,7 @@ namespace RC
             int64_t MajorVersion{-1};
             int64_t MinorVersion{-1};
             Unreal::UnrealInitializer::DebugBuildMode DebugBuild{Unreal::UnrealInitializer::DebugBuildMode::Detect};
+            Unreal::UnrealInitializer::StatsMode Stats{Unreal::UnrealInitializer::StatsMode::Detect};
         } EngineVersionOverride;
 
         struct SectionObjectDumper

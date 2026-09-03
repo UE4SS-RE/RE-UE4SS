@@ -139,6 +139,18 @@ namespace RC
             EngineVersionOverride.DebugBuild = Unreal::UnrealInitializer::DebugBuildMode::ForceTest;
         }
 
+        // Empty means detect from the game, true or false force STATS on or off
+        StringType stats_string{};
+        REGISTER_STRING_SETTING(stats_string, section_engine_version_override, Stats)
+        if (String::iequal(stats_string, STR("true")) || stats_string == STR("1"))
+        {
+            EngineVersionOverride.Stats = Unreal::UnrealInitializer::StatsMode::ForceOn;
+        }
+        else if (String::iequal(stats_string, STR("false")) || stats_string == STR("0"))
+        {
+            EngineVersionOverride.Stats = Unreal::UnrealInitializer::StatsMode::ForceOff;
+        }
+
         constexpr static File::CharType section_object_dumper[] = STR("ObjectDumper");
         REGISTER_BOOL_SETTING(ObjectDumper.LoadAllAssetsBeforeDumpingObjects, section_object_dumper, LoadAllAssetsBeforeDumpingObjects)
         REGISTER_BOOL_SETTING(ObjectDumper.UseModuleOffsets, section_object_dumper, UseModuleOffsets)

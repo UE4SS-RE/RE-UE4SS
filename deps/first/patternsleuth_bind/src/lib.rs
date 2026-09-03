@@ -6,7 +6,7 @@ use patternsleuth::resolvers::{
     futures::join,
     impl_collector,
     unreal::{
-        engine_version::{BuildConfiguration, EngineVersion},
+        engine_version::{BuildConfiguration, EngineVersion, Stats},
         fname::{FNameCtorWchar, FNameToString},
         ftext::FTextFString,
         gmalloc::GMalloc,
@@ -35,6 +35,7 @@ impl_collector! {
         console_manager_singleton: ConsoleManagerSingleton,
         gameengine_tick: UGameEngineTick,
         build_configuration: BuildConfiguration,
+        stats: Stats,
     }
 }
 
@@ -87,6 +88,7 @@ pub struct PsScanConfig {
     console_manager_singleton: bool,
     gameengine_tick: bool,
     build_configuration: bool,
+    stats: bool,
 }
 
 #[repr(C)]
@@ -104,6 +106,8 @@ pub struct PsScanResults {
     gameengine_tick: u64,
     // 0 unknown, 1 shipping, 2 development, 3 test
     build_configuration: u32,
+    // 0 unknown, 1 off, 2 on. Independent of the configuration, any target can force STATS back on.
+    stats: u32,
 }
 
 #[derive(Debug, Default)]
@@ -189,6 +193,22 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
             Err(err) => {
                 warning!(ctx, "Failed to find BuildConfiguration: {err}");
                 results.build_configuration = 0;
+            }
+        }
+    }
+    if ctx.config.stats {
+        match resolution.stats.as_deref() {
+            Ok(Stats::Off) => {
+                default!(ctx, "Found Stats: Off");
+                results.stats = 1;
+            }
+            Ok(Stats::On) => {
+                default!(ctx, "Found Stats: On");
+                results.stats = 2;
+            }
+            Err(err) => {
+                warning!(ctx, "Failed to find Stats: {err}");
+                results.stats = 0;
             }
         }
     }

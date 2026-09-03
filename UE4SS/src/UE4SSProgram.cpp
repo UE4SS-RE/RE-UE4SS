@@ -871,6 +871,7 @@ namespace RC
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
         config.FNameToStringMethod = settings_manager.General.DefaultFNameToStringMethod;
         config.DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
+        config.Stats = settings_manager.EngineVersionOverride.Stats;
         if (settings_manager.General.DoEarlyScan)
         {
             // Scan a single time while the game thread is locked after UE4SS is attached.
