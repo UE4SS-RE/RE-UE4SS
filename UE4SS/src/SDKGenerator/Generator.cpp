@@ -441,7 +441,7 @@ namespace RC::UEGenerator
 
             for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
             {
-                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                 {
                     continue;
                 }
@@ -741,7 +741,7 @@ namespace RC::UEGenerator
 
                 for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                     {
                         continue;
                     }
@@ -1125,7 +1125,7 @@ namespace RC::UEGenerator
 
                 for (XProperty* param : Unreal::TFieldRange<XProperty>(function, EFieldIterationFlags::IncludeDeprecated))
                 {
-                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm | Unreal::CPF_ReturnParm))
+                    if (!param->HasAnyPropertyFlags(Unreal::CPF_Parm) || param->HasAnyPropertyFlags(Unreal::CPF_ReturnParm))
                     {
                         continue;
                     }
@@ -1135,7 +1135,7 @@ namespace RC::UEGenerator
                 }
             }
 
-            auto class_name = generate_class_name(native_class);
+            auto class_name = make_valid_symbol(generate_class_name(native_class));
 
             generate_class_declaration(content_buffer, native_class, inherits_from_class);
 
@@ -1173,7 +1173,7 @@ namespace RC::UEGenerator
             }
 
             int32_t class_size = native_class->GetPropertiesSize();
-            generate_class_struct_end(content_buffer, class_name, class_size, num_padding_elements, last_property_in_this_class);
+            generate_class_struct_end(content_buffer, make_valid_symbol(class_name), class_size, num_padding_elements, last_property_in_this_class);
 
             // Functions
             if (native_class->HasChildren())
@@ -1261,7 +1261,7 @@ namespace RC::UEGenerator
                 }
             }
 
-            auto class_name = generate_class_name(static_cast<UStruct*>(owner.object));
+            auto class_name = make_valid_symbol(generate_class_name(static_cast<UStruct*>(owner.object)));
 
             if (is_valid_lua_symbol(function_name))
             {
@@ -1270,7 +1270,12 @@ namespace RC::UEGenerator
             else
             {
                 // `function MyClass:MyMethod(p1, p2)` is syntactical sugar for `function MyClass.MyMethod(self, p1, p2)`
-                current_class_content.append(fmt::format(STR("{}[{}] = function(self, "), class_name, quote_lua_symbol(function_name)));
+                current_class_content.append(fmt::format(STR("{}[{}] = function(self"), class_name, quote_lua_symbol(function_name)));
+
+                if (!function_info.params.empty())
+                {
+                    current_class_content.append(STR(", "));
+                }
             }
 
             for (size_t i = 0; i < function_info.params.size(); ++i)
