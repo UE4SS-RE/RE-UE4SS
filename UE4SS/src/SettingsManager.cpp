@@ -134,6 +134,10 @@ namespace RC
         {
             EngineVersionOverride.DebugBuild = Unreal::UnrealInitializer::DebugBuildMode::ForceShipping;
         }
+        else if (String::iequal(debug_build_string, STR("test")))
+        {
+            EngineVersionOverride.DebugBuild = Unreal::UnrealInitializer::DebugBuildMode::ForceTest;
+        }
 
         constexpr static File::CharType section_object_dumper[] = STR("ObjectDumper");
         REGISTER_BOOL_SETTING(ObjectDumper.LoadAllAssetsBeforeDumpingObjects, section_object_dumper, LoadAllAssetsBeforeDumpingObjects)
