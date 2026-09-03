@@ -27,6 +27,10 @@ public:
         // The second param is a callback that UE4SS will use to render the contents of the tab.
         // The param to the callback is a pointer to your mod.
         register_tab(STR("My Test Tab"), [](CppUserModBase* instance) {
+            // It's critical that you enable ImGui if you intend to use ImGui within the context of UE4SS.
+            // If you don't do this, a crash will occur as soon as ImGui tries to render anything.
+            UE4SS_ENABLE_IMGUI()
+            
             // In this callback, you can start rendering the contents of your tab with ImGui. 
             ImGui::Text("This is the contents of the tab");
             
@@ -48,6 +52,10 @@ public:
         // Failure to clean up the tab on mod destruction will result in a crash.
         // It's recommended that you use 'register_tab' instead of this function.
         m_less_safe_tab = std::make_shared<GUI::GUITab>(STR("My Less Safe Tab"), [](CppUserModBase* instance) {
+            // It's critical that you enable ImGui if you intend to use ImGui within the context of UE4SS.
+            // If you don't do this, a crash will occur as soon as ImGui tries to render anything.
+            UE4SS_ENABLE_IMGUI()
+            
             // This callback is identical to the one used with 'register_tab' except 'instance' is always nullptr.
             ImGui::Text("This is the contents of the less safe tab");
         });
@@ -63,9 +71,6 @@ public:
     
     auto on_ui_init() -> void override
     {
-        // It's critical that you enable ImGui if you intend to use ImGui within the context of UE4SS.
-        // If you don't do this, a crash will occur as soon as ImGui tries to render anything, for example in your tab.
-        UE4SS_ENABLE_IMGUI()
     }
     
     auto render_some_stuff(int Number) -> void
