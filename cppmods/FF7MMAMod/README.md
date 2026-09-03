@@ -77,7 +77,7 @@ The "FF7 MMA" tab in the UE4SS GUI lists the loaded data tables (tick "Show all 
 
 ## Blueprint API
 
-Blueprint mods (UMG menus and the like) can drive edits at runtime through stub functions that this mod intercepts by name. Create functions with these exact names and parameter names in any loaded blueprint, give them empty bodies, and call them normally. Every parameter and return is a plain String (FString) unless noted; parameters named with Json carry JSON as text, so no JSON plugin or struct types are involved:
+Blueprint mods (UMG menus and the like) can drive edits at runtime through stub functions that this mod intercepts by name. Create functions with these exact names and parameter names in any loaded blueprint, give them empty bodies, and call them normally. The stubs can also live in a Blueprint Function Library; the implicit `__WorldContext` parameter the compiler adds there is ignored. Calls from Lua, C++ or the UE4SS function caller work too. From Lua pass `nil` for `__WorldContext` and a table for each output, which comes back as an FString: `local out = {}; cdo:MMA_GetSchema("Materia", nil, out); print(out.SchemaJson:ToString())`. Every parameter and return is a plain String (FString) unless noted; parameters named with Json carry JSON as text, so no JSON plugin or struct types are involved:
 
 - `MMA_ApplyJson(Json) -> Result`: applies a full data-mod JSON document (same format as the files, including `$` directives and wildcards).
 - `MMA_ReloadJson() -> Result`: re-reads `data/` and applies it again, same as the "Reload JSON" button.

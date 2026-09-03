@@ -1356,10 +1356,20 @@ namespace RC::FF7MMA {
             return nullptr;
         }
 
+        // Out params are not in the callee frame: for blueprint to blueprint calls the
+        // frame records the caller variable addresses in OutParms, so resolve through
+        // that first and fall back to Locals for inputs
+        uint8_t* ParamAddress(Unreal::FFrame& stack, Unreal::FProperty* prop) {
+            for (auto* rec = stack.OutParms(); rec; rec = rec->NextOutParm) {
+                if (rec->Property == prop) return rec->PropAddr;
+            }
+            return stack.Locals() ? stack.Locals() + prop->GetOffset_Internal() : nullptr;
+        }
+
         StringType ReadStrParam(Unreal::FFrame& stack, Unreal::UFunction* function, const CharType* name) {
             auto* prop = FindFuncParam(function, name);
             if (!prop || !stack.Locals()) return {};
-            auto* str = reinterpret_cast<Unreal::FString*>(stack.Locals() + prop->GetOffset_Internal());
+            auto* str = reinterpret_cast<Unreal::FString*>(ParamAddress(stack, prop));
             const auto& chars = str->GetCharArray();
             if (chars.Num() <= 0 || !chars.GetData()) return {};
             return StringType(chars.GetData());
@@ -1369,7 +1379,7 @@ namespace RC::FF7MMA {
                            const StringType& value) {
             auto* prop = FindFuncParam(function, name);
             if (!prop || !stack.Locals()) return;
-            auto* str = reinterpret_cast<Unreal::FString*>(stack.Locals() + prop->GetOffset_Internal());
+            auto* str = reinterpret_cast<Unreal::FString*>(ParamAddress(stack, prop));
             *str = Unreal::FString(value);
         }
     }
@@ -1383,7 +1393,9 @@ namespace RC::FF7MMA {
         s_fnSet = FName(STR("MMA_Set"), Unreal::FNAME_Add);
         s_fnReloadJson = FName(STR("MMA_ReloadJson"), Unreal::FNAME_Add);
 
-        Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback(
+        // Post hooks: the compiled stub assigns its outputs their defaults in its
+        // return node, so the bridge has to write after the body has run
+        Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback(
             [](auto& info, Unreal::UObject* Context, Unreal::FFrame& Stack, void* RESULT_DECL) {
                 (void)info; (void)Context; (void)RESULT_DECL;
                 if (auto* self = FF7MMAMod::GetInstance()) {
@@ -1393,6 +1405,19 @@ namespace RC::FF7MMA {
             // bOnce must stay false or the bridge only serves the first
             // blueprint call of the session; it writes params so it is not readonly
             {false, false, STR("FF7MMAMod"), STR("BPBridge")});
+
+        // Only self calls reach ProcessLocalScriptFunction. Calls into another
+        // object (a function library included) and anything started through
+        // ProcessEvent (Lua, C++, the UE4SS function caller) run ProcessInternal
+        // instead, so the bridge has to sit on both.
+        Unreal::Hook::RegisterProcessInternalPostCallback(
+            [](auto& info, Unreal::UObject* Context, Unreal::FFrame& Stack, void* RESULT_DECL) {
+                (void)info; (void)Context; (void)RESULT_DECL;
+                if (auto* self = FF7MMAMod::GetInstance()) {
+                    self->OnScriptFunctionPre(Stack);
+                }
+            },
+            {false, false, STR("FF7MMAMod"), STR("BPBridgeProcessInternal")});
 
         // ProcessEvent runs the blueprint VM, so it has to be called on the game
         // thread. on_update runs on the UE4SS mod thread instead.
