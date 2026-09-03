@@ -669,6 +669,7 @@ namespace RC
         config.bEnableCache = settings_manager.General.UseCache;
         config.SecondsToScanBeforeGivingUp = settings_manager.General.SecondsToScanBeforeGivingUp;
         config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
+        config.bForceGUObjectArrayForIteration = settings_manager.General.ForceGUObjectArrayForIteration;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
         {
@@ -996,14 +997,17 @@ namespace RC
                             if (!Done)
                             {
                                 Done = true;
-                                Unreal::FUObjectHashTables::RunSelfTest();
+                                if (Unreal::FUObjectHashTables::RunSelfTest())
+                                {
+                                    Unreal::UnrealInitializer::RetireUObjectArrayCache();
+                                }
                             }
                         },
                         {false, false, STR("UE4SS"), STR("HashTableSelfTest")});
             }
-            else
+            else if (Unreal::FUObjectHashTables::RunSelfTest())
             {
-                Unreal::FUObjectHashTables::RunSelfTest();
+                Unreal::UnrealInitializer::RetireUObjectArrayCache();
             }
         }
         else

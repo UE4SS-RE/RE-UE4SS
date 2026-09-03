@@ -2,6 +2,7 @@
 #include <UE4SSProgram.hpp>
 #include <Unreal/UEngine.hpp>
 #include <Unreal/UObject.hpp>
+#include <Unreal/UnrealInitializer.hpp>
 #include <Unreal/UObjectHashTables.hpp>
 #include <Unreal/UnrealVersion.hpp>
 
@@ -30,10 +31,6 @@ namespace RC
 
     auto UE4SSRuntime::ShouldUseHashTableIteration() -> bool
     {
-        if (!IsFUObjectHashTablesAvailable())
-        {
-            return false;
-        }
-        return !UE4SSProgram::get_program().settings_manager.General.ForceGUObjectArrayForIteration;
+        return Unreal::UnrealInitializer::ShouldUseHashTables();
     }
 } // namespace RC
