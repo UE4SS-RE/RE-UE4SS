@@ -151,6 +151,10 @@ Fixed Static Mesh Dumper crashing on material interfaces in UE 5.6 and above due
 
 ### Lua API
 
+Added `__eq` metamethod for `UObjectBase`, allowing comparing `UObject` instances by underlying pointer (`objA == objB`) from Lua rather than userdata reference equality.
+
+Added support for setting `FWeakObjectProperty` values (`Operation::Set`), allowing assignment of `UObject`, `FWeakObjectPtr`, or `nil` from Lua.
+
 Added support for `FUtf8String` and `FAnsiString` Unreal string types with string manipulation API ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
 - Refactored FString implementation to use unified `TLuaStringBase` template for code reuse and consistency
 
