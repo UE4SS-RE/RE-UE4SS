@@ -7219,8 +7219,9 @@ Overloads:
     {
         for (m_processing_events = true; m_processing_events && !m_async_thread.get_stop_token().stop_requested();)
         {
-            if (m_pause_events_processing)
+            if (m_pause_events_processing || UE4SSProgram::unreal_is_shutting_down)
             {
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
                 continue;
             }
 
