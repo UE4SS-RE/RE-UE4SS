@@ -52,6 +52,20 @@ The `UObject` class is the base class that most other Unreal Engine game objects
     Engine.MaxParticleResize = 4
     ```
 
+### __eq
+
+- **Usage:** `ObjectA == ObjectB`
+
+- Compares two `UObject` instances by their underlying C++ pointers. Returns `true` if both userdata wrap the same remote `UObject*` (or both are null/invalid), and `false` otherwise. Safely evaluates to `false` without crashing if compared against non-`UObject` userdata or types.
+
+- **Example:**
+    ```lua
+    local Player = FindFirstOf("BP_Player_C")
+    if Player == Controller.Pawn then
+        print("Pawn matches active player")
+    end
+    ```
+
 ## Methods
 
 ### GetFullName()
