@@ -6290,8 +6290,13 @@ Overloads:
             {
                 return;
             }
-            auto data = precise_name_match ? LuaMod::find_function_hook_data(callback_container, Stack.Node())
-                                           : LuaMod::find_function_hook_data(callback_container, Stack.Node()->GetNamePrivate());
+            auto* node = Stack.Node();
+            if (!node)
+            {
+                return;
+            }
+            auto data = precise_name_match ? LuaMod::find_function_hook_data(callback_container, node)
+                                           : LuaMod::find_function_hook_data(callback_container, node->GetNamePrivate());
             if (data)
             {
                 const auto& callback_data = data->callback_data;
@@ -6314,7 +6319,6 @@ Overloads:
                         static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
 
-                        auto node = Stack.Node();
                         auto return_value_offset = node->GetReturnValueOffset();
                         auto has_return_value = return_value_offset != 0xFFFF;
                         auto num_unreal_params = node->GetNumParms();

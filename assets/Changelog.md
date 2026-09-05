@@ -489,6 +489,8 @@ Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https:
 Fix non-ascii characters in outputted .cpp files ([UE4SS #1378](https://github.com/UE4SS-RE/RE-UE4SS/pull/1378))  
 
 ### Lua API 
+Fixed crash in script hook dispatcher when `Stack.Node()` returns `nullptr` on synthetic or native thunk frames.
+
 Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/pull/425)) - localcc 
 
 Fixed `IterateGameDirectories` crashing when the game root contains a deeply nested directory tree, common once a mod manager unpacks downloads into it. The traversal never grew the Lua stack and wrote past the end of it. It now also stops at a depth of 64, skips unreadable directories, and won't follow a link back into a directory it is already inside. ([UE4SS #1092](https://github.com/UE4SS-RE/RE-UE4SS/issues/1092))
