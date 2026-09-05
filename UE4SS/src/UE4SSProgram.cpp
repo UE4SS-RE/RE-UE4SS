@@ -70,8 +70,6 @@
 
 namespace RC
 {
-    // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
-    /*
     struct RC_UE_API FUEDeathListener : public Unreal::FUObjectCreateListener
     {
         static FUEDeathListener UEDeathListener;
@@ -80,10 +78,14 @@ namespace RC
         void OnUObjectArrayShutdown() override
         {
             UE4SSProgram::unreal_is_shutting_down = true;
+            Unreal::UnrealInitializer::StaticStorage::bIsInitialized = false;
             Unreal::UObjectArray::RemoveUObjectCreateListener(this);
         }
     };
     FUEDeathListener FUEDeathListener::UEDeathListener{};
+
+    // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
+    /*
 
     auto get_player_controller() -> UObject*
     {
@@ -991,10 +993,7 @@ namespace RC
         ProfilerScope();
         using namespace Unreal;
 
-        // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
-        /*
         UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
-        //*/
 
         if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
         {

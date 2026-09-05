@@ -431,6 +431,8 @@ Switch to xmake from cmake which makes building much more streamlined ([UE4SS #3
 ## Fixes 
 
 ### General 
+Fixed access violation crash on engine shutdown by activating `FUEDeathListener` and pausing async Lua action loops when the engine terminates.
+
 Fixed proxy injection incorrectly running UE4SS initialization inside the loader lock when the main thread was the first thread snapshot entry.
 
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
