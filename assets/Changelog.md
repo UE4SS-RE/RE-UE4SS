@@ -678,6 +678,8 @@ Added examplanation of 'ai' to the Object Dumper doc page ([UE4SS #349](https://
 
 ### Lua API
 
+Restore the Lua stack after directory traversal exceptions in `IterateGameDirectories`, so unfinished keys and tables do not affect subsequent entries.
+
 ### C++ API
 
 ### Experimental
