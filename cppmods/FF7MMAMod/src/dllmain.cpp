@@ -163,10 +163,12 @@ namespace RC::FF7MMA {
         // ---- JSON-driven table mods (PalSchema-style) ----
 
         std::vector<PropertyValue> CloneRowValues(const std::vector<PropertyValue>& values);
+        bool ValuesEqual(const PropertyValue& a, const PropertyValue& b);
 
         std::map<std::string, ModJson::object_t> s_tableMods; // lowercase table name -> row objects
         std::map<std::string, std::string> s_tableModNames;    // lowercase -> name as written in the file
-        std::set<std::string> s_appliedTables;
+        std::set<std::string> s_appliedTables; // name level, for completion and events
+        std::set<std::pair<std::string, Unreal::UObject*>> s_appliedObjects; // per instance: reloaded tables get mods again
         std::map<std::string, std::string> s_modResults;
         std::vector<uint8_t*> s_blobs; // side allocations and rebuilt images stay alive forever
         std::map<Unreal::UObject*, std::array<uint8_t, 88>> s_savedRoots; // pre-redirect root header bytes
@@ -437,18 +439,14 @@ namespace RC::FF7MMA {
 
         // Applies "Prop": value pairs from a JSON row object; "$"-prefixed keys are directives
         bool ApplyRowProps(MMARow& row, const std::vector<FFF7Property>& schema,
+                           const std::map<std::string, int32_t>& schemaIndex,
                            const ModJson::object_t& obj, std::vector<std::string>& errs,
                            std::vector<int32_t>* outChanged = nullptr) {
             bool anyError = false;
             for (const auto& [propName, propVal] : obj) {
                 if (!propName.empty() && propName[0] == '$') continue;
-                int32_t idx = -1;
-                for (size_t i = 0; i < schema.size(); ++i) {
-                    if (to_utf8_string(schema[i].Name.ToString()) == propName) {
-                        idx = static_cast<int32_t>(i);
-                        break;
-                    }
-                }
+                auto idxIt = schemaIndex.find(propName);
+                int32_t idx = idxIt != schemaIndex.end() ? idxIt->second : -1;
                 if (idx < 0) {
                     errs.push_back("unknown property '" + propName + "'");
                     anyError = true;
@@ -475,15 +473,17 @@ namespace RC::FF7MMA {
                         }
                         arr->Elements.push_back(std::move(ev));
                     }
-                    if (ok) {
+                    if (ok && !ValuesEqual(row.Values[idx], PropertyValue(arr))) {
                         row.Values[idx] = arr;
                         if (outChanged) outChanged->push_back(idx);
                     }
                 } else {
                     PropertyValue value;
                     if (ConvertJsonScalar(propVal, prop.Type, value, err)) {
-                        row.Values[idx] = std::move(value);
-                        if (outChanged) outChanged->push_back(idx);
+                        if (!ValuesEqual(row.Values[idx], value)) {
+                            row.Values[idx] = std::move(value);
+                            if (outChanged) outChanged->push_back(idx);
+                        }
                     } else {
                         errs.push_back("property '" + propName + "': " + err);
                         anyError = true;
@@ -807,6 +807,56 @@ namespace RC::FF7MMA {
                 s_modResults[fileName] = "top level must be an object of tables";
                 continue;
             }
+            // Full table dumps (Export JSON / MMADumps files) import as complete
+            // row snapshots so "export the table, drop it in data" works
+            auto& top = json.get_object();
+            bool isDump = top.count("table") && top.count("schema") && top.count("rows") &&
+                          top["table"].holds<std::string>() && top["schema"].is_array() &&
+                          top["rows"].is_array();
+            if (isDump) {
+                std::string tableName = top["table"].get<std::string>();
+                std::vector<std::string> propNames;
+                for (auto& schemaEntry : top["schema"].get_array()) {
+                    std::string propName;
+                    if (schemaEntry.is_object()) {
+                        auto nameIt = schemaEntry.get_object().find("name");
+                        if (nameIt != schemaEntry.get_object().end() && nameIt->second.holds<std::string>()) {
+                            propName = nameIt->second.get<std::string>();
+                        }
+                    }
+                    propNames.push_back(propName);
+                }
+                std::string tableKey = NormalizeTableKey(tableName);
+                s_tableModNames[tableKey] = tableName;
+                auto& dest = s_tableMods[tableKey];
+                size_t importedRows = 0;
+                for (auto& rowEntry : top["rows"].get_array()) {
+                    if (!rowEntry.is_object()) continue;
+                    auto& rowObj = rowEntry.get_object();
+                    auto nameIt = rowObj.find("$name");
+                    auto valuesIt = rowObj.find("v");
+                    if (nameIt == rowObj.end() || !nameIt->second.holds<std::string>() ||
+                        valuesIt == rowObj.end() || !valuesIt->second.is_array()) {
+                        continue;
+                    }
+                    auto& values = valuesIt->second.get_array();
+                    ModJson converted;
+                    converted.data = ModJson::object_t{};
+                    auto& convertedRow = converted.get_object();
+                    for (size_t i = 0; i < values.size() && i < propNames.size(); ++i) {
+                        if (!propNames[i].empty()) {
+                            convertedRow[propNames[i]] = std::move(values[i]);
+                        }
+                    }
+                    dest[nameIt->second.get<std::string>()] = std::move(converted);
+                    ++importedRows;
+                }
+                Output::send<LogLevel::Default>(STR("[FF7MMAMod] Loaded {} (table dump import: {} full rows into {})\n"),
+                                                to_generic_string(fileName), importedRows,
+                                                to_generic_string(tableName));
+                continue;
+            }
+
             size_t rowCount = 0;
             for (auto& [tableName, rowsVal] : json.get_object()) {
                 if (!tableName.empty() && tableName[0] == '$') continue; // metadata like "$schema"
@@ -837,7 +887,7 @@ namespace RC::FF7MMA {
 
     void FF7MMAMod::ApplyTableMods(Unreal::UObject* obj, const std::string& name, const std::string& lowerName) {
         auto modsIt = s_tableMods.find(lowerName);
-        if (modsIt == s_tableMods.end() || s_appliedTables.count(lowerName)) {
+        if (modsIt == s_tableMods.end() || s_appliedObjects.count({lowerName, obj})) {
             return;
         }
 
@@ -846,6 +896,7 @@ namespace RC::FF7MMA {
             return; // not loaded yet, retry next scan
         }
         s_appliedTables.insert(lowerName);
+        s_appliedObjects.insert({lowerName, obj});
 
         std::string summary = ApplyEntriesToObject(obj, &modsIt->second);
         s_modResults[name] = summary;
@@ -873,6 +924,10 @@ namespace RC::FF7MMA {
 
         const auto& schema = table.GetSchema();
         auto& rows = table.GetRowsMutable();
+        std::map<std::string, int32_t> schemaIndex;
+        for (size_t i = 0; i < schema.size(); ++i) {
+            schemaIndex[to_utf8_string(schema[i].Name.ToString())] = static_cast<int32_t>(i);
+        }
         int edits = 0, adds = 0, dels = 0;
         std::vector<std::string> errs;
         std::map<size_t, std::set<int32_t>> changedByRow;
@@ -883,7 +938,7 @@ namespace RC::FF7MMA {
             const auto& allObj = allIt->second.get_object();
             for (size_t i = 0; i < rows.size(); ++i) {
                 std::vector<int32_t> changed;
-                if (!ApplyRowProps(rows[i], schema, allObj, errs, &changed)) {
+                if (!ApplyRowProps(rows[i], schema, schemaIndex, allObj, errs, &changed)) {
                     errs.push_back("(in $all edit)");
                     break;
                 }
@@ -923,7 +978,7 @@ namespace RC::FF7MMA {
                     continue;
                 }
                 std::vector<int32_t> changed;
-                if (!ApplyRowProps(rows[i], schema, *rowObj, errs, &changed)) {
+                if (!ApplyRowProps(rows[i], schema, schemaIndex, *rowObj, errs, &changed)) {
                     errs.push_back("(in wildcard edit '" + rowName + "')");
                 }
                 changedByRow[i].insert(changed.begin(), changed.end());
@@ -958,7 +1013,7 @@ namespace RC::FF7MMA {
             MMARow* existing = table.FindRow(rn);
             if (existing) {
                 std::vector<int32_t> changed;
-                if (!ApplyRowProps(*existing, schema, rowObj, errs, &changed)) {
+                if (!ApplyRowProps(*existing, schema, schemaIndex, rowObj, errs, &changed)) {
                     errs.push_back("(in edit of '" + rowName + "')");
                 }
                 size_t rowIdx = static_cast<size_t>(existing - rows.data());
@@ -993,7 +1048,7 @@ namespace RC::FF7MMA {
             if (prioIt != rowObj.end() && GetJsonInt(prioIt->second, prio)) {
                 newRow.Priority = static_cast<int32_t>(prio);
             }
-            if (!ApplyRowProps(newRow, schema, rowObj, errs)) {
+            if (!ApplyRowProps(newRow, schema, schemaIndex, rowObj, errs)) {
                 errs.push_back("(in add of '" + rowName + "')");
             }
             rows.push_back(std::move(newRow));
@@ -1201,6 +1256,7 @@ namespace RC::FF7MMA {
         s_tableMods.clear();
         s_tableModNames.clear();
         s_appliedTables.clear();
+        s_appliedObjects.clear();
         s_modResults.clear();
         m_allModsEventFired = false;
         LoadDataFiles();
@@ -2156,7 +2212,10 @@ namespace RC::FF7MMA {
 
             // Dumping is opt-in: nothing is written without a targets.txt entry.
             // A "*" line dumps every data table (creator use).
-            if (m_dumped.count(name) || m_failed.count(name)) continue;
+            auto dumpedFromIt = m_dumpedFrom.find(name);
+            bool alreadyDumped = m_dumped.count(name) && dumpedFromIt != m_dumpedFrom.end() &&
+                                 dumpedFromIt->second == obj;
+            if (alreadyDumped || m_failed.count(name)) continue;
             if (m_targets.empty()) continue;
             bool dumpAll = m_targets.count("*") != 0;
             if (!dumpAll && !m_targets.count(lowerName)) continue;
@@ -2214,6 +2273,7 @@ namespace RC::FF7MMA {
                 WriteTemplateFile(m_dumpDir / "templates" / (SanitizeFileName(name) + ".template.json"),
                                   name, *table);
                 m_dumped[name] = fileName;
+                m_dumpedFrom[name] = obj;
                 Output::send<LogLevel::Default>(STR("[FF7MMAMod] Dumped {} rows to {}\n"),
                                                 table->GetRows().size(),
                                                 to_generic_string(fileName));
@@ -2417,8 +2477,13 @@ namespace RC::FF7MMA {
         if (!s_mmaClassSearched) {
             CacheMMABaseClass();
         }
+        // RF_NeedInitialization | RF_NeedLoad | RF_NeedPostLoad | RF_NeedPostLoadSubobjects
+        // | RF_BeginDestroyed | RF_FinishDestroyed: mid-load or dying objects have
+        // unpatched frozen names and crash anything that touches them
+        constexpr auto UnreadyFlags = static_cast<Unreal::EObjectFlags>(
+            0x00000200 | 0x00000400 | 0x00001000 | 0x00002000 | 0x00008000 | 0x00010000);
         Unreal::UObjectGlobals::ForEachUObject([&](Unreal::UObject* object, int32_t, int32_t) {
-            if (IsMMAObject(object)) {
+            if (object && !object->HasAnyFlags(UnreadyFlags) && IsMMAObject(object)) {
                 result.push_back(object);
             }
             return LoopAction::Continue;
@@ -2537,9 +2602,11 @@ namespace RC::FF7MMA {
             if (m_searchBuffer[0] != '\0' && entry.Name.find(m_searchBuffer) == std::string::npos) {
                 continue;
             }
+            ImGui::PushID(entry.Object);
             if (ImGui::Selectable(entry.Name.c_str(), entry.Object == m_selectedObject)) {
                 m_selectedObject = entry.Object;
             }
+            ImGui::PopID();
         }
         ImGui::EndChild();
 

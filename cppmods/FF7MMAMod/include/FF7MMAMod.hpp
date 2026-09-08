@@ -134,6 +134,7 @@ namespace RC::FF7MMA {
         std::filesystem::path m_dumpDir;
         std::set<std::string> m_targets;          // lowercase names; empty = dump everything found
         std::map<std::string, std::string> m_dumped;  // name -> file
+        std::map<std::string, Unreal::UObject*> m_dumpedFrom; // instance a dump came from
         std::map<std::string, std::string> m_failed;  // name -> error
         std::set<std::string> m_seen;
         std::chrono::steady_clock::time_point m_startTime{};
