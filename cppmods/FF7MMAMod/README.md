@@ -30,6 +30,8 @@ Drop `.json` files into `ue4ss/Mods/FF7MMAMod/data/` next to the game binary. Fi
 - `$delete: true` or setting the row to `null` removes it. `$priority` sets the key priority of a new row.
 - `*_Array` properties take JSON arrays.
 
+Full table dumps (the files "Export JSON" and the auto-dump write) can also be dropped straight into `data/`: they import as complete row snapshots, so exporting a modded table and placing the export in `data/` reproduces that table without the pak. Rows referencing pak-only content (models, animation sets) still need those content paks installed.
+
 Results are written to `ue4ss/MMADumps/status.json` and the UE4SS log.
 
 Easier than writing these by hand:
