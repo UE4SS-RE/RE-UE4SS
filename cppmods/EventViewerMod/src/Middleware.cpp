@@ -27,6 +27,7 @@ namespace RC::EventViewerMod
     using RC::Unreal::FFrame;
     using RC::Unreal::UFunction;
     using RC::Unreal::UObject;
+	using RC::Unreal::Version;
 
     using RC::Unreal::Hook::ERROR_ID;
     using RC::Unreal::Hook::GlobalCallbackId;
@@ -80,20 +81,22 @@ namespace RC::EventViewerMod
                                    [](auto&, UObject*, FFrame&, void*) {
                                        m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
                                    }};
-#if !LESSEQUAL421
-        m_plsf_controller = {.register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
-                             .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
-                             .m_pre_callback =
-                                     [this](auto&, UObject* context, FFrame& stack, void*) {
-                                         auto fn = stack.Node();
-                                         if (!fn) fn = stack.CurrentNativeFunction();
-                                         return enqueue(EMiddlewareHookTarget::ProcessLocalScriptFunction, context, fn);
-                                     },
-                             .m_post_callback =
-                                     [](auto&, UObject*, FFrame&, void*) {
-                                         m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
-                                     }};
-#endif
+        // ProcessLocalScriptFunction was added in 4.22 so this hook will always fail on versions below 4.21
+		if (Version::IsAbove(4, 21))
+        {
+            m_plsf_controller = {.register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
+                                 .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
+                                 .m_pre_callback =
+                                         [this](auto&, UObject* context, FFrame& stack, void*) {
+                                             auto fn = stack.Node();
+                                             if (!fn) fn = stack.CurrentNativeFunction();
+                                             return enqueue(EMiddlewareHookTarget::ProcessLocalScriptFunction, context, fn);
+                                         },
+                                 .m_post_callback =
+                                         [](auto&, UObject*, FFrame&, void*) {
+                                             m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
+                                         }};
+        }
         QueueProfiler::Reset();
     }
 
@@ -148,9 +151,10 @@ namespace RC::EventViewerMod
 
         m_pe_controller.unhook();
         m_pi_controller.unhook();
-#if !LESSEQUAL421
-		m_plsf_controller.unhook();
-#endif
+        if (Version::IsAbove(4, 21))
+        {
+            m_plsf_controller.unhook();
+        }
         // Causes all thread_local depths to be reset the next time the prehook runs.
         m_depth_reset_counter.fetch_add(1, std::memory_order_release);
         m_allow_queue.clear(std::memory_order_release);
@@ -202,24 +206,28 @@ namespace RC::EventViewerMod
             Output::send<LogLevel::Verbose>(L"[EventViewerMod] Mod requires FName.toString to be known!");
         }
 
-#if !LESSEQUAL421
-        if (!(m_plsf_controller.install_posthook() && m_pi_controller.install_posthook() && m_pe_controller.install_posthook() &&
-              m_plsf_controller.install_prehook() && m_pi_controller.install_prehook() && m_pe_controller.install_prehook()))
+		if (Version::IsAbove(4, 21))
         {
-            m_pe_controller.unhook();
-            m_pi_controller.unhook();
-            m_plsf_controller.unhook();
-            return false;
+			if (!(m_plsf_controller.install_posthook() && m_pi_controller.install_posthook() && m_pe_controller.install_posthook() &&
+				  m_plsf_controller.install_prehook() && m_pi_controller.install_prehook() && m_pe_controller.install_prehook()))
+			{
+				m_pe_controller.unhook();
+				m_pi_controller.unhook();
+				m_plsf_controller.unhook();
+				return false;
+			}
         }
-#else
-        if (!(m_pi_controller.install_posthook() && m_pe_controller.install_posthook() &&
-              m_pi_controller.install_prehook() && m_pe_controller.install_prehook()))
+        else
         {
-            m_pe_controller.unhook();
-            m_pi_controller.unhook();
-            return false;
+            if (!(m_pi_controller.install_posthook() && m_pe_controller.install_posthook() && m_pi_controller.install_prehook() &&
+                  m_pe_controller.install_prehook()))
+            {
+                m_pe_controller.unhook();
+                m_pi_controller.unhook();
+                return false;
+            }
         }
-#endif
+
         m_paused = false;
         m_allow_queue.test_and_set(std::memory_order_acq_rel);
         return true;
