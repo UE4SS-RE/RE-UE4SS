@@ -80,7 +80,7 @@ namespace RC::EventViewerMod
                                    [](auto&, UObject*, FFrame&, void*) {
                                        m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
                                    }};
-
+#if !LESSEQUAL421
         m_plsf_controller = {.register_prehook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPreCallback,
                              .register_posthook_fn = &RC::Unreal::Hook::RegisterProcessLocalScriptFunctionPostCallback,
                              .m_pre_callback =
@@ -93,6 +93,7 @@ namespace RC::EventViewerMod
                                      [](auto&, UObject*, FFrame&, void*) {
                                          m_depth = (m_depth == 0) ? 0 : (m_depth - 1);
                                      }};
+#endif
         QueueProfiler::Reset();
     }
 
@@ -147,8 +148,9 @@ namespace RC::EventViewerMod
 
         m_pe_controller.unhook();
         m_pi_controller.unhook();
-        m_plsf_controller.unhook();
-
+#if !LESSEQUAL421
+		m_plsf_controller.unhook();
+#endif
         // Causes all thread_local depths to be reset the next time the prehook runs.
         m_depth_reset_counter.fetch_add(1, std::memory_order_release);
         m_allow_queue.clear(std::memory_order_release);
@@ -200,6 +202,7 @@ namespace RC::EventViewerMod
             Output::send<LogLevel::Verbose>(L"[EventViewerMod] Mod requires FName.toString to be known!");
         }
 
+#if !LESSEQUAL421
         if (!(m_plsf_controller.install_posthook() && m_pi_controller.install_posthook() && m_pe_controller.install_posthook() &&
               m_plsf_controller.install_prehook() && m_pi_controller.install_prehook() && m_pe_controller.install_prehook()))
         {
@@ -208,7 +211,15 @@ namespace RC::EventViewerMod
             m_plsf_controller.unhook();
             return false;
         }
-
+#else
+        if (!(m_pi_controller.install_posthook() && m_pe_controller.install_posthook() &&
+              m_pi_controller.install_prehook() && m_pe_controller.install_prehook()))
+        {
+            m_pe_controller.unhook();
+            m_pi_controller.unhook();
+            return false;
+        }
+#endif
         m_paused = false;
         m_allow_queue.test_and_set(std::memory_order_acq_rel);
         return true;

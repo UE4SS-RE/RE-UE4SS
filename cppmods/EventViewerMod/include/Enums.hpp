@@ -12,11 +12,18 @@
 
 namespace RC::EventViewerMod
 {
-#define EVM_MIDDLEWARE_HOOK_TARGET_FLAGS(X, EnumName)                                                                                                          \
-    X(EnumName, All, ((1 << 0) | (1 << 1) | (1 << 2)))                                                                                                         \
-    X(EnumName, ProcessEvent, (1 << 0))                                                                                                                        \
-    X(EnumName, ProcessInternal, (1 << 1))                                                                                                                     \
-    X(EnumName, ProcessLocalScriptFunction, (1 << 2))
+#if !LESSEQUAL421
+	#define EVM_MIDDLEWARE_HOOK_TARGET_FLAGS(X, EnumName)                                                                                                          \
+		X(EnumName, All, ((1 << 0) | (1 << 1) | (1 << 2)))                                                                                                         \
+		X(EnumName, ProcessEvent, (1 << 0))                                                                                                                        \
+		X(EnumName, ProcessInternal, (1 << 1))                                                                                                                     \
+		X(EnumName, ProcessLocalScriptFunction, (1 << 2))
+#else
+	#define EVM_MIDDLEWARE_HOOK_TARGET_FLAGS(X, EnumName)                                                                                                          \
+		X(EnumName, All, ((1 << 0) | (1 << 1)))																													   \
+		X(EnumName, ProcessEvent, (1 << 0))                                                                                                                        \
+		X(EnumName, ProcessInternal, (1 << 1))                                                                                                                     
+#endif
 
 #define EVM_MODE(X, EnumName)                                                                                                                                  \
     X(EnumName, Stack)                                                                                                                                         \
@@ -142,9 +149,11 @@ namespace RC::EventViewerMod
             return "(PE) ";
         case EMiddlewareHookTarget::ProcessInternal:
             return "(PI) ";
-        case EMiddlewareHookTarget::ProcessLocalScriptFunction:
+#if !LESSEQUAL421
+		case EMiddlewareHookTarget::ProcessLocalScriptFunction:
             return "(PLSF) ";
-        case EMiddlewareHookTarget::All:
+#endif
+		case EMiddlewareHookTarget::All:
             return "(ALL) ";
         default:
             return "(UnknownTarget) ";
