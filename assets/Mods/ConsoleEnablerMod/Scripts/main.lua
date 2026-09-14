@@ -12,11 +12,37 @@ local KeysToAdd = {
     UEHelpers.FindFName("Tilde"),
     UEHelpers.FindFName("F10")
 }
+local KeysToRemove = {
+    -- Add keys here if you want to stop them from toggling the console.
+    --UEHelpers.FindFName("@"),
+}
 
 
 --########################
 -- OWN LOGIC
 --########################
+local function CopyArrayAsTable(A)
+    local T = {}
+    if type(A) ~= "userdata" then return T end
+    if A:type() ~= "TArray" then return T end
+    for i = 1, #A do
+        -- Must actually re-create the struct, because it's owned by UE, and can be mutated by the owning array.
+        -- For example, if TArray::Empty is called.
+        T[i] = {KeyName = A[i].KeyName}
+    end
+    return T
+end
+
+local function TableContains(T, V)
+    if type(T) ~= "table" then return false end
+    for i = 1, #T do
+        if T[i] == V then
+            return true
+        end
+    end
+    return false
+end
+
 local function RemapConsoleKeys()
     -- Change console key
     local InputSettings = StaticFindObject("/Script/Engine.Default__InputSettings") ---@cast InputSettings UInputSettings
@@ -34,6 +60,20 @@ local function RemapConsoleKeys()
             end
             if not KeyIsAlreadySet then
                 ConsoleKeys[#ConsoleKeys + 1].KeyName = KeyName
+            end
+        end
+    end
+
+    if #KeysToRemove > 0 then
+        -- Shenanigans required because the Lua API doesn't expose any way of removing elements from arrays.
+        local ConsoleKeysCopy = CopyArrayAsTable(ConsoleKeys)
+        ConsoleKeys:Empty()
+        local NewConsoleArrayCount = 1
+        for i = 1, #ConsoleKeysCopy do
+            local Key = ConsoleKeysCopy[i]
+            if not TableContains(KeysToRemove, Key.KeyName) then
+                ConsoleKeys[NewConsoleArrayCount] = Key
+                NewConsoleArrayCount = NewConsoleArrayCount + 1
             end
         end
     end
