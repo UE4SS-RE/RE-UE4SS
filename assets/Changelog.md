@@ -547,6 +547,8 @@ Fixed UFunction and UClass properly inheriting from UStruct in Lua. ([UE4SS #115
 
 Fixed crash when calling certain functions that take callbacks. ([UE4SS #1299](https://github.com/UE4SS-RE/RE-UE4SS/pull/1299))
 
+Fixed the `GetWorld` function of UObject and AActor crashing if the object was nullptr. ([UE4SS 002bca18](https://github.com/UE4SS-RE/RE-UE4SS/commit/002bca18))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
