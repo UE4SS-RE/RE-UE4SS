@@ -1,24 +1,46 @@
-local UEHelpers = require("UEHelpers")
-
-local VerboseLogging = false
-
-local function Log(Message, OnlyLogIfVerbose)
-    if not VerboseLogging and OnlyLogIfVerbose then return end
-    print("[BPModLoaderMod] " .. Message)
-end
-
+---########################
+--- DEFINITIONS
+---########################
 package.path = '.\\Mods\\ModLoaderMod\\?.lua;' .. package.path
 package.path = '.\\Mods\\ModLoaderMod\\BPMods\\?.lua;' .. package.path
+local UEHelpers = require("UEHelpers")
+local LogID = "BPModLoaderMod"
+
+local VerboseLogging = false
+local SpawnModsOnLuaInit = true -- spawn on lua unit exec? common cause of random crashes (game-specific race?)
+local AssetRegistryHelpers = CreateInvalidObject() ---@cast AssetRegistryHelpers UAssetRegistryHelpers
+local AssetRegistry = CreateInvalidObject() ---@cast AssetRegistry IAssetRegistry
 
 Mods = {}
 local OrderedMods = {}
+local ModOrderList = {} -- contains entries from Mods/BPModLoaderMod/load_order.txt; used for the load order of BP mods.
+local DefaultModConfig = {
+    AssetName = "ModActor_C",
+    AssetNameAsFName = UEHelpers.FindOrAddFName("ModActor_C")
+}
 
--- Contains mod names from Mods/BPModLoaderMod/load_order.txt and is used to determine the load order of BP mods.
-local ModOrderList = {}
 
-local DefaultModConfig = {}
-DefaultModConfig.AssetName = "ModActor_C"
-DefaultModConfig.AssetNameAsFName = UEHelpers.FindOrAddFName("ModActor_C")
+---########################
+--- HELPERS
+---########################
+
+local function Log(Message, OnlyLogIfVerbose)
+    if not VerboseLogging and OnlyLogIfVerbose then return end
+    print(string.format("[%s] %s\n", LogID, Message))
+end
+
+local function LogError(Message)
+    error(string.format("[%s] %s\n", LogID, Message))
+end
+
+--- @return integer
+local function GetModCount()
+    local c = 0
+    for _, ModInfo in ipairs(OrderedMods) do
+        if type(ModInfo) == "table" then c = c + 1 end
+    end
+    return c
+end
 
 -- Checks if the beginning of a string contains a certain pattern.
 local function StartsWith(String, StringToCompare)
@@ -49,6 +71,17 @@ local function LinesFrom(file, ignoreLinesStartingWith)
     return lines
 end
 
+local function LogOrderedMods()
+    for _, v in ipairs(OrderedMods) do
+        Log(string.format("%s == %s", v.Name, v))
+        if type(v) == "table" then
+            for k2, v2 in pairs(v) do
+                Log(string.format("    %s == %s", k2, v2))
+            end
+        end
+    end
+end
+
 -- Loads mod order data from load_order.txt and pushes it into ModOrderList.
 local function LoadModOrder()
     local file = 'Mods/BPModLoaderMod/load_order.txt'
@@ -71,7 +104,7 @@ local function LoadModOrder()
     end
 
     if entriesAdded <= 0 then
-        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order.\n"))
+        Log(string.format("Mods/BPModLoaderMod/load_order.txt not present or no matching mods, loading all BP mods in random order."))
     end
 end
 
@@ -110,24 +143,46 @@ local function SetupModOrder()
     end
 end
 
+local function CacheAssetRegistry()
+    ---@cast AssetRegistryHelpers UObject
+    if (AssetRegistryHelpers:IsValid() and AssetRegistry:IsValid()) then return end
+
+    AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers") --[[@as UObject]]
+    if (AssetRegistryHelpers ~= nil and AssetRegistryHelpers:IsValid()) then
+        ---@cast AssetRegistryHelpers UAssetRegistryHelpers
+        AssetRegistry = AssetRegistryHelpers:GetAssetRegistry() --[[@as IAssetRegistry]]
+    end
+    if not AssetRegistry:IsValid() then
+        print("Failed to fetch AssetRegistry via ARHelpers, falling back to SFO search")
+        AssetRegistry = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryImpl") --[[@as IAssetRegistry]]
+    end
+    if not AssetRegistry:IsValid() then LogError("Unable to continue - failed to validate UE game provides instance of AssetRegistry!") end
+end
+
+---########################
+--- MAIN LOGIC
+---########################
 local function LoadModConfigs()
     -- Load configurations for mods.
     local Dirs = IterateGameDirectories();
-    if not Dirs then
-        error("[BPModLoader] UE4SS does not support loading mods for this game.")
+    if not Dirs or not Dirs.Game.Content.Paks then
+        LogError("UE4SS does not support loading mods for this game.")
     end
     local LogicModsDir = Dirs.Game.Content.Paks.LogicMods
-    if not Dirs then error("[BPModLoader] IterateGameDirectories failed, cannot load BP mod configurations.") end
     if not LogicModsDir then
         CreateLogicModsDirectory();
-        Dirs = IterateGameDirectories();
+        Dirs = IterateGameDirectories(); ---@cast Dirs -nil
         LogicModsDir = Dirs.Game.Content.Paks.LogicMods
-        if not LogicModsDir then error("[BPModLoader] Unable to find or create Content/Paks/LogicMods directory. Try creating manually.") end
+        if not LogicModsDir then
+            LogError("Unable to find or create Content/Paks/LogicMods directory. Try creating manually.")
+        end
+        return
     end
+
     for ModDirectoryName, ModDirectory in pairs(LogicModsDir) do
-        Log(string.format("Mod: %s\n", ModDirectoryName))
+        Log(string.format("Mod: %s", ModDirectoryName))
         for _, ModFile in pairs(ModDirectory.__files) do
-            Log(string.format("    ModFile: %s\n", ModFile.__name))
+            Log(string.format("    ModFile: %s", ModFile.__name))
             if ModFile.__name == "config.lua" then
                 dofile(ModFile.__absolute_path)
                 if type(Mods[ModDirectoryName]) ~= "table" then break end
@@ -163,33 +218,18 @@ local function LoadModConfigs()
     end
 
     LoadModOrder()
-
     SetupModOrder()
 end
 
-LoadModConfigs()
-
-for _, v in ipairs(OrderedMods) do
-    Log(string.format("%s == %s\n", v.Name, v))
-    if type(v) == "table" then
-        for k2, v2 in pairs(v) do
-            Log(string.format("    %s == %s\n", k2, v2))
-        end
-    end
-end
-
-local AssetRegistryHelpers = nil
-local AssetRegistry = nil
-
 local function LoadMod(ModName, ModInfo, World)
     if ModInfo.Priority ~= nil then
-        Log(string.format("Loading mod [Priority: #%i]: %s\n", ModInfo.Priority, ModName))
+        Log(string.format("Loading mod [Priority: #%i]: %s", ModInfo.Priority, ModName))
     else
-        Log(string.format("Loading mod: %s\n", ModName))
+        Log(string.format("Loading mod: %s", ModName))
     end
 
     if ModInfo.AssetPath == nil or ModInfo.AssetPath == nil then
-        Log(string.format("Could not load mod '%s' because it has no asset path or name.\n", ModName))
+        Log(string.format("Could not load mod '%s' because it has no asset path or name.", ModName))
         return
     end
 
@@ -204,57 +244,45 @@ local function LoadMod(ModName, ModInfo, World)
             ["AssetName"] = UEHelpers.FindOrAddFName(ModInfo.AssetName),
         }
     end
+    ---@cast AssetRegistryHelpers UObject
+    if (not AssetRegistryHelpers:IsValid()) then
+        LogError("Unable to continue - AssetRegistryHelpers is invalid")
+    end
 
+    ---@cast AssetRegistryHelpers UAssetRegistryHelpers
     local ModClass = AssetRegistryHelpers:GetAsset(AssetData)
     if not ModClass:IsValid() then
         local ObjectPath = AssetData.ObjectPath and AssetData.ObjectPath:ToString() or ""
         local PackageName = AssetData.PackageName and AssetData.PackageName:ToString() or ""
         local AssetName = AssetData.AssetName and AssetData.AssetName:ToString() or ""
-        Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s\n", ModName, ObjectPath,PackageName, AssetName))
+        Log(string.format("ModClass for '%s' is not valid\nObjectPath: %s\nPackageName: %s\nAssetName: %s", ModName, ObjectPath,PackageName, AssetName))
         return
     end
 
-    if not World then error("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
+    if not World then LogError("A `nil` World parameter was passed to LoadMod function. It's most likely a bug in BPModLoaderMod!") end
     if not World:IsValid() then
-        Log(string.format("World is not valid for '%s' to spawn in\n", ModName))
+        Log(string.format("World is not valid for '%s' to spawn in", ModName))
         return
     end
 
     local Actor = World:SpawnActor(ModClass, {}, {})
     if not Actor:IsValid() then
-        Log(string.format("Actor for mod '%s' is not valid\n", ModName))
+        Log(string.format("Actor for mod '%s' is not valid", ModName))
     else
-        Log(string.format("Actor: %s\n", Actor:GetFullName()))
+        Log(string.format("Actor: %s", Actor:GetFullName()))
         local PreBeginPlay = Actor.PreBeginPlay
         if PreBeginPlay:IsValid() then
-            Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'\n", ModName, Actor:GetFullName()))
+            Log(string.format("Executing 'PreBeginPlay' for mod '%s', with path: '%s'", ModName, Actor:GetFullName()))
             PreBeginPlay()
         else
-            Log(string.format("PreBeginPlay not valid for mod %s\n", ModName), true)
+            Log(string.format("PreBeginPlay not valid for mod %s", ModName), true)
         end
     end
 end
 
-local function CacheAssetRegistry()
-    if AssetRegistryHelpers and AssetRegistry then return end
-
-    AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers")
-    if not AssetRegistryHelpers:IsValid() then Log("AssetRegistryHelpers is not valid\n") end
-
-    if AssetRegistryHelpers then
-        AssetRegistry = AssetRegistryHelpers:GetAssetRegistry()
-        if AssetRegistry:IsValid() then return end
-    end
-
-    AssetRegistry = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryImpl")
-    if AssetRegistry:IsValid() then return end
-
-    error("AssetRegistry is not valid\n")
-end
-
 local function LoadMods(World)
     if not World or not World:IsValid() then
-        Log("[Warning] Invalid UWorld object was passed to LoadMods.\n")
+        Log("Invalid UWorld object was passed to LoadMods.")
         return
     end
 
@@ -266,36 +294,52 @@ local function LoadMods(World)
     end
 end
 
-RegisterKeyBind(Key.INS, function()
-    ExecuteInGameThread(function()
-        LoadMods(UEHelpers.GetWorld())
-    end)
-end)
 
-RegisterBeginPlayPostHook(function(ContextParam)
-    local Context = ContextParam:get()
-    for _, ModConfig in ipairs(OrderedMods) do
-        if Context:GetClass():GetFName() ~= ModConfig.AssetNameAsFName then return end
-        local AssetPathWithClassPrefix = string.format("BlueprintGeneratedClass %s.%s", ModConfig.AssetPath, ModConfig.AssetName)
-        if AssetPathWithClassPrefix == Context:GetClass():GetFullName() then
-            local PostBeginPlay = Context.PostBeginPlay
-            if PostBeginPlay:IsValid() then
-                Log(string.format("Executing 'PostBeginPlay' for mod '%s'\n", Context:GetFullName()))
-                PostBeginPlay()
-            else
-                Log(string.format("PostBeginPlay not valid for mod %s\n", Context:GetFullName()), true)
+---########################
+--- ENTRY POINT
+---########################
+
+LoadModConfigs()
+LogOrderedMods()
+
+--- Only add any hooks if we have at least one valid mod entry that requires the logic below
+if (GetModCount() > 0) then
+    ---ALT+INS to reload mods manually in-game
+    RegisterKeyBind(Key.INS, {ModifierKey.ALT}, function()
+        ExecuteInGameThread(function()
+            LoadMods(UEHelpers.GetWorld())
+        end)
+    end)
+
+    RegisterBeginPlayPostHook(function(ContextParam)
+        local Context = ContextParam:get()
+        for _, ModConfig in ipairs(OrderedMods) do
+            if Context:GetClass():GetFName() ~= ModConfig.AssetNameAsFName then return end
+            local AssetPathWithClassPrefix = string.format("BlueprintGeneratedClass %s.%s", ModConfig.AssetPath, ModConfig.AssetName)
+            if AssetPathWithClassPrefix == Context:GetClass():GetFullName() then
+                local PostBeginPlay = Context.PostBeginPlay
+                if PostBeginPlay:IsValid() then
+                    Log(string.format("Executing 'PostBeginPlay' for mod '%s'", Context:GetFullName()))
+                    PostBeginPlay()
+                else
+                    Log(string.format("PostBeginPlay not valid for mod %s", Context:GetFullName()), true)
+                end
             end
         end
-    end
-end)
+    end)
 
-RegisterLoadMapPostHook(function(Engine, World)
-    LoadMods(World:get())
-end)
+    RegisterLoadMapPostHook(function(Engine, World)
+        LoadMods(World:get())
+    end)
 
-ExecuteInGameThread(function()
-    local ExistingActor = FindFirstOf("Actor")
-    if ExistingActor:IsValid() then
-        LoadMods(ExistingActor:GetWorld())
+    if (SpawnModsOnLuaInit) then
+        ExecuteInGameThread(function()
+            local ExistingActor = FindFirstOf("Actor")
+            if ExistingActor:IsValid() then
+                LoadMods(ExistingActor:GetWorld())
+            end
+        end)
     end
-end)
+else
+    Log(string.format("No PAK mod entries found, skipping hooking the events for this run"), false)
+end
