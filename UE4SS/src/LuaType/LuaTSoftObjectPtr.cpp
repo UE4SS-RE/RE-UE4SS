@@ -60,13 +60,13 @@ namespace RC::LuaType
 
         table.add_pair("GetTagAtLastTest", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<TSoftObjectPtr>();
-            lua.set_integer(lua_object.get_local_cpp_object().TagAtLastTest);
+            lua.set_integer(lua_object.get_local_cpp_object().GetTagAtLastTest());
             return 1;
         });
 
         table.add_pair("GetObjectID", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<TSoftObjectPtr>();
-            FSoftObjectPath::construct(lua, lua_object.get_local_cpp_object().ObjectID);
+            FSoftObjectPath::construct(lua, lua_object.get_local_cpp_object().GetUniqueID());
             return 1;
         });
 
