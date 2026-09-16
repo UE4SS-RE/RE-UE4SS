@@ -66,6 +66,8 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 - Rebuild affected C++ mods against the updated headers; see the [upgrade guide](../docs/upgrade-guide.md#soft-object-pointer-member-variables-replaced-by-accessors)
 - The Lua API is unchanged
 
+Fixed typed `TArray` indexing, searches, construction, copying, removal and destruction for runtime-sized elements, including soft object and class pointers. Types with an integral static `StaticSize()` are detected automatically instead of using a hard-coded type list. Raw C++ array and initializer-list inputs retain their `sizeof(T)` source stride; see the [upgrade guide](../docs/upgrade-guide.md#arrays-of-runtime-sized-types).
+
 **BREAKING:** `FText` no longer exposes the `Data`, `SharedRefCollector`, `Flags` and `Unk` member variables. The layout adapts at runtime (5.4 changed TSharedRef to TRefCountPtr, shrinking FText from 0x18 to 0x10), and copies/destruction now use the engine's own FTextProperty value operations, so FText copies are properly reference counted in every engine version. C++ mods must migrate:
 - `text.Data` -> `text.GetTextData()`
 - `text.Flags` -> `text.GetFlags()`

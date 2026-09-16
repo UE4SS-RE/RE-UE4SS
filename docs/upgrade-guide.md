@@ -278,6 +278,18 @@ SoftPtr.SetTagAtLastTest(0);
 - Copy and assign soft pointers through their C++ operations so the path's `FString` is copied correctly; a byte-wise copy does not establish ownership of the string.
 - Lua's `GetWeakPtr()`, `GetObjectID()` and `GetTagAtLastTest()` methods are unchanged. Lua mods require no migration; `GetTagAtLastTest()` returns zero when the engine has no tag field.
 
+#### Arrays of Runtime-Sized Types
+
+Typed `TArray` operations now use the element's runtime size consistently for indexing, iteration, searching, allocation, construction, copying, removal and destruction. This includes `FSoftObjectPath`, `FSoftObjectPtr`, `TSoftObjectPtr<T>` and `TSoftClassPtr<T>`.
+
+Types exposing an integral static `StaticSize()` are detected through the `HasStaticSize` concept. Other types use `sizeof(T)`. `ArraySizeIsImplicit<T>` remains available and now reflects that detection. A custom runtime-sized type must provide a compatible runtime representation and support byte-wise relocation, as required by Unreal containers.
+
+- Use `Array[Index]`, array iterators and the typed array mutation functions. `Array.GetData()[Index]` and pointer arithmetic on `GetData()` still use C++'s `sizeof(T)` stride.
+- Pass a `TArray` directly to its copy, `Append` and `Insert` overloads. Pointer/count overloads and initializer lists describe native C++ arrays and use `sizeof(T)` for the source stride; they cannot describe a packed engine array when its stride differs.
+- `TArrayView` and external algorithms that treat `GetData()` as a native contiguous array do not gain runtime-stride support. A view of a native C++ array can still be copied into a `TArray`.
+- This change covers heap-backed typed arrays. Inline allocator storage, typed `TMap` pair offsets and typed `TSet`/`TSparseArray` slot layouts require separate handling when element sizes differ from `sizeof(T)`.
+- Rebuild C++ mods against the updated headers. Lua mods require no migration.
+
 #### FText Member Variables Replaced By Accessors
 
 **What Changed:**  
