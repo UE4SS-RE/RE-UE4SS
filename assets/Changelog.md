@@ -569,6 +569,10 @@ Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://git
 
 Fixed `LoadMod` function issue that variables would go out-of-scope in the `ExecuteInGameThread` callback. Instead, `LoadMods` is now always called in a game thread. ([UE4SS #752](https://github.com/UE4SS-RE/RE-UE4SS/pull/752))
 
+### EventViewerMod
+
+Fixed the mod failing on LE421 builds due to plsf being added in 4.22 ([UE4SS #1426](https://github.com/UE4SS-RE/RE-UE4SS/pull/1426)) - Willow
+
 ## Settings 
 
 ### Added 
