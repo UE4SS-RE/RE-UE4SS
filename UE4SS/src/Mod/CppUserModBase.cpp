@@ -18,8 +18,6 @@ namespace RC
         static auto MakeDispatcher() -> ModEventDispatcher*;
 
     public:
-        // Member variables must never be removed or reordered.
-        // You may only add new member variables at the bottom.
         // Members may not use STL types.
         ModEvent_OnUE4SSUpdate on_ue4ss_update{};
         ModEvent_OnUnrealInit on_unreal_init{};
