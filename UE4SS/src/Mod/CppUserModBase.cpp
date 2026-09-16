@@ -1,4 +1,5 @@
 #include <vector>
+#include <unordered_map>
 
 #include <Mod/CppMod.hpp>
 #include <Mod/CppUserModBase.hpp>
@@ -13,9 +14,8 @@ namespace RC
         ModEventDispatcher();
 
     public:
-        // Allocates and returns a ModEventDispatcher.
-        // You must manually free the returned pointer when you're done with it.
-        static auto MakeDispatcher() -> ModEventDispatcher*;
+        // Singleton for retrieving (and lazy-constructing) a ModEventDispatcher for the supplied mod.
+        static auto Get(CppUserModBase*) -> ModEventDispatcher&;
 
     public:
         // Members may not use STL types.
@@ -33,9 +33,11 @@ namespace RC
 
     ModEventDispatcher::ModEventDispatcher() = default;
 
-    auto ModEventDispatcher::MakeDispatcher() -> ModEventDispatcher*
+    auto ModEventDispatcher::Get(CppUserModBase* mod) -> ModEventDispatcher&
     {
-        return new ModEventDispatcher;
+        static std::unordered_map<CppUserModBase*, ModEventDispatcher> s_dispatchers{};
+        auto [it, _] = s_dispatchers.try_emplace(mod, ModEventDispatcher{});
+        return it->second;
     }
 
     CppUserModBase::CppUserModBase()
@@ -44,7 +46,6 @@ namespace RC
         {
             ModIntendedSDKVersion = fmt::format(STR("{}.{}.{}"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX);
         }
-        EventDispatcher = ModEventDispatcher::MakeDispatcher();
     }
 
     CppUserModBase::~CppUserModBase()
@@ -57,11 +58,6 @@ namespace RC
             }
         }
         GUITabs.clear();
-        if (EventDispatcher)
-        {
-            delete EventDispatcher;
-            EventDispatcher = nullptr;
-        }
 
 #ifdef HAS_INPUT
         UE4SSProgram::get_program().m_input_handler.get_events_safe([&](auto& key_set) {
@@ -111,136 +107,146 @@ namespace RC
 
     auto CppUserModBase::register_on_ue4ss_update(ModEvent_OnUE4SSUpdate func) -> void
     {
-        EventDispatcher->on_ue4ss_update = func;
+        ModEventDispatcher::Get(this).on_ue4ss_update = func;
     }
 
     auto CppUserModBase::register_on_unreal_init(ModEvent_OnUnrealInit func) -> void
     {
-        EventDispatcher->on_unreal_init = func;
+        ModEventDispatcher::Get(this).on_unreal_init = func;
     }
 
     auto CppUserModBase::register_on_ui_init(ModEvent_OnUIInit func) -> void
     {
-        EventDispatcher->on_ui_init = func;
+        ModEventDispatcher::Get(this).on_ui_init = func;
     }
 
     auto CppUserModBase::register_on_program_start(ModEvent_OnProgramStart func) -> void
     {
-        EventDispatcher->on_program_start = func;
+        ModEventDispatcher::Get(this).on_program_start = func;
     }
 
     auto CppUserModBase::register_on_dll_load(ModEvent_OnDllLoad func) -> void
     {
-        EventDispatcher->on_dll_load = func;
+        ModEventDispatcher::Get(this).on_dll_load = func;
     }
 
     auto CppUserModBase::register_on_lua_start(ModEvent_OnLuaStart func) -> void
     {
-        EventDispatcher->on_lua_start = func;
+        ModEventDispatcher::Get(this).on_lua_start = func;
     }
 
     auto CppUserModBase::register_on_lua_start(ModEvent_OnLuaStartSelf func) -> void
     {
-        EventDispatcher->on_lua_start_self = func;
+        ModEventDispatcher::Get(this).on_lua_start_self = func;
     }
 
     auto CppUserModBase::register_on_lua_stop(ModEvent_OnLuaStop func) -> void
     {
-        EventDispatcher->on_lua_stop = func;
+        ModEventDispatcher::Get(this).on_lua_stop = func;
     }
 
     auto CppUserModBase::register_on_lua_stop(ModEvent_OnLuaStopSelf func) -> void
     {
-        EventDispatcher->on_lua_stop_self = func;
+        ModEventDispatcher::Get(this).on_lua_stop_self = func;
     }
 
     auto CppUserModBase::register_on_all_cpp_mods_loaded(ModEvent_OnAllCppModsLoaded func) -> void
     {
-        EventDispatcher->on_all_cpp_mods_loaded = func;
+        ModEventDispatcher::Get(this).on_all_cpp_mods_loaded = func;
     }
 
     auto CppUserModBase::dispatch_on_ue4ss_update() -> void
     {
-        if (EventDispatcher && EventDispatcher->on_ue4ss_update)
+        const auto func = ModEventDispatcher::Get(this).on_ue4ss_update;
+        if (func)
         {
-            EventDispatcher->on_ue4ss_update(this);
+            func(this);
         }
     }
 
     auto CppUserModBase::dispatch_on_unreal_init() -> void
     {
-        if (EventDispatcher && EventDispatcher->on_unreal_init)
+        const auto func = ModEventDispatcher::Get(this).on_unreal_init;
+        if (func)
         {
-            EventDispatcher->on_unreal_init(this);
+            func(this);
         }
     }
 
     auto CppUserModBase::dispatch_on_ui_init() -> void
     {
-        if (EventDispatcher && EventDispatcher->on_ui_init)
+        const auto func = ModEventDispatcher::Get(this).on_ui_init;
+        if (func)
         {
-            EventDispatcher->on_ui_init(this);
+            func(this);
         }
     }
 
     auto CppUserModBase::dispatch_on_program_start() -> void
     {
-        if (EventDispatcher && EventDispatcher->on_program_start)
+        const auto func = ModEventDispatcher::Get(this).on_program_start;
+        if (func)
         {
-            EventDispatcher->on_program_start(this);
+            func(this);
         }
     }
 
     auto CppUserModBase::dispatch_on_dll_load(StringViewType dll_name) -> void
     {
-        if (EventDispatcher && EventDispatcher->on_dll_load)
+        const auto func = ModEventDispatcher::Get(this).on_dll_load;
+        if (func)
         {
-            EventDispatcher->on_dll_load(this, dll_name);
+            func(this, dll_name);
         }
     }
 
     auto CppUserModBase::dispatch_on_lua_start(
             StringViewType mod_name, LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void
     {
-        if (EventDispatcher && EventDispatcher->on_lua_start)
+        const auto func = ModEventDispatcher::Get(this).on_lua_start;
+        if (func)
         {
-            EventDispatcher->on_lua_start(this, mod_name, lua, main_lua, async_lua, hook_lua);
+            func(this, mod_name, lua, main_lua, async_lua, hook_lua);
         }
     }
 
     auto CppUserModBase::dispatch_on_lua_start(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua)
             -> void
     {
-        if (EventDispatcher && EventDispatcher->on_lua_start_self)
+        const auto func = ModEventDispatcher::Get(this).on_lua_start_self;
+        if (func)
         {
-            EventDispatcher->on_lua_start_self(this, lua, main_lua, async_lua, hook_lua);
+            func(this, lua, main_lua, async_lua, hook_lua);
         }
     }
 
     auto CppUserModBase::dispatch_on_lua_stop(
             StringViewType mod_name, LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void
     {
-        if (EventDispatcher && EventDispatcher->on_lua_stop)
+        const auto func = ModEventDispatcher::Get(this).on_lua_stop;
+        if (func)
         {
-            EventDispatcher->on_lua_stop(this, mod_name, lua, main_lua, async_lua, hook_lua);
+            func(this, mod_name, lua, main_lua, async_lua, hook_lua);
         }
     }
 
     auto CppUserModBase::dispatch_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua)
             -> void
     {
-        if (EventDispatcher && EventDispatcher->on_lua_stop_self)
+        const auto func = ModEventDispatcher::Get(this).on_lua_stop_self;
+        if (func)
         {
-            EventDispatcher->on_lua_stop_self(this, lua, main_lua, async_lua, hook_lua);
+            func(this, lua, main_lua, async_lua, hook_lua);
         }
     }
 
     auto CppUserModBase::dispatch_on_all_cpp_mods_loaded()
             -> void
     {
-        if (EventDispatcher && EventDispatcher->on_all_cpp_mods_loaded)
+        const auto func = ModEventDispatcher::Get(this).on_all_cpp_mods_loaded;
+        if (func)
         {
-            EventDispatcher->on_all_cpp_mods_loaded(this);
+            func(this);
         }
     }
 } // namespace RC

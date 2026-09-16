@@ -53,8 +53,6 @@ namespace RC
         StringType ModAuthors{};
         StringType ModIntendedSDKVersion{};
 
-        ModEventDispatcher* EventDispatcher{};
-
       public:
         RC_UE4SS_API CppUserModBase();
         RC_UE4SS_API virtual ~CppUserModBase();
