@@ -5894,10 +5894,25 @@ Overloads:
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
             {
+                const auto user_mod = cpp_mod->get_user_mod();
                 if (mod->get_name() == get_name())
                 {
+                    if (user_mod)
+                    {
+                        user_mod->dispatch_on_lua_start(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+                    }
+                    // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+                    //       These old virtuals must still be called in order to keep old mods working.
+                    //       Removing these virtual calls breaks both ABI and API.
                     cpp_mod->fire_on_lua_start(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
                 }
+                if (user_mod)
+                {
+                    user_mod->dispatch_on_lua_start(get_name(), m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+                }
+                // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+                //       These old virtuals must still be called in order to keep old mods working.
+                //       Removing these virtual calls breaks both ABI and API.
                 cpp_mod->fire_on_lua_start(get_name(), m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
             }
         }
@@ -5914,10 +5929,25 @@ Overloads:
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod && mod->is_started())
             {
+                const auto user_mod = cpp_mod->get_user_mod();
                 if (mod->get_name() == get_name())
                 {
+                    if (user_mod)
+                    {
+                        user_mod->dispatch_on_lua_stop(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+                    }
+                    // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+                    //       These old virtuals must still be called in order to keep old mods working.
+                    //       Removing these virtual calls breaks both ABI and API.
                     cpp_mod->fire_on_lua_stop(m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
                 }
+                if (user_mod)
+                {
+                    user_mod->dispatch_on_lua_stop(get_name(), m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
+                }
+                // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+                //       These old virtuals must still be called in order to keep old mods working.
+                //       Removing these virtual calls breaks both ABI and API.
                 cpp_mod->fire_on_lua_stop(get_name(), m_lua, *m_main_lua, *m_async_lua, m_hook_lua);
             }
         }

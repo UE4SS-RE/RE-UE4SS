@@ -26,6 +26,19 @@ namespace RC
         class Lua;
     }
 
+    using ModEvent_OnUE4SSUpdate = void(*)(class CppUserModBase*);
+    using ModEvent_OnUnrealInit = void(*)(class CppUserModBase*);
+    using ModEvent_OnUIInit = void(*)(class CppUserModBase*);
+    using ModEvent_OnProgramStart = void(*)(class CppUserModBase*);
+    using ModEvent_OnDllLoad = void(*)(class CppUserModBase*, StringViewType);
+    using ModEvent_OnLuaStart = void(*)(class CppUserModBase*, StringViewType, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
+    using ModEvent_OnLuaStartSelf = void(*)(class CppUserModBase*, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
+    using ModEvent_OnLuaStop = void(*)(class CppUserModBase*, StringViewType, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
+    using ModEvent_OnLuaStopSelf = void(*)(class CppUserModBase*, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
+    using ModEvent_OnAllCppModsLoaded = void(*)(class CppUserModBase*);
+
+    class ModEventDispatcher;
+
     // When making C++ mods, keep in mind that they will break if UE4SS and the mod don't use the same C Runtime library version
     // This includes them being compiled in different configurations (Debug/Release).
     class CppUserModBase
@@ -39,6 +52,8 @@ namespace RC
         StringType ModDescription{};
         StringType ModAuthors{};
         StringType ModIntendedSDKVersion{};
+
+        ModEventDispatcher* EventDispatcher{};
 
       public:
         RC_UE4SS_API CppUserModBase();
@@ -215,5 +230,31 @@ namespace RC
                                                  const Input::Handler::ModifierKeyArray&,
                                                  const Input::EventCallbackCallable&,
                                                  uint8_t custom_data = 0) -> void;
+
+        // Mod event dispatch registration.
+        // Call in your mod constructor.
+        RC_UE4SS_API auto register_on_ue4ss_update(ModEvent_OnUE4SSUpdate) -> void;
+        RC_UE4SS_API auto register_on_unreal_init(ModEvent_OnUnrealInit) -> void;
+        RC_UE4SS_API auto register_on_ui_init(ModEvent_OnUIInit) -> void;
+        RC_UE4SS_API auto register_on_program_start(ModEvent_OnProgramStart) -> void;
+        RC_UE4SS_API auto register_on_dll_load(ModEvent_OnDllLoad) -> void;
+        RC_UE4SS_API auto register_on_lua_start(ModEvent_OnLuaStart) -> void;
+        RC_UE4SS_API auto register_on_lua_start(ModEvent_OnLuaStartSelf) -> void;
+        RC_UE4SS_API auto register_on_lua_stop(ModEvent_OnLuaStop) -> void;
+        RC_UE4SS_API auto register_on_lua_stop(ModEvent_OnLuaStopSelf) -> void;
+        RC_UE4SS_API auto register_on_all_cpp_mods_loaded(ModEvent_OnAllCppModsLoaded) -> void;
+
+    public:
+        // Do not call! These functions are used internally to dispatch callbacks, for example on_unreal_init.
+        auto dispatch_on_ue4ss_update() -> void;
+        auto dispatch_on_unreal_init() -> void;
+        auto dispatch_on_ui_init() -> void;
+        auto dispatch_on_program_start() -> void;
+        auto dispatch_on_dll_load(StringViewType) -> void;
+        auto dispatch_on_lua_start(StringViewType, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*) -> void;
+        auto dispatch_on_lua_start(LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*) -> void;
+        auto dispatch_on_lua_stop(StringViewType, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*) -> void;
+        auto dispatch_on_lua_stop(LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*) -> void;
+        auto dispatch_on_all_cpp_mods_loaded() -> void;
     };
 } // namespace RC
