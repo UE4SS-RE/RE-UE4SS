@@ -2670,6 +2670,7 @@ Overloads:
 
             std::function<void(const std::filesystem::path&, LuaMadeSimple::Lua::Table&, size_t)> iterate_directory =
                     [&](const std::filesystem::path& directory, LuaMadeSimple::Lua::Table& current_directory_table, size_t depth) {
+                        const int directory_stack_top = lua_gettop(lua.get_lua_state());
                         try
                         {
                             if (!lua_checkstack(lua.get_lua_state(), lua_stack_slots_per_level))
@@ -2722,6 +2723,7 @@ Overloads:
                                         following_link = true;
                                     }
 
+                                    const int entry_stack_top = lua_gettop(lua.get_lua_state());
                                     try
                                     {
                                         auto path = item.path().filename();
@@ -2747,6 +2749,8 @@ Overloads:
                                     }
                                     catch (const std::exception& e)
                                     {
+                                        // Discard an unfinished key/table pair before continuing with siblings.
+                                        lua_settop(lua.get_lua_state(), entry_stack_top);
                                         Output::send<LogLevel::Error>(STR("Error processing directory entry: {}\n"), to_wstring(e.what()));
                                     }
 
@@ -2952,6 +2956,7 @@ Overloads:
                         }
                         catch (const std::exception& e)
                         {
+                            lua_settop(lua.get_lua_state(), directory_stack_top);
                             Output::send<LogLevel::Error>(STR("Exception in iterate_directory: {}\n"), to_wstring(e.what()));
                         }
                     };
