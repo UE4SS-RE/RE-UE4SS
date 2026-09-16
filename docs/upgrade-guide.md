@@ -237,6 +237,47 @@ FTopLevelAssetPath AssetPath = Path.GetAssetPath();
 - `TArray<FSoftObjectPath>` now strides by the runtime size (`FSoftObjectPath::StaticSize()`), fixing element access on 5.1+ and case-preserving builds.
 - The Lua API (`GetAssetPathName()`, `GetSubPathString()`) is unchanged; Lua mods are unaffected.
 
+#### Soft Object Pointer Member Variables Replaced By Accessors
+
+**What Changed:**
+
+`FSoftObjectPtr` and its `TPersistentObjectPtr<FSoftObjectPath>` base no longer expose `ObjectID` and `TagAtLastTest` as member variables. Their layout is resolved from the engine's reflected soft object/class property size, with an engine-version fallback when reflection is unavailable. This also applies to the storage inside `TSoftObjectPtr<T>` and `TSoftClassPtr<T>`.
+
+UE 5.3 removed `TagAtLastTest`, moving `ObjectID` from offset `0x10` to `0x08`. This is separate from the UE 5.1 `FSoftObjectPath` change described above. Reading the path at the old offset could interpret string length and capacity as a pointer, causing the crash reported in [issue #1433](https://github.com/UE4SS-RE/RE-UE4SS/issues/1433) when `FUObjectArray::AllocateSerialNumber` converted an object to a soft reference.
+
+**Before (v3.x / earlier experimental builds):**
+
+```cpp
+FSoftObjectPtr SoftPtr;
+FSoftObjectPath& Path = SoftPtr.ObjectID;
+int32 Tag = SoftPtr.TagAtLastTest;
+SoftPtr.TagAtLastTest = 0;
+```
+
+**After (v4.x):**
+
+```cpp
+FSoftObjectPtr SoftPtr;
+FSoftObjectPath& Path = SoftPtr.GetUniqueID();
+int32 Tag = SoftPtr.GetTagAtLastTest();
+SoftPtr.SetTagAtLastTest(0);
+```
+
+**Migration Steps:**
+
+1. Replace direct `ObjectID` access with `GetUniqueID()`. Const and non-const overloads return references.
+2. Replace tag reads with `GetTagAtLastTest()` and writes with `SetTagAtLastTest(value)`.
+3. When replacing a path, prefer `SoftPtr = NewPath`, which also resets the cached weak pointer. If you modify the path through the non-const `GetUniqueID()` reference, call `ResetWeakPtr()` afterward.
+4. For manual traversal of engine-owned memory, use `FSoftObjectPtr::StaticSize()`, `TSoftObjectPtr<T>::StaticSize()` or `TSoftClassPtr<T>::StaticSize()` instead of `sizeof` or a hard-coded stride. `sizeof` includes storage for the largest supported layout and remains the size to use for locally allocated C++ objects.
+5. Rebuild affected C++ mods against the updated UE4SS headers and libraries.
+
+**Important Notes:**
+
+- On engines without the tag field, `GetTagAtLastTest()` returns zero and `SetTagAtLastTest()` has no effect.
+- `WeakPtr` remains accessible. Existing `TSoftObjectPtr<T>` and `TSoftClassPtr<T>` methods such as `Get()`, `Reset()` and `ToSoftObjectPath()` remain available.
+- Copy and assign soft pointers through their C++ operations so the path's `FString` is copied correctly; a byte-wise copy does not establish ownership of the string.
+- Lua's `GetWeakPtr()`, `GetObjectID()` and `GetTagAtLastTest()` methods are unchanged. Lua mods require no migration; `GetTagAtLastTest()` returns zero when the engine has no tag field.
+
 #### FText Member Variables Replaced By Accessors
 
 **What Changed:**  

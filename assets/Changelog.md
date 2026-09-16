@@ -58,6 +58,14 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 - `path.SubPathString` -> `path.GetSubPathString()` (non-const overload available for assignment)
 - Lua mods are unaffected; the Lua API is unchanged
 
+**BREAKING:** `FSoftObjectPtr` (and its `TPersistentObjectPtr<FSoftObjectPath>` base) no longer exposes the `ObjectID` and `TagAtLastTest` member variables. Soft object and class pointers now resolve their layout at runtime, accounting for UE 5.3 removing `TagAtLastTest`. C++ mods must migrate:
+
+- `ptr.ObjectID` -> `ptr.GetUniqueID()` (const and non-const reference overloads)
+- `ptr.TagAtLastTest` -> `ptr.GetTagAtLastTest()` for reads, `ptr.SetTagAtLastTest(value)` for writes; engines without the field return zero and ignore writes
+- Use `FSoftObjectPtr::StaticSize()`, `TSoftObjectPtr<T>::StaticSize()` or `TSoftClassPtr<T>::StaticSize()` when calculating strides through engine memory
+- Rebuild affected C++ mods against the updated headers; see the [upgrade guide](../docs/upgrade-guide.md#soft-object-pointer-member-variables-replaced-by-accessors)
+- The Lua API is unchanged
+
 **BREAKING:** `FText` no longer exposes the `Data`, `SharedRefCollector`, `Flags` and `Unk` member variables. The layout adapts at runtime (5.4 changed TSharedRef to TRefCountPtr, shrinking FText from 0x18 to 0x10), and copies/destruction now use the engine's own FTextProperty value operations, so FText copies are properly reference counted in every engine version. C++ mods must migrate:
 - `text.Data` -> `text.GetTextData()`
 - `text.Flags` -> `text.GetFlags()`
@@ -432,6 +440,8 @@ Switch to xmake from cmake which makes building much more streamlined ([UE4SS #3
 
 ### General 
 Fixed proxy injection incorrectly running UE4SS initialization inside the loader lock when the main thread was the first thread snapshot entry.
+
+Fixed a crash in `FUObjectArray::AllocateSerialNumber` when assigning an object without a serial number to an `FWeakObjectPtr` on UE 5.3+ (reported on UE 5.4.3). Soft pointer copies now use the runtime `ObjectID` offset, including in Kismet object/class reference conversions and Lua soft-property access. ([UE4SS #1433](https://github.com/UE4SS-RE/RE-UE4SS/issues/1433))
 
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
