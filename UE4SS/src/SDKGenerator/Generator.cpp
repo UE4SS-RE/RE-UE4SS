@@ -475,7 +475,7 @@ namespace RC::UEGenerator
 
             for (const auto& elem : uenum->ForEachName())
             {
-                auto enum_value_full_name = elem.Key.ToString();
+                auto enum_value_full_name = elem.Get<0>().ToString();
                 size_t colon_pos = enum_value_full_name.rfind(STR(":"));
                 auto enum_value_name = colon_pos == enum_value_full_name.npos ? enum_value_full_name : enum_value_full_name.substr(colon_pos + 1);
 
@@ -699,7 +699,7 @@ namespace RC::UEGenerator
                                               generate_tab(),
                                               uenum->GetCppForm() == UEnum::ECppForm::Namespaced ? generate_tab() : STR(""),
                                               enum_value_name,
-                                              elem.Value));
+                                              elem.Get<1>()));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {
@@ -1087,7 +1087,7 @@ namespace RC::UEGenerator
         }
         auto generate_enum_member(File::StringType& content_buffer, UEnum* uenum, const File::StringType& enum_value_name, const Unreal::FEnumNamePair& elem) -> void
         {
-            content_buffer.append(fmt::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Value));
+            content_buffer.append(fmt::format(STR("{}{} = {},\n"), generate_tab(), enum_value_name, elem.Get<1>()));
         }
         auto generate_enum_end(File::StringType& content_buffer, UEnum* uenum) -> void
         {

@@ -269,7 +269,7 @@ namespace RC::ObjectDumper
 
         for (auto& Elem : typed_this->ForEachName())
         {
-            out_line.append(fmt::format(STR("\n[{:016X}] {} [n: {:X}] [v: {}]"), 0, Elem.Key.ToString(), Elem.Key.GetComparisonIndex().ToUnstableInt(), Elem.Value));
+            out_line.append(fmt::format(STR("\n[{:016X}] {} [n: {:X}] [v: {}]"), 0, Elem.Get<0>().ToString(), Elem.Get<0>().GetComparisonIndex().ToUnstableInt(), Elem.Get<1>()));
         }
     }
 

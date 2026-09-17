@@ -287,8 +287,34 @@ Types exposing an integral static `StaticSize()` are detected through the `HasSt
 - Use `Array[Index]`, array iterators and the typed array mutation functions. `Array.GetData()[Index]` and pointer arithmetic on `GetData()` still use C++'s `sizeof(T)` stride.
 - Pass a `TArray` directly to its copy, `Append` and `Insert` overloads. Pointer/count overloads and initializer lists describe native C++ arrays and use `sizeof(T)` for the source stride; they cannot describe a packed engine array when its stride differs.
 - `TArrayView` and external algorithms that treat `GetData()` as a native contiguous array do not gain runtime-stride support. A view of a native C++ array can still be copied into a `TArray`.
-- This change covers heap-backed typed arrays. Inline allocator storage, typed `TMap` pair offsets and typed `TSet`/`TSparseArray` slot layouts require separate handling when element sizes differ from `sizeof(T)`.
+- This change covers heap-backed typed arrays. Inline element storage requires separate handling when element sizes differ from `sizeof(T)`.
 - Rebuild C++ mods against the updated headers. Lua mods require no migration.
+
+#### Maps and Sets of Runtime-Sized Types
+
+Heap-backed `TMap`, `TMultiMap`, `TSet` and their `TSparseArray` storage now account for runtime element sizes and alignment. Map value offsets, set hash links and sparse-array strides follow the same layout rules as `FScriptMap` and `FScriptSet`. Construction, copying, removal, compaction and sorting preserve ownership of runtime-sized values.
+
+**Breaking change:** `TPair<Key, Value>` (the two-element `TTuple`) uses runtime storage when either non-reference member exposes `StaticSize()`. Such pairs no longer expose `.Key` and `.Value`. This also affects pairs returned by enum APIs, such as `TPair<FName, int64>`.
+
+```cpp
+// Before
+for (const auto& Pair : Map)
+{
+    Use(Pair.Key, Pair.Value);
+}
+
+// After: Get<0>() returns the key; Get<1>() returns the value.
+for (const auto& Pair : Map)
+{
+    Use(Pair.Get<0>(), Pair.Get<1>());
+}
+```
+
+Structured bindings and map iterator `Key()`/`Value()` accessors remain available. Fixed-size pairs retain their fields and also support `Get<0>()`/`Get<1>()`. In templates where the pair type is dependent, use `Pair.template Get<0>()` and `Pair.template Get<1>()`.
+
+Use typed insertion methods such as `Add` and `Emplace`. Placement `new` into a raw `TSparseArray::AddUninitialized()` allocation is unsuitable when a constructor writes `sizeof(T)` bytes into a smaller runtime slot. Low-level users of runtime-sized `TSetElement<T>` must use `GetValue()`, `GetHashNextId()` and `GetHashIndex()` instead of direct field access.
+
+Inline element allocators are not covered. Rebuild C++ mods against the updated headers and libraries; Lua APIs are unchanged.
 
 #### FText Member Variables Replaced By Accessors
 

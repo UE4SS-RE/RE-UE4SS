@@ -1514,8 +1514,8 @@ namespace RC::LuaType
 
             for (const auto& elem : enum_ptr->ForEachName())
             {
-                std::string elem_name = to_string(elem.Key.ToString());
-                table.add_pair(elem_name.c_str(), elem.Value);
+                std::string elem_name = to_string(elem.Get<0>().ToString());
+                table.add_pair(elem_name.c_str(), elem.Get<1>());
             }
 
             // TODO: Optimize this... it'll probably do a dynamic allocation here in order to fit the new beginning of the string

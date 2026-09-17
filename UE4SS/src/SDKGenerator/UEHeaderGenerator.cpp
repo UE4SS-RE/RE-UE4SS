@@ -3393,7 +3393,7 @@ namespace RC::UEGenerator
 
             if (Enum != NULL)
             {
-                const int64_t first_enum_constant_value = Enum->GetEnumNameByIndex(0).Value;
+                const int64_t first_enum_constant_value = Enum->GetEnumNameByIndex(0).Get<1>();
                 return generate_enum_value(Enum, first_enum_constant_value);
             }
             return STR("0");
@@ -3409,7 +3409,7 @@ namespace RC::UEGenerator
             {
                 throw std::runtime_error(RC::fmt("EnumProperty %S does not have a valid Enum value", property->GetName().c_str()));
             }
-            const int64_t first_enum_constant_value = uenum->GetEnumNameByIndex(0).Value;
+            const int64_t first_enum_constant_value = uenum->GetEnumNameByIndex(0).Get<1>();
             return generate_enum_value(uenum, first_enum_constant_value);
         }
 

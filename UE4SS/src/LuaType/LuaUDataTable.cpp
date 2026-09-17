@@ -108,12 +108,12 @@ namespace RC::LuaType
                            for (const auto& Pair : row_map)
                            {
                                // Use row name as key
-                               lua_table.add_key(to_string(Pair.Key.ToString()).c_str());
+                               lua_table.add_key(to_string(Pair.Get<0>().ToString()).c_str());
 
                                // Create UScriptStruct wrapper for reference-based access
                                ScriptStructWrapper row_wrapper{
                                        .script_struct = row_struct,
-                                       .start_of_struct = Pair.Value,
+                                       .start_of_struct = Pair.Get<1>(),
                                        .property = nullptr
                                };
                                UScriptStruct::construct(lua, row_wrapper);
@@ -182,12 +182,12 @@ namespace RC::LuaType
                                lua_pushvalue(lua.get_lua_state(), 1);
 
                                // Push row name as first parameter
-                               lua.set_string(to_string(Pair.Key.ToString()));
+                               lua.set_string(to_string(Pair.Get<0>().ToString()));
 
                                // Push row data as second parameter (as UScriptStruct for reference-based access)
                                ScriptStructWrapper row_wrapper{
                                        .script_struct = info.row_struct,
-                                       .start_of_struct = Pair.Value,
+                                       .start_of_struct = Pair.Get<1>(),
                                        .property = nullptr
                                };
                                UScriptStruct::construct(lua, row_wrapper);
@@ -373,7 +373,7 @@ namespace RC::LuaType
 
                 // Add row name
                 row_table.add_key("Name");
-                lua.set_string(to_string(Pair.Key.ToString()));
+                lua.set_string(to_string(Pair.Get<0>().ToString()));
                 row_table.fuse_pair();
 
                 // Add row data
@@ -383,7 +383,7 @@ namespace RC::LuaType
                 // Create UScriptStruct wrapper for reference-based access
                 ScriptStructWrapper row_wrapper{
                         .script_struct = info.row_struct,
-                        .start_of_struct = Pair.Value,
+                        .start_of_struct = Pair.Get<1>(),
                         .property = nullptr
                 };
                 UScriptStruct::construct(lua, row_wrapper);

@@ -124,8 +124,8 @@ Overloads:
             auto value = lua.get_integer();
             auto enum_pair = lua_object.get_remote_cpp_object()->GetEnumNameByIndex(value);
 
-            LuaType::FName::construct(lua, enum_pair.Key);
-            lua.set_integer(enum_pair.Value);
+            LuaType::FName::construct(lua, enum_pair.Get<0>());
+            lua.set_integer(enum_pair.Get<1>());
 
             return 2;
         });

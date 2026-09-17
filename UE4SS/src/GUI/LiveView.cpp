@@ -1529,7 +1529,7 @@ namespace RC::GUI
             uint8 enum_index{};
             for (const auto& [key_value_pair, index] : uenum->ForEachName() | views::enumerate)
             {
-                if (key_value_pair.Value == value_raw)
+                if (key_value_pair.Get<1>() == value_raw)
                 {
                     enum_index = index;
                     break;
@@ -1630,11 +1630,11 @@ namespace RC::GUI
 
         for (const auto name : names)
         {
-            auto enum_name = name.Key.ToString();
+            auto enum_name = name.Get<0>().ToString();
             StringType enum_friendly_name = STR("Unable to Display Friendly Name with GUI Outside of Gamethread.");
             if (UE4SSProgram::settings_manager.Debug.RenderMode != RenderMode::ExternalThread)
             {
-                enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, name.Value);
+                enum_friendly_name = UKismetNodeHelperLibrary::GetEnumeratorUserFriendlyName(uenum, name.Get<1>());
             }
 
             ImGui::TableNextRow();
@@ -1663,12 +1663,12 @@ namespace RC::GUI
             ImGui::Text("%S", enum_friendly_name.c_str());
 
             ImGui::TableNextColumn();
-            ImGui::Text("%lld", name.Value);
-            if (ImGui::BeginPopupContextItem(to_string(fmt::format(STR("context-menu-{}-{}"), enum_name, name.Value)).c_str()))
+            ImGui::Text("%lld", name.Get<1>());
+            if (ImGui::BeginPopupContextItem(to_string(fmt::format(STR("context-menu-{}-{}"), enum_name, name.Get<1>())).c_str()))
             {
                 if (ImGui::MenuItem("Copy value"))
                 {
-                    ImGui::SetClipboardText(std::to_string(name.Value).c_str());
+                    ImGui::SetClipboardText(std::to_string(name.Get<1>()).c_str());
                 }
                 if (ImGui::MenuItem("Edit value"))
                 {
@@ -1694,11 +1694,11 @@ namespace RC::GUI
             }
             ImGui::PopID();
 
-            std::string edit_enum_name_modal_name = to_string(fmt::format(STR("Edit enum name for: {}"), name.Key.ToString()));
+            std::string edit_enum_name_modal_name = to_string(fmt::format(STR("Edit enum name for: {}"), name.Get<0>().ToString()));
 
-            std::string edit_enum_value_modal_name = to_string(fmt::format(STR("Edit enum value for: {}"), name.Key.ToString()));
+            std::string edit_enum_value_modal_name = to_string(fmt::format(STR("Edit enum value for: {}"), name.Get<0>().ToString()));
 
-            std::string add_enum_name_modal_name = to_string(fmt::format(STR("Enter new enum name after: {}"), name.Key.ToString()));
+            std::string add_enum_name_modal_name = to_string(fmt::format(STR("Enter new enum name after: {}"), name.Get<0>().ToString()));
 
             if (open_edit_name_popup)
             {
@@ -1744,7 +1744,7 @@ namespace RC::GUI
                 if (!m_modal_edit_property_value_opened_this_frame)
                 {
                     m_modal_edit_property_value_opened_this_frame = true;
-                    m_current_enum_value_buffer = name.Value;
+                    m_current_enum_value_buffer = name.Get<1>();
                 }
             }
 
@@ -2680,7 +2680,7 @@ namespace RC::GUI
                     auto new_name = ensure_str(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
                     uenum->EditNameAt(index, new_key);
-                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
+                    if (uenum->GetEnumNames()[index].Get<0>().ToString() != new_name)
                     {
                         m_modal_edit_property_value_error_unable_to_edit = true;
                         ImGui::OpenPopup("UnableToSetNewEnumNameError");
@@ -2718,7 +2718,7 @@ namespace RC::GUI
                     int64_t new_value = m_current_enum_value_buffer;
                     uenum->EditValueAt(index, new_value);
 
-                    if (uenum->GetEnumNames()[index].Value != new_value)
+                    if (uenum->GetEnumNames()[index].Get<1>() != new_value)
                     {
                         m_modal_edit_property_value_error_unable_to_edit = true;
                         ImGui::OpenPopup("UnableToSetNewEnumValueError");
@@ -2756,12 +2756,12 @@ namespace RC::GUI
                     FOutputDevice placeholder_device{};
                     auto new_name = ensure_str(m_current_property_value_buffer);
                     FName new_key = FName(new_name, FNAME_Add);
-                    int64 value = uenum->GetEnumNames()[index].Value;
+                    int64 value = uenum->GetEnumNames()[index].Get<1>();
 
                     // NOTE: Explicitly giving specifying template params for TPair because Clang can't handle TPair being a templated using statement.
                     uenum->InsertIntoNames(TPair<decltype(new_key), decltype(value)>{new_key, value}, index, true);
 
-                    if (uenum->GetEnumNames()[index].Key.ToString() != new_name)
+                    if (uenum->GetEnumNames()[index].Get<0>().ToString() != new_name)
                     {
                         m_modal_edit_property_value_error_unable_to_edit = true;
                         ImGui::OpenPopup("UnableToAddNewEnumNameError");
