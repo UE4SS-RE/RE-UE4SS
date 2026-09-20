@@ -37,7 +37,7 @@ jobs:
       matrix: ${{ steps.calculate-modes.outputs.matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.UEPSEUDO_PAT }}
           # Note: We don't need submodules for this job - only reading ProjectConfig.cmake
