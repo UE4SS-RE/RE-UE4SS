@@ -177,6 +177,11 @@ namespace RC
                         lua_fnc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
+                            if (!address)
+                            {
+                                scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' returned an address of 0 for FName::FName.");
+                                return DidLuaScanSucceed::No;
+                            }
                             if (!Unreal::UEngine::TickInternal.is_ready())
                             {
                                 scan_result.Errors.emplace_back("UGameEngine::Tick is a requirement when FName_Constructor.lua is present!\n"
