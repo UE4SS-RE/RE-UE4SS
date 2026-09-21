@@ -9,7 +9,7 @@
 
 namespace RC
 {
-    struct RC_UE4SS_API CString
+    struct RC_UE4SS_API CStringView
     {
         const CharType* data{};
         size_t size{};

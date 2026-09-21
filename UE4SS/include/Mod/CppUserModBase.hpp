@@ -31,10 +31,10 @@ namespace RC
     using ModEvent_OnUnrealInit = void(*)(class CppUserModBase*);
     using ModEvent_OnUIInit = void(*)(class CppUserModBase*);
     using ModEvent_OnProgramStart = void(*)(class CppUserModBase*);
-    using ModEvent_OnDllLoad = void(*)(class CppUserModBase*, CString);
-    using ModEvent_OnLuaStart = void(*)(class CppUserModBase*, CString, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
+    using ModEvent_OnDllLoad = void(*)(class CppUserModBase*, CStringView);
+    using ModEvent_OnLuaStart = void(*)(class CppUserModBase*, CStringView, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
     using ModEvent_OnLuaStartSelf = void(*)(class CppUserModBase*, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
-    using ModEvent_OnLuaStop = void(*)(class CppUserModBase*, CString, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
+    using ModEvent_OnLuaStop = void(*)(class CppUserModBase*, CStringView, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
     using ModEvent_OnLuaStopSelf = void(*)(class CppUserModBase*, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua&, LuaMadeSimple::Lua*);
     using ModEvent_OnAllCppModsLoaded = void(*)(class CppUserModBase*);
 
