@@ -196,7 +196,7 @@ namespace RC
         const auto func = ModEventDispatcher::Get(this).on_dll_load;
         if (func)
         {
-            func(this, dll_name);
+            func(this, {dll_name.data(), dll_name.size()});
         }
     }
 
@@ -206,7 +206,7 @@ namespace RC
         const auto func = ModEventDispatcher::Get(this).on_lua_start;
         if (func)
         {
-            func(this, mod_name, lua, main_lua, async_lua, hook_lua);
+            func(this, {mod_name.data(), mod_name.size()}, lua, main_lua, async_lua, hook_lua);
         }
     }
 
@@ -226,7 +226,7 @@ namespace RC
         const auto func = ModEventDispatcher::Get(this).on_lua_stop;
         if (func)
         {
-            func(this, mod_name, lua, main_lua, async_lua, hook_lua);
+            func(this, {mod_name.data(), mod_name.size()}, lua, main_lua, async_lua, hook_lua);
         }
     }
 
