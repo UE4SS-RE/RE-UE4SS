@@ -724,6 +724,7 @@ namespace RC
     {
     }
 
+    static bool is_first_mod_to_start = true;
     template <typename PropertyType>
     auto add_property_type_table(const LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua::Table& property_types_table, std::string_view property_type_name) -> void
     {
@@ -732,16 +733,22 @@ namespace RC
         auto property_type_table = lua.prepare_new_table();
         property_type_table.add_pair("Name", property_type_name.data());
 
-        if constexpr (Unreal::IsTProperty<PropertyType>)
+        try
         {
-            // TODO: Update LuaMadeSimple to accept an unsigned long long, and do it with proper bounds checking
-            property_type_table.add_pair("Size", static_cast<int64_t>(sizeof(typename PropertyType::TCppType)));
+            if (is_first_mod_to_start)
+            {
+                Output::send(STR("[Lua] Exposing size of '{}' as 0x{:X}\n"), ensure_str(typeid(PropertyType).name()), PropertyType::StaticValueSize());
+            }
+            property_type_table.add_pair("Size", PropertyType::StaticValueSize());
         }
-        else
+        catch (std::runtime_error&)
         {
-            // Sizes for types are unknown and will only be known dynamically at runtime
-            // TODO: The size is used in LuaTArray to calculate the address of an element (element index * size)
-            //       Reimplement this by requiring a custom "Size" field in the Lua table
+            if (is_first_mod_to_start)
+            {
+                Output::send<LogLevel::Warning>(
+                        STR("[Lua] Failed to expose size of '{}', internal value invalid, manually set this value in your Lua mod if you intend to use it.\n"),
+                        ensure_str(typeid(PropertyType).name()));
+            }
             property_type_table.add_pair("Size", 0);
         }
 
@@ -891,6 +898,8 @@ namespace RC
         {
             add_property_type_table<Unreal::FUtf8StrProperty>(lua, property_types_table, "Utf8StrProperty");
         }
+
+        is_first_mod_to_start = false;
 
         property_types_table.make_global("PropertyTypes");
     }
