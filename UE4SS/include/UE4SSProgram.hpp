@@ -165,6 +165,7 @@ namespace RC
         bool m_has_game_specific_config{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
+        std::atomic_bool m_mods_are_being_touched{};
         bool m_custom_member_variable_layout_loaded{};
 
       public:
@@ -280,6 +281,10 @@ namespace RC
         RC_UE4SS_API auto is_event_loop_thread() -> bool
         {
             return std::this_thread::get_id() == m_event_loop_thread_id;
+        }
+        RC_UE4SS_API auto are_mods_being_touched() -> bool
+        {
+            return m_mods_are_being_touched;
         }
         RC_UE4SS_API auto delete_mod(Mod*) -> void;
 

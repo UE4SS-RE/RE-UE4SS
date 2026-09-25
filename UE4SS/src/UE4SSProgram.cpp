@@ -1168,6 +1168,7 @@ namespace RC
                         return;
                     }
                     m_pause_events_processing = true;
+                    m_mods_are_being_touched = true;
                     mod->uninstall();
                     auto& mod_ref = *std::ranges::find_if(m_mods, [&](const std::unique_ptr<Mod>& mod_ptr) {
                         return mod_ptr.get() == mod;
@@ -1180,6 +1181,7 @@ namespace RC
                     m_pause_events_processing = false;
                     Output::send(STR("Auto-reloading Lua mod '{}'\n"), mod_ref->get_name());
                     mod_ref->start_mod();
+                    m_mods_are_being_touched = false;
                 }
             });
         }
@@ -1759,6 +1761,7 @@ namespace RC
 
         // Stop processing events while stuff isn't properly setup
         m_pause_events_processing = true;
+        m_mods_are_being_touched = true;
 
         uninstall_mods();
 
@@ -1787,6 +1790,8 @@ namespace RC
             fire_program_start_for_cpp_mods();
         }
 
+        m_mods_are_being_touched = false;
+
         Output::send(STR("All mods re-installed\n"));
     }
 
@@ -1811,6 +1816,7 @@ namespace RC
 
         // Pause event processing for safety
         m_pause_events_processing = true;
+        m_mods_are_being_touched = true;
 
         mod->uninstall();
 
@@ -1830,6 +1836,8 @@ namespace RC
         m_mods.emplace_back(std::move(new_mod));
 
         new_mod_ptr->start_mod();
+
+        m_mods_are_being_touched = false;
 
         Output::send(STR("Mod '{}' reinstalled\n"), new_mod_ptr->get_name());
     }
@@ -1852,6 +1860,7 @@ namespace RC
 
         // Pause event processing for safety
         m_pause_events_processing = true;
+        m_mods_are_being_touched = true;
 
         mod->uninstall();
 
@@ -1862,6 +1871,7 @@ namespace RC
 
         // Resume event processing
         m_pause_events_processing = false;
+        m_mods_are_being_touched = false;
 
         Output::send(STR("Mod '{}' uninstalled\n"), mod_name);
     }
