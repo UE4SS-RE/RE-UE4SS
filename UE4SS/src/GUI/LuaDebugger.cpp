@@ -9,6 +9,7 @@
 #include <set>
 #include <sstream>
 #include <thread>
+#include <utility>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <GUI/GUI.hpp>
@@ -1018,7 +1019,7 @@ namespace RC::GUI
 
     auto LuaDebugger::request_table_expand(const std::string& path) -> void
     {
-        if (!m_selected_state)
+        if (!get_selected_state())
         {
             return;
         }
@@ -1520,6 +1521,12 @@ namespace RC::GUI
             std::string result;
             bool is_error = false;
 
+            if (!UE4SSProgram::find_lua_mod_by_lua_state(L))
+            {
+                // Lua state is invalid, likely because the mod was reinstalled, probably via hotreload.
+                return;
+            }
+
             int original_top = lua_gettop(L);
 
             // Try to execute as expression first (return value)
@@ -1596,6 +1603,11 @@ namespace RC::GUI
     {
         std::lock_guard<std::mutex> lock(m_states_mutex);
 
+        if (!L)
+        {
+            return "<unknown>";
+        }
+
         auto it = m_lua_states.find(L);
         if (it != m_lua_states.end())
         {
@@ -1603,35 +1615,40 @@ namespace RC::GUI
         }
 
         // Try to find it in program mods
-        for (const auto& mod : UE4SSProgram::get_program().m_mods)
+        const auto lua_mod = UE4SSProgram::find_lua_mod_by_lua_state(L);
+        if (lua_mod && lua_mod->get_lua_state() == L)
         {
-            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
-            if (lua_mod)
-            {
-                if (lua_mod->get_lua_state() == L)
-                {
-                    return to_string(lua_mod->get_name());
-                }
-                if (lua_mod->m_main_lua && lua_mod->m_main_lua->get_lua_state() == L)
-                {
-                    return to_string(lua_mod->get_name()) + " (main)";
-                }
-                if (lua_mod->m_hook_lua && lua_mod->m_hook_lua->get_lua_state() == L)
-                {
-                    return to_string(lua_mod->get_name()) + " (hook)";
-                }
-                if (lua_mod->m_async_lua && lua_mod->m_async_lua->get_lua_state() == L)
-                {
-                    return to_string(lua_mod->get_name()) + " (async)";
-                }
-            }
+            return to_string(lua_mod->get_name());
+        }
+        if (lua_mod && lua_mod->m_main_lua && lua_mod->m_main_lua->get_lua_state() == L)
+        {
+            return to_string(lua_mod->get_name()) + " (main)";
+        }
+        if (lua_mod && lua_mod->m_hook_lua && lua_mod->m_hook_lua->get_lua_state() == L)
+        {
+            return to_string(lua_mod->get_name()) + " (hook)";
+        }
+        if (lua_mod && lua_mod->m_async_lua && lua_mod->m_async_lua->get_lua_state() == L)
+        {
+            return to_string(lua_mod->get_name()) + " (async)";
         }
 
         return "<unknown>";
     }
 
+    auto LuaDebugger::get_selected_state() const -> lua_State*
+    {
+        const auto lua_mod = UE4SSProgram::find_lua_mod_by_lua_state(m_selected_state);
+        return lua_mod ? m_selected_state : nullptr;
+    }
+
     auto LuaDebugger::render() -> void
     {
+        // We want to let the queue finish processing to ensure that we have a full mod list before querying the mod list.
+        while (UE4SSProgram::get_program().are_mods_being_touched())
+        {
+        }
+
         render_controls();
 
         // Show debug controls if paused
@@ -1716,6 +1733,12 @@ namespace RC::GUI
         }
 
         ImGui::EndChild();
+
+        if (!get_selected_state() && m_selected_state)
+        {
+            m_selected_state = nullptr;
+            m_selected_state_invalidated = true;
+        }
     }
 
     auto LuaDebugger::render_controls() -> void
@@ -1757,7 +1780,7 @@ namespace RC::GUI
         ImGui::Separator();
 
         // Gather all states from program mods dynamically
-        std::vector<std::pair<lua_State*, std::string>> all_states;
+        std::vector<std::pair<std::tuple<lua_State*, LuaStateType, std::string>, std::string>> all_states;
 
         for (const auto& mod : UE4SSProgram::get_program().m_mods)
         {
@@ -1768,15 +1791,15 @@ namespace RC::GUI
 
                 if (lua_mod->m_main_lua)
                 {
-                    all_states.emplace_back(lua_mod->m_main_lua->get_lua_state(), mod_name + " [main]");
+                    all_states.emplace_back(std::tuple{lua_mod->m_main_lua->get_lua_state(), LuaStateType::Main, mod_name}, mod_name + " [main]");
                 }
                 if (lua_mod->m_hook_lua)
                 {
-                    all_states.emplace_back(lua_mod->m_hook_lua->get_lua_state(), mod_name + " [hook]");
+                    all_states.emplace_back(std::tuple{lua_mod->m_hook_lua->get_lua_state(), LuaStateType::Hook, mod_name}, mod_name + " [hook]");
                 }
                 if (lua_mod->m_async_lua)
                 {
-                    all_states.emplace_back(lua_mod->m_async_lua->get_lua_state(), mod_name + " [async]");
+                    all_states.emplace_back(std::tuple{lua_mod->m_async_lua->get_lua_state(), LuaStateType::Async, mod_name}, mod_name + " [async]");
                 }
             }
         }
@@ -1787,19 +1810,31 @@ namespace RC::GUI
             return;
         }
 
-        for (const auto& [L, name] : all_states)
+        for (const auto& [state_data, name] : all_states)
         {
+            const auto L = std::get<lua_State*>(state_data);
             if (!L)
             {
+                Output::send(STR("L nullptr: '{}'\n"), ensure_str(std::get<std::string>(state_data)));
                 continue;
             }
 
             bool is_selected = (m_selected_state == L);
 
+            bool reselected_state{};
+            if (m_selected_state_invalidated && m_selected_state_type == std::get<LuaStateType>(state_data) &&
+                m_selected_state_name == std::get<std::string>(state_data))
+            {
+                reselected_state = true;
+                m_selected_state_invalidated = false;
+            }
+
             // Don't call lua_gettop from GUI thread - it's not thread safe
-            if (ImGui::Selectable(name.c_str(), is_selected))
+            if (ImGui::Selectable(name.c_str(), is_selected) || reselected_state)
             {
                 m_selected_state = L;
+                m_selected_state_name = std::get<std::string>(state_data);
+                m_selected_state_type = std::get<LuaStateType>(state_data);
                 // Clear cached globals when selecting a new state
                 {
                     std::lock_guard<std::mutex> lock(m_globals_mutex);
@@ -1837,17 +1872,18 @@ namespace RC::GUI
                 ImGui::EndTooltip();
             }
         }
+        m_selected_state_invalidated = false;
     }
 
     auto LuaDebugger::render_stack_view() -> void
     {
-        if (!m_selected_state)
+        if (!get_selected_state())
         {
             ImGui::TextDisabled("Select a Lua state from the list to view its stack");
             return;
         }
 
-        ImGui::Text("Stack for: %p", (void*)m_selected_state);
+        ImGui::Text("Stack for: %p", (void*)get_selected_state());
         ImGui::Separator();
 
         // Wrap content in scrollable child
@@ -2067,7 +2103,7 @@ namespace RC::GUI
 
     auto LuaDebugger::request_globals_refresh() -> void
     {
-        if (!m_selected_state)
+        if (!get_selected_state())
         {
             return;
         }
@@ -2084,7 +2120,7 @@ namespace RC::GUI
 
         // Queue the globals fetch on the game thread
         UE4SSProgram::get_program().queue_event([this]() {
-            lua_State* L = m_selected_state;
+            lua_State* L = get_selected_state();
 
             if (!L)
             {
@@ -2117,12 +2153,12 @@ namespace RC::GUI
 
     auto LuaDebugger::request_loaded_modules_refresh() -> void
     {
-        if (!m_selected_state)
+        if (!get_selected_state())
         {
             return;
         }
 
-        lua_State* L = m_selected_state;
+        lua_State* L = get_selected_state();
 
         UE4SSProgram::get_program().queue_event([this, L]() {
             if (!L)
@@ -2261,7 +2297,7 @@ namespace RC::GUI
 
     auto LuaDebugger::render_globals_view() -> void
     {
-        if (!m_selected_state)
+        if (!get_selected_state())
         {
             ImGui::TextDisabled("Select a Lua state from the list to view its globals");
             return;
@@ -2296,7 +2332,7 @@ namespace RC::GUI
         ImGui::Separator();
 
         // Check if we need to refresh for a new state
-        if (m_cached_globals_state != m_selected_state && !m_globals_refresh_requested)
+        if (m_cached_globals_state != get_selected_state() && !m_globals_refresh_requested)
         {
             // Auto-refresh when selecting a new state
             if (UE4SSProgram::get_program().can_process_events())
@@ -2309,7 +2345,7 @@ namespace RC::GUI
         std::vector<std::pair<std::string, LuaStackSlot>> globals;
         {
             std::lock_guard<std::mutex> lock(m_globals_mutex);
-            if (m_cached_globals_state == m_selected_state)
+            if (m_cached_globals_state == get_selected_state())
             {
                 globals = m_cached_globals;
             }
@@ -2321,7 +2357,7 @@ namespace RC::GUI
             {
                 ImGui::TextDisabled("Loading globals...");
             }
-            else if (m_cached_globals_state != m_selected_state)
+            else if (m_cached_globals_state != get_selected_state())
             {
                 ImGui::TextDisabled("Click 'Refresh' to load globals for this state");
             }
@@ -3069,26 +3105,26 @@ namespace RC::GUI
 
     auto LuaDebugger::render_debug_view() -> void
     {
-        if (!m_selected_state)
+        if (!get_selected_state())
         {
             ImGui::TextDisabled("Select a Lua state to debug");
             return;
         }
 
         // Debug controls at top
-        std::string mod_name = find_mod_name_for_state(m_selected_state);
-        bool debug_enabled = has_debug_hook(m_selected_state);
+        std::string mod_name = find_mod_name_for_state(get_selected_state());
+        bool debug_enabled = has_debug_hook(get_selected_state());
 
         if (ImGui::Checkbox("Enable Debug", &debug_enabled))
         {
             if (debug_enabled)
             {
-                install_debug_hook(m_selected_state);
+                install_debug_hook(get_selected_state());
                 m_debug_enabled_mods.insert(mod_name);
             }
             else
             {
-                uninstall_debug_hook(m_selected_state);
+                uninstall_debug_hook(get_selected_state());
                 m_debug_enabled_mods.erase(mod_name);
             }
         }
@@ -3106,7 +3142,7 @@ namespace RC::GUI
         ImGui::BeginChild("DebugScriptPanel", ImVec2(script_width, -1.0f), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         // Script selection
-        auto scripts = get_mod_scripts(m_selected_state);
+        auto scripts = get_mod_scripts(get_selected_state());
         if (!scripts.empty())
         {
             std::string current_display = m_current_script_path;
@@ -3245,21 +3281,21 @@ namespace RC::GUI
     {
         // Get scripts list if we have a selected state
         std::vector<std::string> scripts;
-        if (m_selected_state)
+        if (get_selected_state())
         {
-            scripts = get_mod_scripts(m_selected_state);
+            scripts = get_mod_scripts(get_selected_state());
         }
 
         // Allow editing if we have a file loaded, even without a selected state
         bool has_loaded_file = !m_script_edit_path.empty() && !m_script_original_content.empty();
 
-        if (!m_selected_state && !has_loaded_file)
+        if (!get_selected_state() && !has_loaded_file)
         {
             ImGui::TextDisabled("Select a Lua state or open a script from the Mods tab");
             return;
         }
 
-        if (m_selected_state && scripts.empty() && !has_loaded_file)
+        if (get_selected_state() && scripts.empty() && !has_loaded_file)
         {
             ImGui::TextDisabled("No scripts found for this mod");
             return;
@@ -3420,13 +3456,13 @@ namespace RC::GUI
 
     auto LuaDebugger::render_repl() -> void
     {
-        if (!m_selected_state)
+        if (!get_selected_state())
         {
             ImGui::TextDisabled("Select a Lua state to use the REPL");
             return;
         }
 
-        ImGui::Text("Execute Lua code in the context of: %s", find_mod_name_for_state(m_selected_state).c_str());
+        ImGui::Text("Execute Lua code in the context of: %s", find_mod_name_for_state(get_selected_state()).c_str());
 
         // Input area first (at the top for visibility)
         ImGui::Separator();
@@ -3476,7 +3512,7 @@ namespace RC::GUI
                 m_repl_history_index = -1;
 
                 // Execute
-                execute_repl(m_selected_state, m_repl_input);
+                execute_repl(get_selected_state(), m_repl_input);
                 m_repl_input.clear();
                 repl_input_buffer[0] = '\0';
 

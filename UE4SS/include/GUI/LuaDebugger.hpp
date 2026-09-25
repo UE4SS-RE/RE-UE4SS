@@ -138,6 +138,14 @@ namespace RC::GUI
         static constexpr size_t MAX_REPL_HISTORY = 100;
         static constexpr size_t MAX_TABLE_DEPTH = 10;
 
+        enum class LuaStateType
+        {
+            Unselected,
+            Main,
+            Hook,
+            Async,
+        };
+
     private:
         // All tracked Lua states
         std::unordered_map<lua_State*, LuaStateInfo> m_lua_states;
@@ -149,7 +157,13 @@ namespace RC::GUI
         // UI state
         bool m_auto_scroll_errors{true};
         int m_selected_error_index{-1};
+        // Do not use! Call get_selected_state instead to make sure it's valid!
         lua_State* m_selected_state{nullptr};
+        // The name and type of the selected state, valid even if the state no longer exists.
+        // Used to reselect the state when appropriate.
+        std::string m_selected_state_name{};
+        LuaStateType m_selected_state_type{LuaStateType::Unselected};
+        bool m_selected_state_invalidated{false};
         bool m_show_stack_details{true};
         bool m_pause_on_error{false};
         std::string m_error_filter;
@@ -296,6 +310,7 @@ namespace RC::GUI
         auto render_debug_controls() -> void;
 
         auto find_mod_name_for_state(lua_State* L) const -> std::string;
+        auto get_selected_state() const -> lua_State*;
         auto request_globals_refresh() -> void;
         auto request_loaded_modules_refresh() -> void;
         auto check_breakpoint(lua_State* L, lua_Debug* ar) -> bool;
