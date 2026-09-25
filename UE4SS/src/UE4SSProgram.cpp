@@ -2378,6 +2378,49 @@ namespace RC
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
     }
 
+    auto UE4SSProgram::find_lua_mod_by_lua_state(lua_State* lua_state, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+    {
+        if (!lua_state)
+        {
+            return nullptr;
+        }
+
+        const auto mod = std::ranges::find_if(get_program().m_mods, [&](auto& elem) -> bool {
+            bool found = false;
+
+            const auto lua_mod = dynamic_cast<LuaMod*>(elem.get());
+            if (!lua_mod)
+            {
+                return false;
+            }
+            if (lua_state == lua_mod->get_lua_state() || (lua_mod->m_main_lua && lua_mod->m_main_lua->get_lua_state() == lua_state) ||
+                (lua_mod->m_hook_lua && lua_mod->m_hook_lua->get_lua_state() == lua_state) ||
+                (lua_mod->m_async_lua && lua_mod->m_async_lua->get_lua_state() == lua_state))
+            {
+                found = true;
+            }
+            if (is_installed == IsInstalled::Yes && !elem->is_installable())
+            {
+                found = false;
+            }
+            if (is_started == IsStarted::Yes && !elem->is_started())
+            {
+                found = false;
+            }
+
+            return found;
+        });
+
+        if (mod != get_program().m_mods.end())
+        {
+            return static_cast<LuaMod*>(mod->get());
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType
     {
         return ensure_str(m_object_dumper_output_directory);
