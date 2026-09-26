@@ -334,6 +334,11 @@ Added improved string and path conversion utilities with proper UTF-8 support ([
 
 Added `RC::await_debugger` in `Helpers/Debug.hpp`. ([UE4SS #1314](https://github.com/UE4SS-RE/RE-UE4SS/pull/1314))
 
+Added registration functions for C++ mod events. ([UE4SS #1431](https://github.com/UE4SS-RE/RE-UE4SS/pull/1431))
+- These are analogous to the virtual functions that can be overridden from CppUserModBase.
+- They are intended to replace the virtual functions for ABI reasons, but the virtual functions will also be maintained for now.
+- No new virtual functions will be added to CppUserModBase, and no existing virtual functions will be removed.
+
 ### BPModLoader 
 
 ### Experimental 

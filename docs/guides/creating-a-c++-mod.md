@@ -70,10 +70,6 @@ public:
     ~MyAwesomeMod() override
     {
     }
-
-    auto on_update() -> void override
-    {
-    }
 };
 
 #define MY_AWESOME_MOD_API __declspec(dllexport)
@@ -134,9 +130,26 @@ We also get some support for colors via the `LogLevel` enum.
 #include <Unreal/UObject.hpp>
 ```
 5. Let's again utilize the `using namespace` shortcut by adding this below the first one: `using namespace RC::Unreal;`
-6. Add this function in your mod class:
+6. Register a callback for on_unreal_init in the mod constructor using `register_on_unreal_init`, making this the full code for the constructor:
 ```c++
-auto on_unreal_init() -> void override
+    MyAwesomeMod() : CppUserModBase()
+    {
+        ModName = STR("MyAwesomeMod");
+        ModVersion = STR("1.0");
+        ModDescription = STR("This is my awesome mod");
+        ModAuthors = STR("UE4SS Team");
+        // Do not change this unless you want to target a UE4SS version
+        // other than the one you're currently building with somehow.
+        //ModIntendedSDKVersion = STR("2.6");
+        
+        register_on_unreal_init(&on_unreal_init);
+        
+        printf("MyAwesomeMod says hello\n");
+    }
+```
+7. Define `on_unreal_init` like this:
+```c++
+static auto on_unreal_init(CppModUserBase* self) -> void
 {
     // You are allowed to use the 'Unreal' namespace in this function and anywhere else after this function has fired.
     auto Object = UObjectGlobals::StaticFindObject<UObject*>(nullptr, nullptr, STR("/Script/CoreUObject.Object"));
