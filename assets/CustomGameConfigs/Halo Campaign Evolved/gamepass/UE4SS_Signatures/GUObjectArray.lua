@@ -1,8 +1,12 @@
+-- Halo: Campaign Evolved Game Pass
+-- HaloCampaignEvolved.exe SHA-256: 036aa6df8f3e5c8bc0e40bf416dc40b2ddc7f8f5e9e15cfc2eb073323ceddf53
+
 function Register()
     return "48 C7 ? 10 00 00 00 00 48 8D 05 ? ? ? ? ? ? ? 48 89 ? ? FF FF FF FF 89 ? 08"
 end
 
 function OnMatchFound(MatchAddress)
+    -- The retained 48 8D 05 is a seven-byte LEA RAX,[RIP+disp32] at +0x8.
     local LeaInstruction = MatchAddress + 0x8
     local NextInstruction = LeaInstruction + 0x7
     local DisplacementAddress = LeaInstruction + 0x3
