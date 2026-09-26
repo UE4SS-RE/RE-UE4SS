@@ -1,0 +1,7 @@
+{
+  "trailing-commas": true,
+  "duplicate-keys": true,
+  "compact": true,
+  "continue": true,
+  "quiet": true
+}
