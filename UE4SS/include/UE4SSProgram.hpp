@@ -94,7 +94,7 @@ namespace RC
 
       public:
         RC_UE4SS_API static SettingsManager settings_manager;
-        static inline bool unreal_is_shutting_down{};
+        static inline std::atomic<bool> unreal_is_shutting_down{};
         static inline std::atomic_bool cpp_mods_done_loading{};
 
       public:
