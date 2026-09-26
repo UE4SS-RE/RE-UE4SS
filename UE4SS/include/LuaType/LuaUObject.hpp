@@ -413,6 +413,7 @@ namespace RC::LuaType
             const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field) -> void;
 
     auto is_a_implementation(const LuaMadeSimple::Lua& lua) -> int;
+    auto uobject_equal_implementation(const LuaMadeSimple::Lua& lua) -> int;
 
     template <typename DerivedType, typename ObjectName>
     class UObjectBase;
@@ -517,6 +518,8 @@ namespace RC::LuaType
                 }
                 return 0;
             });
+
+            base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Equal, uobject_equal_implementation);
         }
 
       public:
@@ -524,6 +527,8 @@ namespace RC::LuaType
         auto static setup_member_functions(const LuaMadeSimple::Lua::Table& table) -> void
         {
             Super::template setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
+
+            table.add_pair("__is_uobject", true);
 
             // Add functions that are not intended to be overridden later here
             table.add_pair("GetFullName", [](const LuaMadeSimple::Lua& lua) -> int {
