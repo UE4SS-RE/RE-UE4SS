@@ -1638,6 +1638,7 @@ namespace RC::LuaType
         case Operation::Set: {
             if (params.lua.is_nil(params.stored_at_index))
             {
+                params.lua.discard_value(params.stored_at_index);
                 *static_cast<Unreal::FWeakObjectPtr*>(params.data) = Unreal::FWeakObjectPtr{};
                 return;
             }
@@ -1645,7 +1646,7 @@ namespace RC::LuaType
             lua_State* L = params.lua.get_lua_state();
             if (is_uobject_userdata(L, params.stored_at_index))
             {
-                const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(params.stored_at_index, true);
+                const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(params.stored_at_index);
                 auto* remote_object = lua_object.get_remote_cpp_object();
                 if (remote_object == LuaMadeSimple::Type::special_invalid_ptr())
                 {
@@ -1656,7 +1657,7 @@ namespace RC::LuaType
             }
             if (is_weak_object_ptr_userdata(L, params.stored_at_index))
             {
-                auto& lua_weak = params.lua.get_userdata<LuaType::FWeakObjectPtr>(params.stored_at_index, true);
+                auto& lua_weak = params.lua.get_userdata<LuaType::FWeakObjectPtr>(params.stored_at_index);
                 *static_cast<Unreal::FWeakObjectPtr*>(params.data) = lua_weak.get_local_cpp_object();
                 return;
             }
@@ -2198,8 +2199,8 @@ Overloads:
             return 1;
         }
 
-        const auto& uobj_a = lua.get_userdata<LuaType::UObject>(1, true);
-        const auto& uobj_b = lua.get_userdata<LuaType::UObject>(2, true);
+        const auto& uobj_a = lua.get_userdata<LuaType::UObject>();
+        const auto& uobj_b = lua.get_userdata<LuaType::UObject>();
 
         auto* ptr_a = uobj_a.get_remote_cpp_object();
         auto* ptr_b = uobj_b.get_remote_cpp_object();
