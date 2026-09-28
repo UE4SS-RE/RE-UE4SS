@@ -1168,6 +1168,7 @@ namespace RC
                         return;
                     }
                     m_pause_events_processing = true;
+                    m_mods_are_being_touched = true;
                     mod->uninstall();
                     auto& mod_ref = *std::ranges::find_if(m_mods, [&](const std::unique_ptr<Mod>& mod_ptr) {
                         return mod_ptr.get() == mod;
@@ -1180,6 +1181,7 @@ namespace RC
                     m_pause_events_processing = false;
                     Output::send(STR("Auto-reloading Lua mod '{}'\n"), mod_ref->get_name());
                     mod_ref->start_mod();
+                    m_mods_are_being_touched = false;
                 }
             });
         }
@@ -1759,6 +1761,7 @@ namespace RC
 
         // Stop processing events while stuff isn't properly setup
         m_pause_events_processing = true;
+        m_mods_are_being_touched = true;
 
         uninstall_mods();
 
@@ -1787,6 +1790,8 @@ namespace RC
             fire_program_start_for_cpp_mods();
         }
 
+        m_mods_are_being_touched = false;
+
         Output::send(STR("All mods re-installed\n"));
     }
 
@@ -1811,6 +1816,7 @@ namespace RC
 
         // Pause event processing for safety
         m_pause_events_processing = true;
+        m_mods_are_being_touched = true;
 
         mod->uninstall();
 
@@ -1830,6 +1836,8 @@ namespace RC
         m_mods.emplace_back(std::move(new_mod));
 
         new_mod_ptr->start_mod();
+
+        m_mods_are_being_touched = false;
 
         Output::send(STR("Mod '{}' reinstalled\n"), new_mod_ptr->get_name());
     }
@@ -1852,6 +1860,7 @@ namespace RC
 
         // Pause event processing for safety
         m_pause_events_processing = true;
+        m_mods_are_being_touched = true;
 
         mod->uninstall();
 
@@ -1862,6 +1871,7 @@ namespace RC
 
         // Resume event processing
         m_pause_events_processing = false;
+        m_mods_are_being_touched = false;
 
         Output::send(STR("Mod '{}' uninstalled\n"), mod_name);
     }
@@ -2376,6 +2386,49 @@ namespace RC
     auto UE4SSProgram::find_lua_mod_by_name(StringViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
+    }
+
+    auto UE4SSProgram::find_lua_mod_by_lua_state(lua_State* lua_state, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+    {
+        if (!lua_state)
+        {
+            return nullptr;
+        }
+
+        const auto mod = std::ranges::find_if(get_program().m_mods, [&](auto& elem) -> bool {
+            bool found = false;
+
+            const auto lua_mod = dynamic_cast<LuaMod*>(elem.get());
+            if (!lua_mod)
+            {
+                return false;
+            }
+            if (lua_state == lua_mod->get_lua_state() || (lua_mod->m_main_lua && lua_mod->m_main_lua->get_lua_state() == lua_state) ||
+                (lua_mod->m_hook_lua && lua_mod->m_hook_lua->get_lua_state() == lua_state) ||
+                (lua_mod->m_async_lua && lua_mod->m_async_lua->get_lua_state() == lua_state))
+            {
+                found = true;
+            }
+            if (is_installed == IsInstalled::Yes && !elem->is_installable())
+            {
+                found = false;
+            }
+            if (is_started == IsStarted::Yes && !elem->is_started())
+            {
+                found = false;
+            }
+
+            return found;
+        });
+
+        if (mod != get_program().m_mods.end())
+        {
+            return static_cast<LuaMod*>(mod->get());
+        }
+        else
+        {
+            return nullptr;
+        }
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType

@@ -493,6 +493,8 @@ Fix SetupAttachment implementations randomly changing order ([UE4SS #606](https:
 Fix non-ascii characters in outputted .cpp files ([UE4SS #1378](https://github.com/UE4SS-RE/RE-UE4SS/pull/1378))  
 
 ### Lua API 
+Fixed crash in script hook dispatcher when `Stack.Node()` returns `nullptr` on synthetic or native thunk frames.
+
 Fixed FString use after free ([UE4SS #425](https://github.com/UE4SS-RE/RE-UE4SS/pull/425)) - localcc 
 
 Fixed `IterateGameDirectories` crashing when the game root contains a deeply nested directory tree, common once a mod manager unpacks downloads into it. The traversal never grew the Lua stack and wrote past the end of it. It now also stops at a depth of 64, skips unreadable directories, and won't follow a link back into a directory it is already inside. ([UE4SS #1092](https://github.com/UE4SS-RE/RE-UE4SS/issues/1092))
@@ -548,6 +550,10 @@ Fixed callbacks being executed in the wrong thread. ([UE4SS #1170](https://githu
 Fixed UFunction and UClass properly inheriting from UStruct in Lua. ([UE4SS #1158](https://github.com/UE4SS-RE/RE-UE4SS/pull/1158)) - Corporalwill123
 
 Fixed crash when calling certain functions that take callbacks. ([UE4SS #1299](https://github.com/UE4SS-RE/RE-UE4SS/pull/1299))
+
+Fixed the `GetWorld` function of UObject and AActor crashing if the object was nullptr. ([UE4SS 002bca18](https://github.com/UE4SS-RE/RE-UE4SS/commit/002bca18))
+
+Fixed the `RegisterCustomProperty` sometimes not working because of an unknown property size. ([UE4SS cb897cc7](https://github.com/UE4SS-RE/RE-UE4SS/commit/cb897cc7))
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 

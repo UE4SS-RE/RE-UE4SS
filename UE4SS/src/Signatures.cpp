@@ -1,5 +1,6 @@
 #include <filesystem>
 
+#include <UE4SSProgram.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <LuaLibrary.hpp>
 #include <LuaMadeSimple/LuaMadeSimple.hpp>
@@ -177,6 +178,11 @@ namespace RC
                         lua_fnc_scan_script,
                         signature_containers,
                         [&scan_result](void* address) {
+                            if (!address)
+                            {
+                                scan_result.Errors.emplace_back("Lua script 'FName_Constructor.lua' returned an address of 0 for FName::FName.");
+                                return DidLuaScanSucceed::No;
+                            }
                             if (!Unreal::UEngine::TickInternal.is_ready())
                             {
                                 scan_result.Errors.emplace_back("UGameEngine::Tick is a requirement when FName_Constructor.lua is present!\n"
@@ -191,6 +197,14 @@ namespace RC
                             // dozens of times on games that reach this point early.
                             SEH_TRY({ name = Unreal::FName(STR("ByteProperty"), Unreal::FNAME_Find, address); })
                             SEH_EXCEPT({ Output::send<LogLevel::Error>(STR("Error: Crashed calling FName constructor.\n")); });
+
+                            if (UE4SSProgram::settings_manager.General.DefaultFNameToStringMethod == Unreal::UnrealInitializer::FNameToStringMethod::Conv_NameToString)
+                            {
+                                Output::send(STR("Skipping confirmation of FName constructor address with a call to FName::ToString because FNameToStringMethod == Conv_NameToString\n"));
+                                Output::send(STR("FName::FName address: {} <- Lua Script\n"), address);
+                                Unreal::FName::ConstructorInternal.assign_address(address);
+                                return DidLuaScanSucceed::Yes;
+                            }
 
                             DidLuaScanSucceed did_succeed{};
                             SEH_TRY({

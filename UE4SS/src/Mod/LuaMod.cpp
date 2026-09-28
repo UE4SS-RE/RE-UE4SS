@@ -724,6 +724,7 @@ namespace RC
     {
     }
 
+    static bool is_first_mod_to_start = true;
     template <typename PropertyType>
     auto add_property_type_table(const LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua::Table& property_types_table, std::string_view property_type_name) -> void
     {
@@ -732,16 +733,22 @@ namespace RC
         auto property_type_table = lua.prepare_new_table();
         property_type_table.add_pair("Name", property_type_name.data());
 
-        if constexpr (Unreal::IsTProperty<PropertyType>)
+        try
         {
-            // TODO: Update LuaMadeSimple to accept an unsigned long long, and do it with proper bounds checking
-            property_type_table.add_pair("Size", static_cast<int64_t>(sizeof(typename PropertyType::TCppType)));
+            if (is_first_mod_to_start)
+            {
+                Output::send(STR("[Lua] Exposing size of '{}' as 0x{:X}\n"), ensure_str(typeid(PropertyType).name()), PropertyType::StaticValueSize());
+            }
+            property_type_table.add_pair("Size", PropertyType::StaticValueSize());
         }
-        else
+        catch (std::runtime_error&)
         {
-            // Sizes for types are unknown and will only be known dynamically at runtime
-            // TODO: The size is used in LuaTArray to calculate the address of an element (element index * size)
-            //       Reimplement this by requiring a custom "Size" field in the Lua table
+            if (is_first_mod_to_start)
+            {
+                Output::send<LogLevel::Warning>(
+                        STR("[Lua] Failed to expose size of '{}', internal value invalid, manually set this value in your Lua mod if you intend to use it.\n"),
+                        ensure_str(typeid(PropertyType).name()));
+            }
             property_type_table.add_pair("Size", 0);
         }
 
@@ -891,6 +898,8 @@ namespace RC
         {
             add_property_type_table<Unreal::FUtf8StrProperty>(lua, property_types_table, "Utf8StrProperty");
         }
+
+        is_first_mod_to_start = false;
 
         property_types_table.make_global("PropertyTypes");
     }
@@ -4916,7 +4925,7 @@ Overloads:
             }
 
             auto handle = lua.get_integer();
-            auto new_delay = lua_tointeger(L, 2);
+            auto new_delay = lua.get_integer();
             const auto mod = get_mod_ref(lua);
             const LuaMadeSimple::Lua* mod_hook_lua = mod->m_hook_lua;
             bool found = false;
@@ -6290,8 +6299,13 @@ Overloads:
             {
                 return;
             }
-            auto data = precise_name_match ? LuaMod::find_function_hook_data(callback_container, Stack.Node())
-                                           : LuaMod::find_function_hook_data(callback_container, Stack.Node()->GetNamePrivate());
+            auto* node = Stack.Node();
+            if (!node)
+            {
+                return;
+            }
+            auto data = precise_name_match ? LuaMod::find_function_hook_data(callback_container, node)
+                                           : LuaMod::find_function_hook_data(callback_container, node->GetNamePrivate());
             if (data)
             {
                 const auto& callback_data = data->callback_data;
@@ -6314,7 +6328,6 @@ Overloads:
                         static auto s_object_property_name = Unreal::FName(STR("ObjectProperty"), Unreal::FNAME_Find);
                         LuaType::RemoteUnrealParam::construct(lua, &Context, s_object_property_name);
 
-                        auto node = Stack.Node();
                         auto return_value_offset = node->GetReturnValueOffset();
                         auto has_return_value = return_value_offset != 0xFFFF;
                         auto num_unreal_params = node->GetNumParms();

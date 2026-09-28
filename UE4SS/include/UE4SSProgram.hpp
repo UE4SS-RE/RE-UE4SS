@@ -165,6 +165,7 @@ namespace RC
         bool m_has_game_specific_config{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
+        std::atomic_bool m_mods_are_being_touched{};
         bool m_custom_member_variable_layout_loaded{};
 
       public:
@@ -281,6 +282,10 @@ namespace RC
         {
             return std::this_thread::get_id() == m_event_loop_thread_id;
         }
+        RC_UE4SS_API auto are_mods_being_touched() -> bool
+        {
+            return m_mods_are_being_touched;
+        }
         RC_UE4SS_API auto delete_mod(Mod*) -> void;
 
       public:
@@ -357,6 +362,7 @@ namespace RC
 
         RC_UE4SS_API static auto find_lua_mod_by_name(StringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API static auto find_lua_mod_by_lua_state(lua_State* lua_state, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         static auto static_cleanup() -> void;
         RC_UE4SS_API static auto get_program() -> UE4SSProgram&
         {
