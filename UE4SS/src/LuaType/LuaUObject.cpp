@@ -70,28 +70,17 @@ namespace RC::LuaType
         return object && s_lua_unreal_objects.contains(object->HashObject());
     }
 
-    static auto is_uobject_userdata(lua_State* L, int32_t index) -> bool
+    static auto is_uobject_userdata(const LuaMadeSimple::Lua& lua, int32_t index) -> bool
     {
-        int abs_index = lua_absindex(L, index);
-        if (lua_type(L, abs_index) != LUA_TUSERDATA)
-        {
-            return false;
-        }
-        if (lua_getiuservalue(L, abs_index, 3) != LUA_TTABLE)
-        {
-            lua_pop(L, 1);
-            return false;
-        }
-        lua_pushstring(L, "__is_uobject");
-        lua_rawget(L, -2);
-        bool is_uobj = lua_toboolean(L, -1);
-        lua_pop(L, 2);
-        return is_uobj;
+        return lua.is_userdata(index) && lua.get_userdata<UE4SSBaseObject>(index, true).derives_from_object();
     }
 
-    static auto is_weak_object_ptr_userdata(lua_State* L, int32_t index) -> bool
+    static auto is_weak_object_ptr_userdata(const LuaMadeSimple::Lua& lua, int32_t index) -> bool
     {
-        return luaL_testudata(L, index, "FWeakObjectPtr") != nullptr;
+        // Can we safely append new virtuals in ObjectBase, where 'derives_from_object' lives ?
+        // If so, we can avoid this string comparison, although we'd be replacing it with a virtual call.
+        // Both are bad, we should probably use an enum stored inside the base object instead.
+        return lua.is_userdata(index) && std::string_view{lua.get_userdata<UE4SSBaseObject>(index, true).get_object_name()} == FWeakObjectPtrName::ToString();
     }
 
     FLuaObjectDeleteListener FLuaObjectDeleteListener::s_lua_object_delete_listener{};
@@ -1643,26 +1632,25 @@ namespace RC::LuaType
                 return;
             }
 
-            lua_State* L = params.lua.get_lua_state();
-            if (is_uobject_userdata(L, params.stored_at_index))
+            if (is_uobject_userdata(params.lua, params.stored_at_index))
             {
-                const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(params.stored_at_index);
+                const auto& lua_object = params.lua.get_userdata<UObject>(params.stored_at_index);
                 auto* remote_object = lua_object.get_remote_cpp_object();
                 if (remote_object == LuaMadeSimple::Type::special_invalid_ptr())
                 {
                     remote_object = nullptr;
                 }
                 *static_cast<Unreal::FWeakObjectPtr*>(params.data) = remote_object;
-                return;
             }
-            if (is_weak_object_ptr_userdata(L, params.stored_at_index))
+            else if (is_weak_object_ptr_userdata(params.lua, params.stored_at_index))
             {
-                auto& lua_weak = params.lua.get_userdata<LuaType::FWeakObjectPtr>(params.stored_at_index);
+                auto& lua_weak = params.lua.get_userdata<FWeakObjectPtr>(params.stored_at_index);
                 *static_cast<Unreal::FWeakObjectPtr*>(params.data) = lua_weak.get_local_cpp_object();
-                return;
             }
-
-            params.throw_error("push_weakobjectproperty", "Value must be UObject, FWeakObjectPtr, or nil");
+            else
+            {
+                params.throw_error("push_weakobjectproperty", "Value must be UObject, FWeakObjectPtr, or nil");
+            }
             return;
         }
         case Operation::GetParam:
@@ -2192,18 +2180,17 @@ Overloads:
 
     auto uobject_equal_implementation(const LuaMadeSimple::Lua& lua) -> int
     {
-        lua_State* L = lua.get_lua_state();
-        if (!is_uobject_userdata(L, 1) || !is_uobject_userdata(L, 2))
+        if (!is_uobject_userdata(lua, 1) || !is_uobject_userdata(lua, 2))
         {
             lua.set_bool(false);
             return 1;
         }
 
-        const auto& uobj_a = lua.get_userdata<LuaType::UObject>();
-        const auto& uobj_b = lua.get_userdata<LuaType::UObject>();
-
+        const auto& uobj_a = lua.get_userdata<UObject>();
+        const auto& uobj_b = lua.get_userdata<UObject>();
         auto* ptr_a = uobj_a.get_remote_cpp_object();
         auto* ptr_b = uobj_b.get_remote_cpp_object();
+
         if (ptr_a == LuaMadeSimple::Type::special_invalid_ptr())
         {
             ptr_a = nullptr;

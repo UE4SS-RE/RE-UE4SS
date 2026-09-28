@@ -528,8 +528,6 @@ namespace RC::LuaType
         {
             Super::template setup_member_functions<LuaMadeSimple::Type::IsFinal::No>(table);
 
-            table.add_pair("__is_uobject", true);
-
             // Add functions that are not intended to be overridden later here
             table.add_pair("GetFullName", [](const LuaMadeSimple::Lua& lua) -> int {
                 // Get the userdata from the Lua stack
