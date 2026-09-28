@@ -72,19 +72,6 @@ namespace RC
 {
     // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
     /*
-    struct RC_UE_API FUEDeathListener : public Unreal::FUObjectCreateListener
-    {
-        static FUEDeathListener UEDeathListener;
-
-        void NotifyUObjectCreated(const Unreal::UObjectBase* object, int32_t index) override {}
-        void OnUObjectArrayShutdown() override
-        {
-            UE4SSProgram::unreal_is_shutting_down = true;
-            Unreal::UObjectArray::RemoveUObjectCreateListener(this);
-        }
-    };
-    FUEDeathListener FUEDeathListener::UEDeathListener{};
-
     auto get_player_controller() -> UObject*
     {
         std::vector<Unreal::UObject*> player_controllers{};
@@ -991,11 +978,6 @@ namespace RC
         ProfilerScope();
         using namespace Unreal;
 
-        // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
-        /*
-        UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
-        //*/
-
         if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
         {
             Hook::RegisterEngineTickPostCallback([](auto&,...){gui_render_thread_tick(); }, {false, false, STR("UE4SS"), STR("ImGuiRenderHook")});
@@ -1189,8 +1171,15 @@ namespace RC
         Output::send(STR("Event loop start\n"));
         for (m_processing_events = true; m_processing_events;)
         {
-            if (m_pause_events_processing || UE4SSProgram::unreal_is_shutting_down)
+            if (!Unreal::UnrealInitializer::IsInitialized())
             {
+                m_processing_events = false;
+                break;
+            }
+
+            if (m_pause_events_processing)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 continue;
             }
 
@@ -1260,6 +1249,7 @@ namespace RC
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             ProfilerFrameMark();
         }
+        m_processing_events = false;
         Output::send(STR("Event loop end\n"));
     }
 

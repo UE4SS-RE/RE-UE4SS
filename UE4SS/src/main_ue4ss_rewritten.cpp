@@ -7,6 +7,7 @@
 #include <tlhelp32.h>
 
 #include "UE4SSProgram.hpp"
+#include <Unreal/UnrealInitializer.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/String.hpp>
 
@@ -143,6 +144,8 @@ auto WIN_API_FUNCTION_NAME(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpR
     case DLL_THREAD_DETACH:
         break;
     case DLL_PROCESS_DETACH:
+        Unreal::UnrealInitializer::IsInitialized() = false;
+        Unreal::UnrealInitializer::StaticStorage::bIsInitialized = false;
         // A non-null reserved pointer means the entire process is terminating.
         // Avoid running the program destructor from DllMain in that case: the
         // CRT and dependency statics may already be partially torn down, and
