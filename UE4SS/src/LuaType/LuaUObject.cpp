@@ -70,6 +70,19 @@ namespace RC::LuaType
         return object && s_lua_unreal_objects.contains(object->HashObject());
     }
 
+    static auto is_uobject_userdata(const LuaMadeSimple::Lua& lua, int32_t index) -> bool
+    {
+        return lua.is_userdata(index) && lua.get_userdata<UE4SSBaseObject>(index, true).derives_from_object();
+    }
+
+    static auto is_weak_object_ptr_userdata(const LuaMadeSimple::Lua& lua, int32_t index) -> bool
+    {
+        // Can we safely append new virtuals in ObjectBase, where 'derives_from_object' lives ?
+        // If so, we can avoid this string comparison, although we'd be replacing it with a virtual call.
+        // Both are bad, we should probably use an enum stored inside the base object instead.
+        return lua.is_userdata(index) && std::string_view{lua.get_userdata<UE4SSBaseObject>(index, true).get_object_name()} == FWeakObjectPtrName::ToString();
+    }
+
     FLuaObjectDeleteListener FLuaObjectDeleteListener::s_lua_object_delete_listener{};
     void FLuaObjectDeleteListener::NotifyUObjectDeleted(const Unreal::UObjectBase* object, [[maybe_unused]] int32_t index)
     {
@@ -1611,10 +1624,35 @@ namespace RC::LuaType
             }
             return;
         }
-        case Operation::Set:
-            // For now, doing nothing just to get past the error
-            Output::send(STR("[push_weakobjectproperty] Operation::Set is not supported\n"));
+        case Operation::Set: {
+            if (params.lua.is_nil(params.stored_at_index))
+            {
+                params.lua.discard_value(params.stored_at_index);
+                *static_cast<Unreal::FWeakObjectPtr*>(params.data) = Unreal::FWeakObjectPtr{};
+                return;
+            }
+
+            if (is_uobject_userdata(params.lua, params.stored_at_index))
+            {
+                const auto& lua_object = params.lua.get_userdata<UObject>(params.stored_at_index);
+                auto* remote_object = lua_object.get_remote_cpp_object();
+                if (remote_object == LuaMadeSimple::Type::special_invalid_ptr())
+                {
+                    remote_object = nullptr;
+                }
+                *static_cast<Unreal::FWeakObjectPtr*>(params.data) = remote_object;
+            }
+            else if (is_weak_object_ptr_userdata(params.lua, params.stored_at_index))
+            {
+                auto& lua_weak = params.lua.get_userdata<FWeakObjectPtr>(params.stored_at_index);
+                *static_cast<Unreal::FWeakObjectPtr*>(params.data) = lua_weak.get_local_cpp_object();
+            }
+            else
+            {
+                params.throw_error("push_weakobjectproperty", "Value must be UObject, FWeakObjectPtr, or nil");
+            }
             return;
+        }
         case Operation::GetParam:
             params.throw_error("push_weakobjectproperty", "Operation::GetParam is not supported");
             return;
@@ -2137,6 +2175,32 @@ Overloads:
             lua.throw_error(error_overload_not_found);
         }
 
+        return 1;
+    }
+
+    auto uobject_equal_implementation(const LuaMadeSimple::Lua& lua) -> int
+    {
+        if (!is_uobject_userdata(lua, 1) || !is_uobject_userdata(lua, 2))
+        {
+            lua.set_bool(false);
+            return 1;
+        }
+
+        const auto& uobj_a = lua.get_userdata<UObject>();
+        const auto& uobj_b = lua.get_userdata<UObject>();
+        auto* ptr_a = uobj_a.get_remote_cpp_object();
+        auto* ptr_b = uobj_b.get_remote_cpp_object();
+
+        if (ptr_a == LuaMadeSimple::Type::special_invalid_ptr())
+        {
+            ptr_a = nullptr;
+        }
+        if (ptr_b == LuaMadeSimple::Type::special_invalid_ptr())
+        {
+            ptr_b = nullptr;
+        }
+
+        lua.set_bool(ptr_a == ptr_b);
         return 1;
     }
 
