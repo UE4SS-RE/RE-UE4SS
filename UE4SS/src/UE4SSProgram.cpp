@@ -1770,7 +1770,7 @@ namespace RC
         start_cpp_mods();
         start_lua_mods();
 
-        if (Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
+        if (Unreal::UnrealInitializer::IsInitialized())
         {
             fire_unreal_init_for_cpp_mods();
         }
