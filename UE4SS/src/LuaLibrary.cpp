@@ -235,7 +235,7 @@ namespace RC::LuaLibrary
     {
         try
         {
-            if (!Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
+            if (!Unreal::UnrealInitializer::IsInitialized())
             {
                 return_struct.status = ExportedFunctionStatus::UE4SS_NOT_INITIALIZED;
                 Output::send(STR("set_script_variable_int32 | UE4SS is not initialized\n"));
@@ -291,7 +291,7 @@ namespace RC::LuaLibrary
     {
         try
         {
-            if (!Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
+            if (!Unreal::UnrealInitializer::IsInitialized())
             {
                 return_struct.status = ExportedFunctionStatus::UE4SS_NOT_INITIALIZED;
                 Output::send(STR("set_script_variable_default_data | UE4SS is not initialized\n"));
@@ -398,7 +398,7 @@ namespace RC::LuaLibrary
     {
         try
         {
-            if (!Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
+            if (!Unreal::UnrealInitializer::IsInitialized())
             {
                 return_struct.status = ExportedFunctionStatus::UE4SS_NOT_INITIALIZED;
                 Output::send(STR("call_script_function | UE4SS is not initialized\n"));
@@ -479,6 +479,6 @@ namespace RC::LuaLibrary
 
     auto is_ue4ss_initialized() -> bool
     {
-        return Unreal::UnrealInitializer::StaticStorage::bIsInitialized;
+        return Unreal::UnrealInitializer::IsInitialized();
     }
 } // namespace RC::LuaLibrary

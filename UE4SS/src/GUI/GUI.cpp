@@ -134,7 +134,7 @@ namespace RC::GUI
                 bool listeners_are_required{};
                 bool should_unset_listeners{};
 
-                auto is_unreal_initialized = Unreal::UnrealInitializer::StaticStorage::bIsInitialized;
+                bool is_unreal_initialized = Unreal::UnrealInitializer::IsInitialized();
                 if (!is_unreal_initialized)
                 {
                     ImGui::BeginDisabled(true);

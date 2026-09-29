@@ -7232,8 +7232,15 @@ Overloads:
     {
         for (m_processing_events = true; m_processing_events && !m_async_thread.get_stop_token().stop_requested();)
         {
+            if (!Unreal::UnrealInitializer::IsInitialized())
+            {
+                m_processing_events = false;
+                break;
+            }
+
             if (m_pause_events_processing)
             {
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
                 continue;
             }
 
@@ -7241,6 +7248,7 @@ Overloads:
 
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
+        m_processing_events = false;
     }
 
     auto LuaMod::process_delayed_actions() -> void
@@ -7263,6 +7271,10 @@ Overloads:
                                                    auto duration_since_creation = (action.type == LuaMod::ActionType::Immediate || passed >= action.delay);
                                                    if (duration_since_creation)
                                                    {
+                                                       if (!Unreal::UnrealInitializer::IsInitialized())
+                                                       {
+                                                           return true;
+                                                       }
                                                        bool result = true;
                                                        try
                                                        {
