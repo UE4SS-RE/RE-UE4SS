@@ -431,7 +431,9 @@ Switch to xmake from cmake which makes building much more streamlined ([UE4SS #3
 ## Fixes 
 
 ### General 
-Fixed access violation crash on engine shutdown by terminating event loops when `UnrealInitializer::IsInitialized()` is false.
+Fixed access violation crash on engine shutdown by terminating event loops when `UnrealInitializer::StaticStorage::bIsInitialized` is false.  
+This was fixed by introducing a new atomic bool: `UnrealInitializer::IsInitialized()`  
+The old variable will stay for ABI/API reasons.
 
 Fixed proxy injection incorrectly running UE4SS initialization inside the loader lock when the main thread was the first thread snapshot entry.
 
