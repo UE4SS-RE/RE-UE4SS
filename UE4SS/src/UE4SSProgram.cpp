@@ -840,7 +840,7 @@ namespace RC
 
                 Output::send<Color::Blue>(STR("UDataTable\n"));
                 retrieve_vtable_layout_from_ini(STR("UDataTable"), [&](uint32_t index, File::StringType& item) {
-                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("UDataTable::{} = 0x{:X}\n"), item, offset);
                     Unreal::UDataTable::VTableLayoutMap.emplace(item, offset);
                 });
