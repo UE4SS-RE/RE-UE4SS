@@ -614,6 +614,12 @@ namespace RC
 
         // Version override from ini file
         {
+            Unreal::Version::PointerHashOverride = settings_manager.EngineVersionOverride.PointerHash;
+            if (Unreal::Version::PointerHashOverride != Unreal::PointerHashAlgorithm::Auto)
+            {
+                constexpr const CharType* names[] = {STR("Auto"), STR("HashCombine"), STR("Murmur32"), STR("Murmur64")};
+                Output::send(STR("[Unreal] Pointer hash override: {}\n"), names[static_cast<size_t>(Unreal::Version::PointerHashOverride)]);
+            }
             int64_t major_version = settings_manager.EngineVersionOverride.MajorVersion;
             int64_t minor_version = settings_manager.EngineVersionOverride.MinorVersion;
 
