@@ -40,6 +40,8 @@ set(TMP_MSVC ${MSVC})
 unset(MSVC)
 
 FetchContent_MakeAvailable(PolyHook2)
+include("${CMAKE_CURRENT_LIST_DIR}/patch_iat.cmake")
+ue4ss_patch_polyhook_iat("${polyhook2_SOURCE_DIR}")
 
 # Override PolyHook's C++ standard to match ours
 if(TARGET PolyHook_2)
@@ -72,3 +74,7 @@ organize_targets("^asmjit|^asmtk" "deps/third")
 # re-enable 'install' and reset 'MSVC' since we're done adding PolyHook
 set(MSVC ${TMP_MSVC})
 set(_DISABLE_INSTALL FALSE)
+
+if(UE4SS_BUILD_IAT_TESTS)
+    add_subdirectory(tests)
+endif()
