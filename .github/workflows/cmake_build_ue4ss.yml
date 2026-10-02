@@ -51,7 +51,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
           token: ${{ secrets.UEPSEUDO_PAT }}
@@ -96,7 +96,7 @@ jobs:
       # Dependencies are shared between MSVC and Clang-CL builds since most are compiler-agnostic
       - name: Cache CMake Dependencies
         if: ${{ inputs.enable-caching }}
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cmake/packages
@@ -156,7 +156,7 @@ jobs:
       # Cache key includes hash of CMakeLists/code - when code changes, cache is invalidated
       - name: Cache CMake build directory
         if: ${{ inputs.enable-caching }}
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         id: cache_build
         with:
           path: |
@@ -427,7 +427,7 @@ jobs:
 
       - name: Upload a Build Artifact
         if: ${{inputs.should-upload-artifact == true}}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: CMAKE-${{inputs.build-mode}}
           path: ${{ steps.calc-files-artifact.outputs.artifact_dir }}

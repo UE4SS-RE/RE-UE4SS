@@ -16,7 +16,7 @@ jobs:
           known_hosts: unnecessary
         
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       
       - name: Initialize submodule
         run: |
