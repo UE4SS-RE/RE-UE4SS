@@ -815,16 +815,11 @@ namespace RC
                 Output::send<Color::Blue>(STR("AGameMode\n"));
                 retrieve_vtable_layout_from_ini(STR("AGameMode"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index,
-                                                                        Unreal::Version::IsAtLeast(4, 14)
-                                                                        ? uobjectbase_size,
+                                                                        uobjectbase_size,
                                                                         uobjectbaseutility_size,
                                                                         uobject_size,
                                                                         aactor_size,
-                                                                        agamemodebase_size
-                                                                        : uobjectbase_size,
-                                                                        uobjectbaseutility_size,
-                                                                        uobject_size,
-                                                                        aactor_size);
+                                                                        Unreal::Version::IsAtLeast(4, 14) ? agamemodebase_size : 0);
                     Output::send(STR("AGameMode::{} = 0x{:X}\n"), item, offset);
                     Unreal::AGameMode::VTableLayoutMap.emplace(item, offset);
                 });
