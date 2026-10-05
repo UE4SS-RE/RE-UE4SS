@@ -1234,6 +1234,7 @@ namespace RC
     auto static setup_lua_global_functions_internal(const LuaMadeSimple::Lua& lua, Mod::IsTrueMod is_true_mod) -> void
     {
         lua.register_function("print", LuaLibrary::global_print);
+        lua.register_function("println", LuaLibrary::global_println);
         lua.register_function("LoadExport", LuaLibrary::load_export);
 
         lua.register_function("CreateInvalidObject", [](const LuaMadeSimple::Lua& lua) -> int {

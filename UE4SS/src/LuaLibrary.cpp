@@ -31,7 +31,12 @@ namespace RC::LuaLibrary
         lua_setglobal(lua.get_lua_state(), "OutputDeviceRef");
     }
 
-    auto global_print(const LuaMadeSimple::Lua& lua) -> int
+    enum class AutoNewLine
+    {
+        Yes,
+        No,
+    };
+    static auto print_impl(const LuaMadeSimple::Lua& lua, AutoNewLine auto_new_line)
     {
         auto* output_device = get_outputdevice_ref(lua);
 
@@ -98,6 +103,11 @@ namespace RC::LuaLibrary
             lua.discard_value(-1);
         }
 
+        if (auto_new_line == AutoNewLine::Yes)
+        {
+            formatted_string.append(STR("\n"));
+        }
+
         Output::send(formatted_string);
 
         if (output_device)
@@ -106,6 +116,16 @@ namespace RC::LuaLibrary
         }
 
         return 0;
+    }
+
+    auto global_print(const LuaMadeSimple::Lua& lua) -> int
+    {
+        return print_impl(lua, AutoNewLine::No);
+    }
+
+    auto global_println(const LuaMadeSimple::Lua& lua) -> int
+    {
+        return print_impl(lua, AutoNewLine::Yes);
     }
 
     auto deref_to_int32(const LuaMadeSimple::Lua& lua) -> int

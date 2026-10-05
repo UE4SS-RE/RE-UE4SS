@@ -1,10 +1,10 @@
 # print
 
-The `print` function is used for debugging and outputs a string to the debug console.
+The `println` function is used for debugging and outputs a string to the debug console. 
 
 This function cannot be used to format strings, please use `string.format` for string formatting purposes.  
 
-> New lines ARE NOT automatically appended, so DO make sure to use `\n` whenever you want a new line.
+> New lines ARE automatically appended, so do NOT use `\n` whenever you want a new line.
 
 ## Parameters
 
@@ -14,5 +14,5 @@ This function cannot be used to format strings, please use `string.format` for s
 
 ## Example
 ```lua
-print("Hello Debug Console\n")
+println("Hello Debug Console")
 ```
