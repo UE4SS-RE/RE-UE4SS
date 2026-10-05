@@ -280,6 +280,11 @@ EInternalObjectFlags = {
 
 -- # Global Functions
 
+---Same as print, except automatically adds a new line character
+---@param Fmt string
+------@param ... any[]
+function println(Fmt, ...) end
+
 ---Creates an blank UObject whose IsValid function always returns false
 ---@return UObject
 function CreateInvalidObject() end
