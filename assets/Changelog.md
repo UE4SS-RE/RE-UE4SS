@@ -251,6 +251,8 @@ Added support for handling structs as userdata (Fixed `StructData as userdata is
 
 Added `ModRef.OnUnload` lua function, registers a callback to be called when the mod is unloaded via hot reload or any other means ([UE4SS #1394](https://github.com/UE4SS-RE/RE-UE4SS/pull/1394))
 
+Added `println` global lua function, just like `print`, except adds a new line character automatically ([UE4SS #1451](https://github.com/UE4SS-RE/RE-UE4SS/pull/1451))
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 
