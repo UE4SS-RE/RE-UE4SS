@@ -223,6 +223,11 @@ namespace RC
         }
     }
 
+    auto CppMod::get_user_mod() -> CppUserModBase*
+    {
+        return m_mod;
+    }
+
     CppMod::~CppMod()
     {
         if (m_main_dll_module)

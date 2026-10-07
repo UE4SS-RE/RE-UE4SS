@@ -59,11 +59,16 @@ namespace RC
 
         auto fire_on_lua_stop(LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua& main_lua, LuaMadeSimple::Lua& async_lua, LuaMadeSimple::Lua* hook_lua) -> void;
 
+        // Old event dispatchers.
+        // We must keep them so that old mods that expect these will keep functioning.
         auto fire_unreal_init() -> void override;
         auto fire_ui_init() -> void override;
         auto fire_program_start() -> void override;
         auto fire_update() -> void override;
         auto fire_dll_load(StringViewType dll_name) -> void;
         auto fire_on_cpp_mods_loaded() -> void;
+
+        // Getter so that the new event dispatch system can be accessed.
+        auto get_user_mod() -> CppUserModBase*;
     };
 } // namespace RC
