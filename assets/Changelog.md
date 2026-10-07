@@ -559,6 +559,8 @@ Fixed the `GetWorld` function of UObject and AActor crashing if the object was n
 
 Fixed the `RegisterCustomProperty` sometimes not working because of an unknown property size. ([UE4SS cb897cc7](https://github.com/UE4SS-RE/RE-UE4SS/commit/cb897cc7))
 
+Fixed a memory leak when calling a UFunction with an 'Out' parameter from Lua: every call left a registry reference to the 'Out' table behind, so the table and everything in it were never garbage collected. ([UE4SS #1446](https://github.com/UE4SS-RE/RE-UE4SS/issues/1446))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 

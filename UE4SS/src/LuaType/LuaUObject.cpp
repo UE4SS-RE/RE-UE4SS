@@ -213,10 +213,10 @@ namespace RC::LuaType
                                     "Tried storing reference to a Lua table for an 'Out' parameter when calling a UFunction but no table was on the stack");
                         }
 
-                        // Duplicate the Lua function to the top of the stack for luaL_ref
+                        // Duplicate the 'Out' table to the top of the stack for luaL_ref
                         lua_pushvalue(lua.get_lua_state(), 1);
 
-                        // Take a reference to the Lua function (it also pops it of the stack)
+                        // Take a reference to the 'Out' table (it also pops it of the stack); released after the call
                         dynamic_unreal_function_out_parameters.add({.property = param_next, .lua_ref = lua.registry().make_ref()});
 
                         if (!param_next->IsA<Unreal::FStructProperty>() && !param_next->IsA<Unreal::FArrayProperty>())
@@ -268,6 +268,9 @@ namespace RC::LuaType
 
                 // Use the stored registry index to put the original Lua table for the 'Out' param back on the stack
                 lua.registry().get_table_ref(lua_table_ref);
+                // The reference was only needed to get the table back here; release it so each call doesn't leave
+                // a registry entry behind that keeps the table (and everything stored in it) alive forever
+                luaL_unref(lua.get_lua_state(), LUA_REGISTRYINDEX, lua_table_ref);
                 auto lua_table = lua.get_table();
 
                 auto reuse_same_table = param->IsA<Unreal::FArrayProperty>() || param->IsA<Unreal::FStructProperty>() || param->IsA<Unreal::FSetProperty>();
