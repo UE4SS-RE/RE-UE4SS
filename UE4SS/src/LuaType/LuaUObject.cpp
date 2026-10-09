@@ -213,14 +213,15 @@ namespace RC::LuaType
                                     "Tried storing reference to a Lua table for an 'Out' parameter when calling a UFunction but no table was on the stack");
                         }
 
-                        // Duplicate the Lua function to the top of the stack for luaL_ref
+                        // Duplicate the Lua table to the top of the stack for luaL_ref
                         lua_pushvalue(lua.get_lua_state(), 1);
 
-                        // Take a reference to the Lua function (it also pops it of the stack)
+                        // Take a reference to the Lua table (it also pops it of the stack)
                         dynamic_unreal_function_out_parameters.add({.property = param_next, .lua_ref = lua.registry().make_ref()});
 
                         if (!param_next->IsA<Unreal::FStructProperty>() && !param_next->IsA<Unreal::FArrayProperty>())
                         {
+                            lua.discard_value();
                             continue;
                         }
                     }
