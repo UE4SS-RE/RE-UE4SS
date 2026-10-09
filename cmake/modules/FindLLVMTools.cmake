@@ -91,6 +91,7 @@ endfunction()
 #   NEED_LLVM_RC - Find llvm-rc
 #   NEED_LLVM_MT - Find llvm-mt
 #   NEED_LLVM_RANLIB - Find llvm-ranlib
+#   NEED_LLVM_ML - Find llvm-ml
 #
 # Sets in parent scope (if requested):
 #   CLANG_EXECUTABLE - Path to clang
@@ -102,6 +103,7 @@ endfunction()
 #   LLVM_RC_EXECUTABLE - Path to llvm-rc
 #   LLVM_MT_EXECUTABLE - Path to llvm-mt
 #   LLVM_RANLIB_EXECUTABLE - Path to llvm-ranlib
+#   LLVM_ML_EXECUTABLE - Path to llvm-ml
 #
 # Example usage:
 #   find_llvm_tools(NEED_CLANG_CL TRUE NEED_LLD TRUE NEED_LLVM_LIB TRUE)
@@ -110,7 +112,7 @@ function(find_llvm_tools)
     cmake_parse_arguments(FIND_LLVM
         ""
         ""
-        "NEED_CLANG;NEED_CLANG_CL;NEED_LLD;NEED_LLVM_LIB;NEED_LLVM_RC;NEED_LLVM_MT;NEED_LLVM_RANLIB"
+        "NEED_CLANG;NEED_CLANG_CL;NEED_LLD;NEED_LLVM_LIB;NEED_LLVM_RC;NEED_LLVM_MT;NEED_LLVM_RANLIB;NEED_LLVM_ML"
         ${ARGN}
     )
     
@@ -157,6 +159,11 @@ function(find_llvm_tools)
         find_llvm_tool(LLVM_RANLIB_EXECUTABLE "llvm-ranlib" "LLVM ranlib" TRUE)
         set(LLVM_RANLIB_EXECUTABLE "${LLVM_RANLIB_EXECUTABLE}" PARENT_SCOPE)
     endif()
+
+    if(FIND_LLVM_NEED_LLVM_ML)
+        find_llvm_tool(LLVM_ML_EXECUTABLE "llvm-ml" "LLVM ML assembler" TRUE)
+        set(LLVM_ML_EXECUTABLE "${LLVM_ML_EXECUTABLE}" PARENT_SCOPE)
+    endif()
 endfunction()
 
 # Convenience wrapper for Windows-targeting toolchains
@@ -168,6 +175,7 @@ function(find_llvm_windows_tools)
         NEED_LLVM_RC TRUE
         NEED_LLVM_MT TRUE
         NEED_LLVM_RANLIB TRUE
+        NEED_LLVM_ML TRUE
     )
     # Forward all variables to parent scope
     set(CLANG_CL_EXECUTABLE "${CLANG_CL_EXECUTABLE}" PARENT_SCOPE)
@@ -176,6 +184,7 @@ function(find_llvm_windows_tools)
     set(LLVM_RC_EXECUTABLE "${LLVM_RC_EXECUTABLE}" PARENT_SCOPE)
     set(LLVM_MT_EXECUTABLE "${LLVM_MT_EXECUTABLE}" PARENT_SCOPE)
     set(LLVM_RANLIB_EXECUTABLE "${LLVM_RANLIB_EXECUTABLE}" PARENT_SCOPE)
+    set(LLVM_ML_EXECUTABLE "${LLVM_ML_EXECUTABLE}" PARENT_SCOPE)
 endfunction()
 
 # Convenience wrapper for GNU-style toolchains
