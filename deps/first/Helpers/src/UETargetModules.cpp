@@ -4,12 +4,12 @@
 
 #include <fmt/format.h>
 
-#if defined(_WIN32)
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <Windows.h>
 #include <Psapi.h>
-#elif defined(__linux__)
+#elifdef __linux__
 // No platform headers required here.
 #else
 #error "UETargetModules is not supported on this platform"
@@ -17,7 +17,7 @@
 
 namespace RC
 {
-#if defined(_WIN32)
+#ifdef _WIN32
     auto WIN_MODULEINFO::operator=(MODULEINFO other) -> WIN_MODULEINFO&
     {
         lpBaseOfDll = other.lpBaseOfDll;
@@ -35,7 +35,7 @@ namespace RC
     {
         return *std::bit_cast<MODULEINFO*>(&array[static_cast<size_t>(index)]);
     }
-#elif defined(__linux__)
+#elifdef __linux__
     auto ScanTargetArray::operator[](ScanTarget index) -> LINUX_MODULEINFO&
     {
         return array[static_cast<size_t>(index)];
