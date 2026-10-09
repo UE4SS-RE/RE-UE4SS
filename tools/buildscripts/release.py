@@ -10,10 +10,11 @@ import sys
 import json
 
 class ReleaseHandler:
-    def __init__(self, is_dev_release, is_experimental, release_output='release'):
+    def __init__(self, is_dev_release, is_experimental, release_output='release', append_clang_name=False):
         self.is_dev_release = is_dev_release
         self.is_experimental = is_experimental
         self.release_output = release_output
+        self.append_clang_name = append_clang_name
         self.staging_dir = os.path.join(self.release_output, 'StagingDev') if self.is_dev_release else os.path.join(self.release_output, 'StagingRelease')
         self.ue4ss_dir = os.path.join(self.staging_dir, 'ue4ss')
 
@@ -228,6 +229,8 @@ class ReleaseHandler:
             sys.exit(1)
         main_zip_name = f'zDEV-UE4SS_{version}' if self.is_dev_release else f'UE4SS_{version}'
         output = os.path.join(self.release_output, main_zip_name)
+        if self.append_clang_name:
+            output += '_Clang'
         shutil.make_archive(output, 'zip', self.staging_dir)
         print(f'Created package {output}.zip')
 
@@ -250,8 +253,8 @@ class Packager:
         os.mkdir(self.release_output)
 
     def run(self):
-        dev_handler = ReleaseHandler(is_dev_release=True, is_experimental=self.args.e, release_output=self.release_output)
-        release_handler = ReleaseHandler(is_dev_release=False, is_experimental=self.args.e, release_output=self.release_output)
+        dev_handler = ReleaseHandler(is_dev_release=True, is_experimental=self.args.e, release_output=self.release_output, append_clang_name=self.args.c)
+        release_handler = ReleaseHandler(is_dev_release=False, is_experimental=self.args.e, release_output=self.release_output, append_clang_name=self.args.c)
 
         dev_handler.make_staging_dirs()
         dev_handler.package_release()
@@ -325,6 +328,7 @@ if __name__ == "__main__":
 
     package_parser = subparsers.add_parser('package')
     package_parser.add_argument('-e', action='store_true')
+    package_parser.add_argument('-c', action='store_true')
 
     release_commit_parser = subparsers.add_parser('release_commit')
     release_commit_parser.add_argument('username', nargs='?')
@@ -343,6 +347,7 @@ How to run this script:
 
     --changelog_path : Optional argument to specify the path to the changelog file. Default is 'assets/Changelog.md'
     -e : Argument used when running the script for experimental release
+    -c : Argument used when wanting to append _Clang to the package name
 
     Examples:
     - python release.py package 
