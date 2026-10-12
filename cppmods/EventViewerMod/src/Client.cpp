@@ -1001,6 +1001,13 @@ namespace RC::EventViewerMod
 
     auto Client::add_to_white_list(const std::string_view item) -> void
     {
+        const auto lower_item = to_lower_case(item);
+        const auto current_tokens = split_string_by_comma(m_state.whitelist);
+        if (std::ranges::find(current_tokens, lower_item) != current_tokens.end())
+        {
+            return;
+        }
+
         if (m_state.whitelist.empty())
         {
             m_state.whitelist += item;
@@ -1016,6 +1023,13 @@ namespace RC::EventViewerMod
 
     auto Client::add_to_black_list(std::string_view item) -> void
     {
+        const auto lower_item = to_lower_case(item);
+        const auto current_tokens = split_string_by_comma(m_state.blacklist);
+        if (std::ranges::find(current_tokens, lower_item) != current_tokens.end())
+        {
+            return;
+        }
+
         if (m_state.blacklist.empty())
         {
             m_state.blacklist += item;
