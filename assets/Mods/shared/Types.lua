@@ -374,6 +374,7 @@ function UninstallMod(ModName) end
 
 --- Registers a callback for a UFunction
 --- Callbacks are triggered when a UFunction is executed
+--- If the function is not yet loaded into memory, the hook is automatically deferred and bound once loaded.
 --- The callback params are: UObject self, UFunctionParams...
 --- Returns two ids, both of which must be passed to `UnregisterHook` if you want to unregister the hook.
 ---@param UFunctionName string

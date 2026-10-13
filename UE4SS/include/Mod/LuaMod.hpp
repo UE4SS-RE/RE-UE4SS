@@ -143,6 +143,20 @@ namespace RC
             std::vector<Unreal::FName> names{};
             LuaCallbackData callback_data{};
         };
+        struct DeferredHookData
+        {
+            int32_t pre_id{};
+            int32_t post_id{};
+            LuaMod* mod{};
+            LuaMadeSimple::Lua* hook_lua{};
+            int32_t lua_callback_registry_index{};
+            int32_t lua_post_callback_registry_index{-1};
+            int32_t lua_thread_registry_index{};
+            StringType function_name_no_prefix{};
+            std::chrono::steady_clock::time_point registered_at{std::chrono::steady_clock::now()};
+            bool warned_unresolved{false};
+        };
+        static inline std::vector<DeferredHookData> m_deferred_hooks{};
         static inline std::vector<LuaCancellableCallbackData> m_static_construct_object_lua_callbacks;
         static inline uint64_t m_next_static_construct_callback_id{1};
         static inline std::vector<LuaCallbackData> m_process_console_exec_pre_callbacks;
@@ -270,6 +284,7 @@ namespace RC
         static auto remove_function_hook_data(std::vector<FunctionHookData>&, Unreal::FName) -> void;
         static auto remove_function_hook_data(std::vector<FunctionHookData>&, const Unreal::UObject*) -> void;
         static auto remove_function_hook_data(std::vector<FunctionHookData>&, const std::vector<Unreal::FName>&) -> void;
+        static auto process_deferred_hooks() -> void;
     };
 
     struct LuaStatics

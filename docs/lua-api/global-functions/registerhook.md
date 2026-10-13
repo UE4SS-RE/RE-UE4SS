@@ -8,7 +8,7 @@ The callback params are: `UObject self`, `UFunctionParams..`.
 
 Returns two ids, both of which must be passed to `UnregisterHook` if you want to unregister the hook.
 
-> Any `UFunction` that you attempt to register with `RegisterHook` must already exist in memory when you register it.  
+> If the `UFunction` is not loaded into memory yet when `RegisterHook` is called (e.g. Blueprint functions at mod startup), the hook is automatically deferred and will be bound immediately as soon as the asset/function is loaded into memory without requiring any manual delays (`ExecuteWithDelay`).
 
 > `RegisterHook` doesn't support delegate functions!
 

@@ -1759,14 +1759,6 @@ Overloads:
 
                 auto function_name_no_prefix = get_function_name_without_prefix(ensure_str(lua.get_string()));
 
-                Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
-                if (!unreal_function)
-                {
-                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name "
-                                                "was found.\n>FunctionName: {}",
-                                                to_string(function_name_no_prefix)));
-                }
-
                 if (!lua.is_integer())
                 {
                     lua.throw_error(error_overload_not_found);
@@ -1790,6 +1782,32 @@ Overloads:
                 {
                     lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but the PostCallbackId supplied was too "
                                                 "large (>int32)\n>FunctionName: {}",
+                                                to_string(function_name_no_prefix)));
+                }
+
+                Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
+                if (!unreal_function)
+                {
+                    // Check if it's a pending deferred hook that hasn't resolved yet
+                    auto it = std::ranges::find_if(LuaMod::m_deferred_hooks, [&](const LuaMod::DeferredHookData& elem) {
+                        return elem.pre_id == pre_id && elem.function_name_no_prefix == function_name_no_prefix;
+                    });
+                    if (it != LuaMod::m_deferred_hooks.end())
+                    {
+                        luaL_unref(it->hook_lua->get_lua_state(), LUA_REGISTRYINDEX, it->lua_callback_registry_index);
+                        if (it->lua_post_callback_registry_index != -1)
+                        {
+                            luaL_unref(it->hook_lua->get_lua_state(), LUA_REGISTRYINDEX, it->lua_post_callback_registry_index);
+                        }
+                        luaL_unref(it->hook_lua->get_lua_state(), LUA_REGISTRYINDEX, it->lua_thread_registry_index);
+                        LuaMod::m_deferred_hooks.erase(it);
+                        Output::send<LogLevel::Verbose>(STR("[UnregisterHook] Cancelled deferred hook ({}, {}) for {}\n"),
+                                                        pre_id, post_id, function_name_no_prefix);
+                        return 0;
+                    }
+
+                    lua.throw_error(std::format("Tried to unregister a hook with Lua function 'UnregisterHook' but no UFunction with the specified name "
+                                                "was found.\n>FunctionName: {}",
                                                 to_string(function_name_no_prefix)));
                 }
 
@@ -4103,6 +4121,7 @@ Overloads:
         process_delayed_actions<GameThreadExecutionMethod::ProcessEvent>(LuaMod::m_delayed_game_thread_actions);
 
         process_pending_notify_on_new_object_callbacks();
+        LuaMod::process_deferred_hooks();
 
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
@@ -4140,6 +4159,7 @@ Overloads:
         process_delayed_actions<GameThreadExecutionMethod::EngineTick>(LuaMod::m_delayed_game_thread_actions);
 
         process_pending_notify_on_new_object_callbacks();
+        LuaMod::process_deferred_hooks();
 
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
@@ -4194,6 +4214,110 @@ Overloads:
         }
     }
 
+    static auto bind_hook(LuaMod* mod,
+                          LuaMadeSimple::Lua* hook_lua,
+                          int lua_thread_registry_index,
+                          int lua_callback_registry_index,
+                          int lua_post_callback_registry_index,
+                          Unreal::UFunction* unreal_function,
+                          const StringType& function_name_no_prefix,
+                          int32_t preferred_id = 0) -> std::pair<int32_t, int32_t>
+    {
+        int32_t pre_id{};
+        int32_t post_id{};
+
+        auto func_ptr = unreal_function->GetFunc();
+        if (func_ptr && func_ptr != Unreal::UObject::ProcessInternalInternal.get_function_address() &&
+            unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
+        {
+            auto& custom_data = g_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
+                    0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index));
+            pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
+            post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
+            custom_data->pre_callback_id = pre_id;
+            custom_data->post_callback_id = post_id;
+            Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"),
+                                            custom_data->pre_callback_id,
+                                            custom_data->post_callback_id,
+                                            unreal_function->GetFullName());
+        }
+        else if (func_ptr && func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
+                 !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
+        {
+            auto function_data = LuaMod::find_function_hook_data(LuaMod::m_script_hook_callbacks, unreal_function);
+            if (!function_data)
+            {
+                function_data = &LuaMod::m_script_hook_callbacks.emplace_back(LuaMod::get_object_names(unreal_function), LuaMod::LuaCallbackData{hook_lua, nullptr, {}});
+            }
+            auto& callback_data = function_data->callback_data;
+            // Note that non-native hooks don't have a different id for the post-callback.
+            pre_id = preferred_id != 0 ? preferred_id : Unreal::UnrealScriptFunctionData::MakeNewId();
+            post_id = pre_id;
+            callback_data.registry_indexes.emplace_back(hook_lua, LuaMod::LuaCallbackData::RegistryIndex{lua_callback_registry_index, pre_id});
+            Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
+                                            pre_id,
+                                            post_id,
+                                            unreal_function->GetFullName());
+        }
+        else
+        {
+            Output::send<LogLevel::Error>(STR("[RegisterHook] Unable to register hook for '{}': UFunction::Func = {}, FUNC_Native = {}\n"),
+                                          function_name_no_prefix,
+                                          std::bit_cast<void*>(func_ptr),
+                                          static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native)));
+            return {0, 0};
+        }
+
+        return {pre_id, post_id};
+    }
+
+    auto LuaMod::process_deferred_hooks() -> void
+    {
+        std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+        if (m_deferred_hooks.empty())
+        {
+            return;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        std::vector<DeferredHookData> remaining_hooks{};
+        remaining_hooks.reserve(m_deferred_hooks.size());
+
+        for (auto& hook : m_deferred_hooks)
+        {
+            Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, hook.function_name_no_prefix);
+            if (unreal_function)
+            {
+                auto [pre_id, post_id] = bind_hook(hook.mod,
+                                                   hook.hook_lua,
+                                                   hook.lua_thread_registry_index,
+                                                   hook.lua_callback_registry_index,
+                                                   hook.lua_post_callback_registry_index,
+                                                   unreal_function,
+                                                   hook.function_name_no_prefix,
+                                                   hook.pre_id);
+                Output::send<LogLevel::Default>(
+                        STR("[RegisterHook] Deferred hook resolved and bound for '{}' (id: {}, {})\n"),
+                        unreal_function->GetFullName(),
+                        pre_id,
+                        post_id);
+            }
+            else
+            {
+                if (!hook.warned_unresolved && (now - hook.registered_at) > std::chrono::seconds(30))
+                {
+                    Output::send<LogLevel::Warning>(
+                            STR("[RegisterHook] Warning: Deferred hook for '{}' still unresolved after 30 seconds. Verify function path if unexpected.\n"),
+                            hook.function_name_no_prefix);
+                    hook.warned_unresolved = true;
+                }
+                remaining_hooks.push_back(std::move(hook));
+            }
+        }
+
+        m_deferred_hooks = std::move(remaining_hooks);
+    }
+
     auto LuaMod::setup_lua_global_functions_main_state_only() const -> void
     {
         m_lua.register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -4241,52 +4365,53 @@ Overloads:
             Unreal::UFunction* unreal_function = Unreal::UObjectGlobals::StaticFindObject<Unreal::UFunction*>(nullptr, nullptr, function_name_no_prefix);
             if (!unreal_function)
             {
-                lua.throw_error(std::format(
-                        "Tried to register a hook with Lua function 'RegisterHook' but no UFunction with the specified name was found.\nFunction Name: {}",
-                        to_string(function_name_no_prefix)));
-            }
-
-            int32_t pre_id{};
-            int32_t post_id{};
-
-            auto func_ptr = unreal_function->GetFunc();
-            if (func_ptr && func_ptr != Unreal::UObject::ProcessInternalInternal.get_function_address() &&
-                unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
-            {
-                auto& custom_data = g_hooked_script_function_data.emplace_back(std::make_unique<LuaUnrealScriptFunctionData>(
-                        0, 0, unreal_function, mod, *hook_lua, lua_callback_registry_index, lua_post_callback_registry_index, lua_thread_registry_index));
-                pre_id = unreal_function->RegisterPreHook(&lua_unreal_script_function_hook_pre, custom_data.get());
-                post_id = unreal_function->RegisterPostHook(&lua_unreal_script_function_hook_post, custom_data.get());
-                custom_data->pre_callback_id = pre_id;
-                custom_data->post_callback_id = post_id;
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered native hook ({}, {}) for {}\n"),
-                                                custom_data->pre_callback_id,
-                                                custom_data->post_callback_id,
-                                                unreal_function->GetFullName());
-            }
-            else if (func_ptr && func_ptr == Unreal::UObject::ProcessInternalInternal.get_function_address() &&
-                     !unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))
-            {
-                auto function_data = find_function_hook_data(m_script_hook_callbacks, unreal_function);
-                if (!function_data)
+                if (is_engine_tick_hook_available())
                 {
-                    function_data = &m_script_hook_callbacks.emplace_back(get_object_names(unreal_function), LuaCallbackData{hook_lua, nullptr, {}});
+                    ensure_engine_tick_hooked();
                 }
-                auto& callback_data = function_data->callback_data;
-                // Note that non-native hooks don't have a different id for the post-callback.
-                pre_id = Unreal::UnrealScriptFunctionData::MakeNewId();
-                post_id = pre_id;
-                callback_data.registry_indexes.emplace_back(hook_lua, LuaCallbackData::RegistryIndex{lua_callback_registry_index, pre_id});
-                Output::send<LogLevel::Verbose>(STR("[RegisterHook] Registered script hook ({}, {}) for {}\n"),
-                                                pre_id,
-                                                post_id,
-                                                unreal_function->GetFullName());
+                else if (is_process_event_hook_available())
+                {
+                    ensure_process_event_hooked(mod);
+                }
+
+                auto pre_id = Unreal::UnrealScriptFunctionData::MakeNewId();
+                auto post_id = pre_id;
+
+                m_deferred_hooks.emplace_back(DeferredHookData{
+                        .pre_id = pre_id,
+                        .post_id = post_id,
+                        .mod = mod,
+                        .hook_lua = hook_lua,
+                        .lua_callback_registry_index = lua_callback_registry_index,
+                        .lua_post_callback_registry_index = lua_post_callback_registry_index,
+                        .lua_thread_registry_index = lua_thread_registry_index,
+                        .function_name_no_prefix = function_name_no_prefix,
+                });
+
+                Output::send<LogLevel::Default>(
+                        STR("[RegisterHook] UFunction '{}' not found yet (asset pending load). Deferred hook registered with id ({}, {}).\n"),
+                        function_name_no_prefix,
+                        pre_id,
+                        post_id);
+
+                lua.set_integer(pre_id);
+                lua.set_integer(post_id);
+                return 2;
             }
-            else
+
+            auto [pre_id, post_id] = bind_hook(mod,
+                                               hook_lua,
+                                               lua_thread_registry_index,
+                                               lua_callback_registry_index,
+                                               lua_post_callback_registry_index,
+                                               unreal_function,
+                                               function_name_no_prefix);
+
+            if (pre_id == 0 && post_id == 0)
             {
                 std::string error_message{"Was unable to register a hook with Lua function 'RegisterHook', information:\n"};
                 error_message.append(fmt::format("FunctionName: {}\n", to_string(function_name_no_prefix)));
-                error_message.append(fmt::format("UFunction::Func: {}\n", std::bit_cast<void*>(func_ptr)));
+                error_message.append(fmt::format("UFunction::Func: {}\n", std::bit_cast<void*>(unreal_function->GetFunc())));
                 error_message.append(fmt::format("ProcessInternal: {}\n", Unreal::UObject::ProcessInternalInternal.get_function_address()));
                 error_message.append(
                         fmt::format("FUNC_Native: {}\n", static_cast<uint32_t>(unreal_function->HasAnyFunctionFlags(Unreal::EFunctionFlags::FUNC_Native))));
@@ -6131,6 +6256,19 @@ Overloads:
         erase_from_container(this, m_local_player_exec_pre_callbacks);
         erase_from_container(this, m_local_player_exec_post_callbacks);
         erase_from_container(this, m_script_hook_callbacks);
+        std::erase_if(m_deferred_hooks, [&](const DeferredHookData& hook) {
+            if (hook.mod == this)
+            {
+                luaL_unref(hook.hook_lua->get_lua_state(), LUA_REGISTRYINDEX, hook.lua_callback_registry_index);
+                if (hook.lua_post_callback_registry_index != -1)
+                {
+                    luaL_unref(hook.hook_lua->get_lua_state(), LUA_REGISTRYINDEX, hook.lua_post_callback_registry_index);
+                }
+                luaL_unref(hook.hook_lua->get_lua_state(), LUA_REGISTRYINDEX, hook.lua_thread_registry_index);
+                return true;
+            }
+            return false;
+        });
 
         UE4SSProgram::get_program().get_all_input_events([&](auto& key_set) {
             std::erase_if(key_set.key_data,
