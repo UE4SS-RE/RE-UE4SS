@@ -153,6 +153,11 @@ Fixed Static Mesh Dumper crashing on material interfaces in UE 5.6 and above due
 
 ### Lua API
 
+Added automatic deferred hooking to `RegisterHook`:
+- If a target `UFunction` is not yet loaded in memory when `RegisterHook` is called (e.g. Blueprint functions in uninstantiated assets at startup), the hook is automatically queued and bound on the game thread as soon as the asset/function loads.
+- Returns valid hook IDs immediately, eliminating the need to wrap hook registrations inside `ExecuteWithDelay`.
+- Supports cancelling deferred hooks via `UnregisterHook` prior to resolution.
+
 Added `__eq` metamethod for `UObjectBase`, allowing comparing `UObject` instances by underlying pointer (`objA == objB`) from Lua rather than userdata reference equality.
 
 Added support for setting `FWeakObjectProperty` values (`Operation::Set`), allowing assignment of `UObject`, `FWeakObjectPtr`, or `nil` from Lua.
