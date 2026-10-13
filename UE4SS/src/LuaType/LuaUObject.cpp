@@ -142,7 +142,34 @@ namespace RC::LuaType
         Unreal::FName return_value_property_type{0u, 0u};
         int32_t return_value_property_offset_internal{};
 
-        DynamicUnrealFunctionData dynamic_unreal_function_data{};
+#ifndef _WIN32
+        // _ALLOCA_S_THRESHOLD only exists on Windows as far as I know, so let's define it the same on other systems.
+        static constexpr size_t _ALLOCA_S_THRESHOLD = 1024;
+#endif
+        const auto params_size = func->GetParmsSize();
+        const  bool requires_heap_alloc = params_size > _ALLOCA_S_THRESHOLD;
+        uint8_t* dynamic_unreal_function_data{};
+        if (requires_heap_alloc)
+        {
+            dynamic_unreal_function_data = static_cast<uint8_t*>(malloc(params_size));
+        }
+        else
+        {
+            dynamic_unreal_function_data = static_cast<uint8_t*>(alloca(params_size));
+        }
+        Unreal::FMemory::Memzero(dynamic_unreal_function_data, params_size);
+        struct DeferFree
+        {
+            uint8_t* data{};
+            bool requires_free{};
+            ~DeferFree()
+            {
+                if (data && requires_free)
+                {
+                    free(data);
+                }
+            }
+        } defer_free{dynamic_unreal_function_data, requires_heap_alloc};
         DynamicUnrealFunctionOutParameters dynamic_unreal_function_out_parameters{};
         bool has_out_params{false};
 
@@ -230,11 +257,11 @@ namespace RC::LuaType
 
                     if (StaticState::m_property_value_pushers.contains(name_comparison_index))
                     {
-                        void* data = &dynamic_unreal_function_data.data[offset_internal];
+                        void* data = &dynamic_unreal_function_data[offset_internal];
 
                         const PusherParams pusher_params{.operation = Operation::Set,
                                                          .lua = lua,
-                                                         .base = static_cast<Unreal::UObject*>(static_cast<void*>(dynamic_unreal_function_data.data)),
+                                                         .base = static_cast<Unreal::UObject*>(static_cast<void*>(dynamic_unreal_function_data)),
                                                          .data = data,
                                                          .property = param_next};
                         StaticState::m_property_value_pushers[name_comparison_index](pusher_params);
@@ -255,7 +282,7 @@ namespace RC::LuaType
         // It's assumed that everything is safe here
         // Every part of the system is designed to throw when stuff goes wrong
         // This code should never be executed in those cases
-        calling_context->ProcessEvent(func, dynamic_unreal_function_data.data);
+        calling_context->ProcessEvent(func, dynamic_unreal_function_data);
 
         // If there are any 'Out' params, update the table that they correspond to
         if (has_out_params)
@@ -285,12 +312,12 @@ namespace RC::LuaType
 
                 if (StaticState::m_property_value_pushers.contains(name_comparison_index))
                 {
-                    uint8_t* data = &dynamic_unreal_function_data.data[param->GetOffset_Internal()];
+                    uint8_t* data = &dynamic_unreal_function_data[param->GetOffset_Internal()];
 
                     const PusherParams pusher_params{
                             .operation = Operation::GetNonTrivialLocal,
                             .lua = lua,
-                            .base = static_cast<Unreal::UObject*>(static_cast<void*>(dynamic_unreal_function_data.data)),
+                            .base = static_cast<Unreal::UObject*>(static_cast<void*>(dynamic_unreal_function_data)),
                             .data = data,
                             .property = param,
                             .create_new_if_get_non_trivial_local = !reuse_same_table,
@@ -317,7 +344,7 @@ namespace RC::LuaType
 
             if (StaticState::m_property_value_pushers.contains(name_comparison_index))
             {
-                uint8_t* data = &dynamic_unreal_function_data.data[return_value_property_offset_internal];
+                uint8_t* data = &dynamic_unreal_function_data[return_value_property_offset_internal];
 
                 const PusherParams pusher_params{.operation = Operation::GetNonTrivialLocal,
                                                  .lua = lua,
