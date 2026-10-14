@@ -1,8 +1,13 @@
 #pragma once
 
+#include <array>
+#include <bit>
+#include <cstddef>
+#include <cstring>
 #include <filesystem>
 #include <memory>
 #include <span>
+#include <type_traits>
 #include <string>
 
 #include <File/Common.hpp>
@@ -31,28 +36,58 @@ namespace RC::File
         FileType m_internal_handle{};
 
       protected:
-        explicit HandleTemplate(FileType&& internal_handle) : m_internal_handle(std::move(internal_handle))
+        explicit HandleTemplate(FileType&& InternalHandle)
         {
+            // Transfer the complete platform-specific state rather than
+            // copying native resource handles and invalidating the source.
+            using std::swap;
+            swap(m_internal_handle, InternalHandle);
         }
 
       public:
         HandleTemplate() = default;
         HandleTemplate(const HandleTemplate&) = delete;
         HandleTemplate& operator=(const HandleTemplate& original) = delete;
-        HandleTemplate& operator=(HandleTemplate&& original)
+        HandleTemplate& operator=(HandleTemplate&& Original)
         {
-            m_internal_handle = std::move(original.m_internal_handle);
-            original.m_internal_handle.invalidate_file();
+            if (this == &Original)
+            {
+                return *this;
+            }
+
+            // Release resources already owned by the destination before
+            // accepting those of the source. If closure fails, leave the
+            // source's ownership unchanged so cleanup can be retried.
+            close();
+
+            using std::swap;
+            swap(m_internal_handle, Original.m_internal_handle);
             return *this;
         };
-        HandleTemplate(HandleTemplate&& original) noexcept
+        HandleTemplate(HandleTemplate&& Original) noexcept(std::is_nothrow_default_constructible_v<FileType> && std::is_nothrow_swappable_v<FileType>)
         {
-            m_internal_handle = std::move(original.m_internal_handle);
-            original.m_internal_handle.invalidate_file();
+            // A moved-from handle receives the default, unowned state.
+            // No native resource is copied or independently duplicated.
+            using std::swap;
+            swap(m_internal_handle, Original.m_internal_handle);
         }
-        ~HandleTemplate()
+        ~HandleTemplate() noexcept
         {
-            close();
+            // Explicit close() reports resource-release failures to the caller.
+            // Destruction cannot safely propagate those exceptions, particularly
+            // when another exception is already unwinding the stack.
+            //
+            // The platform implementations attempt all resource releases
+            // before reporting errors, so suppressing the exception here
+            // does not prevent the remaining cleanup from being attempted.
+            try
+            {
+                close();
+            }
+            catch (...)
+            {
+                // Cleanup failures must not escape the destructor.
+            }
         }
 
       public:
@@ -151,12 +186,30 @@ namespace RC::File
         template <typename SerializedDataType>
         auto get_serialized_item() -> SerializedDataType
         {
-            auto* data = static_cast<SerializedDataType*>(m_internal_handle.get_serialized_item(sizeof(SerializedDataType), false));
-            if (!data)
+            void* Data = m_internal_handle.get_serialized_item(sizeof(SerializedDataType), false);
+            if (!Data)
             {
                 THROW_INTERNAL_FILE_ERROR("Attempted to get serialized item but the data was nullptr")
             }
-            return *data;
+
+            if constexpr (std::is_integral_v<SerializedDataType> &&
+                          (sizeof(SerializedDataType) == 4 || sizeof(SerializedDataType) == 8))
+            {
+                // The supported integer types are returned as native bytes.
+                // Copy into byte storage before constructing the value:
+                // the source need not contain a live, aligned integer object.
+                // This also avoids requiring a default constructor.
+                std::array<std::byte, sizeof(SerializedDataType)> Bytes{};
+                std::memcpy(Bytes.data(), Data, Bytes.size());
+                return std::bit_cast<SerializedDataType>(Bytes);
+            }
+            else
+            {
+                // Preserve the previous template behaviour for types outside
+                // the documented integer serialisation contract. In
+                // particular, do not add new construction requirements.
+                return *static_cast<SerializedDataType*>(Data);
+            }
         }
 
         auto write_string_to_file(StringViewType string_to_write) -> void

@@ -2,68 +2,106 @@
 
 #ifdef __linux__
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <format>
+#include <optional>
+#include <utility>
+#include <vector>
 
 #include <File/Common.hpp>
 #include <File/FileType/FileBase.hpp>
 #include <File/Macros.hpp>
-
-// NOTE: This file is effectively a stub.
-//       The LinuxFile class has not been implemented!
-//       File operations through the Output::* system doesn't work, for example FileDevice and NewFileDevice.
 
 namespace RC::File
 {
     class LinuxFile : public FileInterface<LinuxFile>
     {
       private:
-        using HANDLE = void*;
-
         struct IdentifyingProperties
         {
-            unsigned long volume_serial_number{};
-            unsigned long file_index_low{};
-            unsigned long file_index_high{};
-            unsigned long creation_time_low{};
-            unsigned long creation_time_high{};
-            unsigned long last_write_time_high{};
-            unsigned long last_write_time_low{};
-            unsigned long file_size_low{};
-            unsigned long file_size_high{};
+            uint64_t Device{};
+            uint64_t Inode{};
+            int64_t ModificationTimeSeconds{};
+            int64_t ModificationTimeNanoseconds{};
+            uint64_t FileSize{};
+        };
+
+        struct SerializedRecord
+        {
+            GenericDataType Type{};
+            std::uint64_t ValueBits{};
+        };
+
+        struct CacheSnapshot
+        {
+            IdentifyingProperties Properties{};
+            std::vector<SerializedRecord> Records{};
         };
 
       private:
-        HANDLE m_file{};
-        HANDLE m_map_handle{};
+        int FileDescriptor{-1};
         uint8_t* m_memory_map{};
+        size_t MapSize{};
         OpenProperties m_open_properties{};
         std::filesystem::path m_file_path_and_name{};
         std::filesystem::path m_serialization_file_path_and_name{};
-        IdentifyingProperties m_identifying_properties{};
-        constexpr static inline size_t cache_size = 0x500;
-        unsigned char m_cache[cache_size]{};
-        size_t m_offset_to_next_serialized_item{};
-        bool m_has_cache_in_memory{};
-        bool m_has_cached_identifying_properties{};
+        std::optional<CacheSnapshot> CachedSnapshot{};
+        size_t NextRecordIndex{};
+        alignas(std::uint64_t) std::array<std::byte, sizeof(std::uint64_t)> ReturnStorage{};
         bool m_is_file_open{};
 
       public:
+        LinuxFile() = default;
+
+        // Transfer the complete resource state without copying ownership
+        // of the descriptor or performing potentially throwing allocations.
+        // This also makes returning an opened LinuxFile safe without NRVO.
+        LinuxFile(LinuxFile&& Other) noexcept
+        {
+            swap(*this, Other);
+        }
+
         ~LinuxFile() override = default;
 
-      private:
-        auto static create_all_directories(const std::filesystem::path& file_name_and_path) -> void;
+        // Exchange the complete file state, including descriptor and mapping
+        // ownership. Swapping only the native resources would leave the paths,
+        // open properties and serialization state attached to the wrong file.
+        //
+        // HandleTemplate uses this to transfer ownership without temporarily
+        // duplicating native handles or performing potentially throwing copies.
+        friend auto swap(LinuxFile& Lhs, LinuxFile& Rhs) noexcept -> void
+        {
+            using std::swap;
+
+            swap(Lhs.FileDescriptor, Rhs.FileDescriptor);
+            swap(Lhs.m_memory_map, Rhs.m_memory_map);
+            swap(Lhs.MapSize, Rhs.MapSize);
+            swap(Lhs.m_open_properties, Rhs.m_open_properties);
+            Lhs.m_file_path_and_name.swap(Rhs.m_file_path_and_name);
+            Lhs.m_serialization_file_path_and_name.swap(Rhs.m_serialization_file_path_and_name);
+            swap(Lhs.CachedSnapshot, Rhs.CachedSnapshot);
+            swap(Lhs.NextRecordIndex, Rhs.NextRecordIndex);
+            swap(Lhs.ReturnStorage, Rhs.ReturnStorage);
+            swap(Lhs.m_is_file_open, Rhs.m_is_file_open);
+        }
 
       private:
-        auto close_file() -> void;
+        auto static CreateAllDirectories(const std::filesystem::path& file_name_and_path) -> void;
+
+      private:
+        auto LoadSerializationSnapshot() -> bool;
+        auto CloseFile() -> void;
 
       public:
         [[nodiscard]] auto is_file_open() const -> bool;
 
       public:
-        RC_FILE_API auto set_file(HANDLE new_file) -> void;
+        RC_FILE_API auto set_file(int NewFileDescriptor) -> void;
         RC_FILE_API auto set_is_file_open(bool new_is_open) -> void;
-        RC_FILE_API auto get_file() -> HANDLE;
+        RC_FILE_API auto get_file() -> int;
         RC_FILE_API auto serialization_file_exists() -> bool;
 
         // File Interface -> START
@@ -89,7 +127,7 @@ namespace RC::File
         // File Interface -> END
     };
 
-    // This file is automatically included ONLY if Windows is detected
+    // This file is automatically included ONLY if Linux is detected
     // Therefore, it's not necessary to do any checks here
     template <ImplementsFileInterface UnderlyingAbstraction>
     class HandleTemplate;

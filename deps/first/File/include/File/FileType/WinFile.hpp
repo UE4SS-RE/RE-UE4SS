@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <format>
+#include <utility>
 
 #include <File/Common.hpp>
 #include <File/FileType/FileBase.hpp>
@@ -46,6 +47,30 @@ namespace RC::File
 
       public:
         ~WinFile() override = default;
+
+        // Exchange the complete file state, including file and mapping
+        // ownership. Paths, open properties and serialization state must
+        // follow their associated native handles during ownership transfers.
+        //
+        // Preserve the existing Windows serialization representation and
+        // cursor state without modifying their implementation.
+        friend auto swap(WinFile& Lhs, WinFile& Rhs) noexcept -> void
+        {
+            using std::swap;
+
+            swap(Lhs.m_file, Rhs.m_file);
+            swap(Lhs.m_map_handle, Rhs.m_map_handle);
+            swap(Lhs.m_memory_map, Rhs.m_memory_map);
+            swap(Lhs.m_open_properties, Rhs.m_open_properties);
+            Lhs.m_file_path_and_name.swap(Rhs.m_file_path_and_name);
+            Lhs.m_serialization_file_path_and_name.swap(Rhs.m_serialization_file_path_and_name);
+            swap(Lhs.m_identifying_properties, Rhs.m_identifying_properties);
+            swap(Lhs.m_cache, Rhs.m_cache);
+            swap(Lhs.m_offset_to_next_serialized_item, Rhs.m_offset_to_next_serialized_item);
+            swap(Lhs.m_has_cache_in_memory, Rhs.m_has_cache_in_memory);
+            swap(Lhs.m_has_cached_identifying_properties, Rhs.m_has_cached_identifying_properties);
+            swap(Lhs.m_is_file_open, Rhs.m_is_file_open);
+        }
 
       private:
         auto static create_all_directories(const std::filesystem::path& file_name_and_path) -> void;
