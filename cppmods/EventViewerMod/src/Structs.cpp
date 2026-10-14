@@ -33,11 +33,8 @@ namespace RC::EventViewerMod
 {
     auto copy_to_clipboard(const std::string_view& string) -> void
     {
-        ImGui::LogToClipboard();
-        ImVec2 dummy{0, 0};
-        ImGui::LogRenderedText(&dummy, string.data(), string.data() + string.size());
-        ImGui::LogFinish();
-    };
+        ImGui::SetClipboardText(std::string(string).c_str());
+    }
 
     EntryBase::EntryBase(const bool is_tick) : is_tick(is_tick)
     {

@@ -6,7 +6,7 @@ use patternsleuth::resolvers::{
     futures::join,
     impl_collector,
     unreal::{
-        engine_version::EngineVersion,
+        engine_version::{BuildConfiguration, EngineVersion, Stats},
         fname::{FNameCtorWchar, FNameToString},
         ftext::FTextFString,
         gmalloc::GMalloc,
@@ -34,6 +34,8 @@ impl_collector! {
         gnatives: GNatives,
         console_manager_singleton: ConsoleManagerSingleton,
         gameengine_tick: UGameEngineTick,
+        build_configuration: BuildConfiguration,
+        stats: Stats,
     }
 }
 
@@ -85,6 +87,8 @@ pub struct PsScanConfig {
     gnatives: bool,
     console_manager_singleton: bool,
     gameengine_tick: bool,
+    build_configuration: bool,
+    stats: bool,
 }
 
 #[repr(C)]
@@ -100,6 +104,10 @@ pub struct PsScanResults {
     gnatives: u64,
     console_manager_singleton: u64,
     gameengine_tick: u64,
+    // 0 unknown, 1 shipping, 2 development, 3 test
+    build_configuration: u32,
+    // 0 unknown, 1 off, 2 on. Independent of the configuration, any target can force STATS back on.
+    stats: u32,
 }
 
 #[derive(Debug, Default)]
@@ -165,6 +173,42 @@ pub fn ps_scan_internal(ctx: &PsCtx, results: &mut PsScanResults) -> Result<(), 
                     "You need to override the engine version in 'UE4SS-settings.ini'."
                 );
                 errors.0.push(Box::new(err));
+            }
+        }
+    }
+    if ctx.config.build_configuration {
+        match resolution.build_configuration.as_deref() {
+            Ok(BuildConfiguration::Shipping) => {
+                default!(ctx, "Found BuildConfiguration: Shipping");
+                results.build_configuration = 1;
+            }
+            Ok(BuildConfiguration::Development) => {
+                default!(ctx, "Found BuildConfiguration: Development");
+                results.build_configuration = 2;
+            }
+            Ok(BuildConfiguration::Test) => {
+                default!(ctx, "Found BuildConfiguration: Test");
+                results.build_configuration = 3;
+            }
+            Err(err) => {
+                warning!(ctx, "Failed to find BuildConfiguration: {err}");
+                results.build_configuration = 0;
+            }
+        }
+    }
+    if ctx.config.stats {
+        match resolution.stats.as_deref() {
+            Ok(Stats::Off) => {
+                default!(ctx, "Found Stats: Off");
+                results.stats = 1;
+            }
+            Ok(Stats::On) => {
+                default!(ctx, "Found Stats: On");
+                results.stats = 2;
+            }
+            Err(err) => {
+                warning!(ctx, "Failed to find Stats: {err}");
+                results.stats = 0;
             }
         }
     }

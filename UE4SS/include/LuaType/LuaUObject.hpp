@@ -413,6 +413,7 @@ namespace RC::LuaType
             const Operation operation, const LuaMadeSimple::Lua&, Unreal::UObject* base, Unreal::FName property_name, Unreal::FField* field) -> void;
 
     auto is_a_implementation(const LuaMadeSimple::Lua& lua) -> int;
+    auto uobject_equal_implementation(const LuaMadeSimple::Lua& lua) -> int;
 
     template <typename DerivedType, typename ObjectName>
     class UObjectBase;
@@ -517,6 +518,8 @@ namespace RC::LuaType
                 }
                 return 0;
             });
+
+            base_object.get_metamethods().create(LuaMadeSimple::Lua::MetaMethod::Equal, uobject_equal_implementation);
         }
 
       public:
@@ -636,7 +639,8 @@ namespace RC::LuaType
 
             table.add_pair("GetWorld", [](const LuaMadeSimple::Lua& lua) -> int {
                 const auto& lua_object = lua.get_userdata<SelfType>();
-                auto_construct_object(lua, lua_object.get_remote_cpp_object()->GetWorld());
+                const auto object = lua_object.get_remote_cpp_object();
+                auto_construct_object(lua, object ? object->GetWorld() : nullptr);
                 return 1;
             });
 

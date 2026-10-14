@@ -5,7 +5,7 @@
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
-#include <GUI/BPMods.hpp>
+#include <GUI/Mods.hpp>
 #include <GUI/DX11.hpp>
 #include <GUI/Dumpers.hpp>
 #include <GUI/GLFW3_OpenGL3.hpp>
@@ -134,7 +134,7 @@ namespace RC::GUI
                 bool listeners_are_required{};
                 bool should_unset_listeners{};
 
-                auto is_unreal_initialized = Unreal::UnrealInitializer::StaticStorage::bIsInitialized;
+                bool is_unreal_initialized = Unreal::UnrealInitializer::IsInitialized();
                 if (!is_unreal_initialized)
                 {
                     ImGui::BeginDisabled(true);
@@ -173,10 +173,14 @@ namespace RC::GUI
                     ImGui::EndTabItem();
                 }
 
-                if (ImGui::BeginTabItem(ICON_FA_PUZZLE_PIECE " BP Mods"))
+                if (ImGui::BeginTabItem(ICON_FA_PUZZLE_PIECE " Mods"))
                 {
-                    BPMods::render();
+                    m_mods_widget.render();
                     ImGui::EndTabItem();
+                }
+                else
+                {
+                    m_mods_widget.cleanup();
                 }
 
                 if (ImGui::BeginTabItem(ICON_FA_BUG " Lua Debugger"))

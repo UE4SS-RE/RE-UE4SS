@@ -72,19 +72,6 @@ namespace RC
 {
     // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
     /*
-    struct RC_UE_API FUEDeathListener : public Unreal::FUObjectCreateListener
-    {
-        static FUEDeathListener UEDeathListener;
-
-        void NotifyUObjectCreated(const Unreal::UObjectBase* object, int32_t index) override {}
-        void OnUObjectArrayShutdown() override
-        {
-            UE4SSProgram::unreal_is_shutting_down = true;
-            Unreal::UObjectArray::RemoveUObjectCreateListener(this);
-        }
-    };
-    FUEDeathListener FUEDeathListener::UEDeathListener{};
-
     auto get_player_controller() -> UObject*
     {
         std::vector<Unreal::UObject*> player_controllers{};
@@ -106,78 +93,6 @@ namespace RC
     for (const auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                       \
     {                                                                                                                                                          \
         Output::send(STR(#StructName "::{} = 0x{:X}\n"), name, offset);                                                                                        \
-    }
-
-    // Helper macro to adjust all member offsets for a UObjectBase-derived struct by +8 bytes
-    // Used when running on debug/stats builds that have TStatId added to UObjectBase
-#define ADJUST_MEMBER_OFFSETS_FOR_STRUCT(StructName)                                                                                                           \
-    for (auto& [name, offset] : Unreal::StructName::MemberOffsets)                                                                                             \
-    {                                                                                                                                                          \
-        offset += sizeof(void*);                                                                                                                               \
-    }
-
-    // Adjusts all member offsets for UObjectBase-derived classes by +8 bytes.
-    // In stats/debug builds, UObjectBase has an additional TStatId member (8 bytes) after OuterPrivate,
-    // which shifts all derived class member offsets by 8 bytes.
-    // This is only needed for pre-4.25 games since FUObjectItem adjustment handles 4.25+.
-    auto AdjustOffsetsForStatsBuild() -> void
-    {
-        static bool s_already_adjusted = false;
-        if (s_already_adjusted)
-        {
-            Output::send<LogLevel::Warning>(STR("AdjustOffsetsForStatsBuild called twice! Skipping.\n"));
-            return;
-        }
-        s_already_adjusted = true;
-
-        Output::send<LogLevel::Verbose>(STR("Adjusting member offsets for stats/debug build (+8 bytes for UObjectBase-derived classes)\n"));
-
-        // UObjectBase itself - ONLY UEP_TotalSize needs adjustment
-        // The other members (ObjectFlags, InternalIndex, ClassPrivate, NamePrivate, OuterPrivate)
-        // are BEFORE the StatID insertion point and should NOT be shifted
-        Unreal::UObjectBase::UEP_TotalSize() += sizeof(void*);
-
-        // UField and all its derivatives (UStruct, UClass, UScriptStruct, UFunction, UEnum)
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UField);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UStruct);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UClass);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UFunction);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(USparseDelegateFunction);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UEnum);
-
-        // Property classes (in pre-4.25, these are UProperty which inherits from UField)
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FProperty);
-
-        // NOTE: FNumericProperty does NOT have its own MemberOffsets - it inherits from FProperty
-        // So do NOT adjust it, as that would double-adjust FProperty::MemberOffsets
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FObjectPropertyBase);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FStructProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FArrayProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FMapProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FSetProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FBoolProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FByteProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FEnumProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FClassProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FSoftClassProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FDelegateProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FMulticastDelegateProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FInterfaceProperty);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(FFieldPathProperty);
-
-        // UObjectBase-derived classes that DON'T have their own MemberOffsets:
-        // UEngine has no dumped member offsets of its own, so there is nothing to adjust for it.
-
-        // Other UObject-derived classes
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AActor);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AGameModeBase);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(AGameMode);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UGameViewportClient);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UPlayer);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(ULocalPlayer);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UWorld);
-        ADJUST_MEMBER_OFFSETS_FOR_STRUCT(UDataTable);
     }
 
     enum class IsCoalesced
@@ -669,6 +584,7 @@ namespace RC
         config.bEnableCache = settings_manager.General.UseCache;
         config.SecondsToScanBeforeGivingUp = settings_manager.General.SecondsToScanBeforeGivingUp;
         config.bUseUObjectArrayCache = settings_manager.General.UseUObjectArrayCache;
+        config.bForceGUObjectArrayForIteration = settings_manager.General.ForceGUObjectArrayForIteration;
 
         // Retrieve from the config file the number of threads to be used for aob scanning
         {
@@ -846,10 +762,24 @@ namespace RC
                 });
 
                 Output::send<Color::Blue>(STR("UStruct\n"));
-                retrieve_vtable_layout_from_ini(STR("UStruct"), [&](uint32_t index, File::StringType& item) {
+                uint32_t ustruct_size = retrieve_vtable_layout_from_ini(STR("UStruct"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, ufield_size);
                     Output::send(STR("UStruct::{} = 0x{:X}\n"), item, offset);
                     Unreal::UStruct::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send<Color::Blue>(STR("UClass\n"));
+                retrieve_vtable_layout_from_ini(STR("UClass"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, ufield_size, ustruct_size);
+                    Output::send(STR("UClass::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UClass::VTableLayoutMap.emplace(item, offset);
+                });
+
+                Output::send<Color::Blue>(STR("UGameViewportClient\n"));
+                retrieve_vtable_layout_from_ini(STR("UGameViewportClient"), [&](uint32_t index, File::StringType& item) {
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
+                    Output::send(STR("UGameViewportClient::{} = 0x{:X}\n"), item, offset);
+                    Unreal::UGameViewportClient::VTableLayoutMap.emplace(item, offset);
                 });
 
                 Output::send<Color::Blue>(STR("FOutputDevice\n"));
@@ -885,16 +815,11 @@ namespace RC
                 Output::send<Color::Blue>(STR("AGameMode\n"));
                 retrieve_vtable_layout_from_ini(STR("AGameMode"), [&](uint32_t index, File::StringType& item) {
                     uint32_t offset = calculate_virtual_function_offset(index,
-                                                                        Unreal::Version::IsAtLeast(4, 14)
-                                                                        ? uobjectbase_size,
+                                                                        uobjectbase_size,
                                                                         uobjectbaseutility_size,
                                                                         uobject_size,
                                                                         aactor_size,
-                                                                        agamemodebase_size
-                                                                        : uobjectbase_size,
-                                                                        uobjectbaseutility_size,
-                                                                        uobject_size,
-                                                                        aactor_size);
+                                                                        Unreal::Version::IsAtLeast(4, 14) ? agamemodebase_size : 0);
                     Output::send(STR("AGameMode::{} = 0x{:X}\n"), item, offset);
                     Unreal::AGameMode::VTableLayoutMap.emplace(item, offset);
                 });
@@ -915,7 +840,7 @@ namespace RC
 
                 Output::send<Color::Blue>(STR("UDataTable\n"));
                 retrieve_vtable_layout_from_ini(STR("UDataTable"), [&](uint32_t index, File::StringType& item) {
-                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size, uplayer_size);
+                    uint32_t offset = calculate_virtual_function_offset(index, uobjectbase_size, uobjectbaseutility_size, uobject_size);
                     Output::send(STR("UDataTable::{} = 0x{:X}\n"), item, offset);
                     Unreal::UDataTable::VTableLayoutMap.emplace(item, offset);
                 });
@@ -941,9 +866,8 @@ namespace RC
         config.bHookUStructLink = settings_manager.Hooks.HookUStructLink;
         config.FExecVTableOffsetInLocalPlayer = settings_manager.Hooks.FExecVTableOffsetInLocalPlayer;
         config.FNameToStringMethod = settings_manager.General.DefaultFNameToStringMethod;
-        // Apply Debug Build setting from settings file only for now.
-        Unreal::Version::DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
-        Output::send<LogLevel::Warning>(STR("DebugGame Setting Enabled? {}\n"), Unreal::Version::DebugBuild);
+        config.DebugBuild = settings_manager.EngineVersionOverride.DebugBuild;
+        config.Stats = settings_manager.EngineVersionOverride.Stats;
         if (settings_manager.General.DoEarlyScan)
         {
             // Scan a single time while the game thread is locked after UE4SS is attached.
@@ -962,30 +886,13 @@ namespace RC
         // Continuous scanning, and finish initializing after the game thread is unlocked.
         Unreal::UnrealInitializer::Initialize(config);
 
-        // Apply debug/stats build offset adjustments now that version is known and member offsets are initialized
-        if (settings_manager.EngineVersionOverride.DebugBuild)
-        {
-            if (Unreal::Version::IsAtLeast(4, 25))
-            {
-                // In 4.25+, debug builds add TStatId to FUObjectItem
-                Unreal::FUObjectItem::UEP_TotalSize() += sizeof(void*);
-                Output::send<LogLevel::Verbose>(STR("Adjusted FUObjectItem::UEP_TotalSize for stats/debug build (+8 bytes)\n"));
-            }
-            else
-            {
-                // In pre-4.25, debug builds add TStatId to UObjectBase (after OuterPrivate)
-                // This shifts all derived class member offsets by 8 bytes
-                AdjustOffsetsForStatsBuild();
-            }
-        }
-
         output_all_member_offsets(IsCoalesced::Yes);
 
         if (settings_manager.General.ForceGUObjectArrayForIteration)
         {
             Output::send<LogLevel::Warning>(STR("[HashTables] Iteration forced to GUObjectArray by settings\n"));
         }
-        else if (Unreal::FUObjectHashTables::IsAvailable())
+        else if (Unreal::FUObjectHashTables::IsConfigured())
         {
             // The game thread edits the tables without locking, so the walk has to happen on it
             if (UE4SSRuntime::IsEngineTickAvailable())
@@ -996,14 +903,17 @@ namespace RC
                             if (!Done)
                             {
                                 Done = true;
-                                Unreal::FUObjectHashTables::RunSelfTest();
+                                if (Unreal::FUObjectHashTables::RunSelfTest())
+                                {
+                                    Unreal::UnrealInitializer::RetireUObjectArrayCache();
+                                }
                             }
                         },
                         {false, false, STR("UE4SS"), STR("HashTableSelfTest")});
             }
-            else
+            else if (Unreal::FUObjectHashTables::RunSelfTest())
             {
-                Unreal::FUObjectHashTables::RunSelfTest();
+                Unreal::UnrealInitializer::RetireUObjectArrayCache();
             }
         }
         else
@@ -1076,11 +986,6 @@ namespace RC
     {
         ProfilerScope();
         using namespace Unreal;
-
-        // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
-        /*
-        UObjectArray::AddUObjectCreateListener(&FUEDeathListener::UEDeathListener);
-        //*/
 
         if (settings_manager.Debug.RenderMode == GUI::RenderMode::EngineTick)
         {
@@ -1254,6 +1159,7 @@ namespace RC
                         return;
                     }
                     m_pause_events_processing = true;
+                    m_mods_are_being_touched = true;
                     mod->uninstall();
                     auto& mod_ref = *std::ranges::find_if(m_mods, [&](const std::unique_ptr<Mod>& mod_ptr) {
                         return mod_ptr.get() == mod;
@@ -1266,6 +1172,7 @@ namespace RC
                     m_pause_events_processing = false;
                     Output::send(STR("Auto-reloading Lua mod '{}'\n"), mod_ref->get_name());
                     mod_ref->start_mod();
+                    m_mods_are_being_touched = false;
                 }
             });
         }
@@ -1273,8 +1180,15 @@ namespace RC
         Output::send(STR("Event loop start\n"));
         for (m_processing_events = true; m_processing_events;)
         {
-            if (m_pause_events_processing || UE4SSProgram::unreal_is_shutting_down)
+            if (!Unreal::UnrealInitializer::IsInitialized())
             {
+                m_processing_events = false;
+                break;
+            }
+
+            if (m_pause_events_processing)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
                 continue;
             }
 
@@ -1330,6 +1244,17 @@ namespace RC
                 {
                     if (mod->is_started())
                     {
+                        if (const auto cpp_mod = dynamic_cast<CppMod*>(mod.get()))
+                        {
+                            const auto user_mod = cpp_mod->get_user_mod();
+                            if (user_mod)
+                            {
+                                user_mod->dispatch_on_ue4ss_update();
+                            }
+                        }
+                        // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+                        //       These old virtuals must still be called in order to keep old mods working.
+                        //       Removing these virtual calls breaks both ABI and API.
                         mod->fire_update();
                     }
                 }
@@ -1344,6 +1269,7 @@ namespace RC
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
             ProfilerFrameMark();
         }
+        m_processing_events = false;
         Output::send(STR("Event loop end\n"));
     }
 
@@ -1488,6 +1414,14 @@ namespace RC
             {
                 continue;
             }
+            const auto user_mod = static_cast<CppMod*>(mod.get())->get_user_mod();
+            if (user_mod)
+            {
+                user_mod->dispatch_on_unreal_init();
+            }
+            // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+            //       These old virtuals must still be called in order to keep old mods working.
+            //       Removing these virtual calls breaks both ABI and API.
             mod->fire_unreal_init();
         }
     }
@@ -1501,6 +1435,14 @@ namespace RC
             {
                 continue;
             }
+            const auto user_mod = static_cast<CppMod*>(mod.get())->get_user_mod();
+            if (user_mod)
+            {
+                user_mod->dispatch_on_ui_init();
+            }
+            // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+            //       These old virtuals must still be called in order to keep old mods working.
+            //       Removing these virtual calls breaks both ABI and API.
             mod->fire_ui_init();
         }
     }
@@ -1514,6 +1456,14 @@ namespace RC
             {
                 continue;
             }
+            const auto user_mod = static_cast<CppMod*>(mod.get())->get_user_mod();
+            if (user_mod)
+            {
+                user_mod->dispatch_on_program_start();
+            }
+            // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+            //       These old virtuals must still be called in order to keep old mods working.
+            //       Removing these virtual calls breaks both ABI and API.
             mod->fire_program_start();
         }
     }
@@ -1524,6 +1474,14 @@ namespace RC
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod)
             {
+                const auto user_mod = cpp_mod->get_user_mod();
+                if (user_mod)
+                {
+                    user_mod->dispatch_on_dll_load(dll_name);
+                }
+                // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+                //       These old virtuals must still be called in order to keep old mods working.
+                //       Removing these virtual calls breaks both ABI and API.
                 cpp_mod->fire_dll_load(dll_name);
             }
         }
@@ -1535,6 +1493,14 @@ namespace RC
         {
             if (auto cpp_mod = dynamic_cast<CppMod*>(mod.get()); cpp_mod)
             {
+                const auto user_mod = cpp_mod->get_user_mod();
+                if (user_mod)
+                {
+                    user_mod->dispatch_on_all_cpp_mods_loaded();
+                }
+                // NOTE: Legacy virtual event dispatch, not ABI stable to add new events, therefore we now use the new EventDispatcher system.
+                //       These old virtuals must still be called in order to keep old mods working.
+                //       Removing these virtual calls breaks both ABI and API.
                 cpp_mod->fire_on_cpp_mods_loaded();
             }
         }
@@ -1845,6 +1811,7 @@ namespace RC
 
         // Stop processing events while stuff isn't properly setup
         m_pause_events_processing = true;
+        m_mods_are_being_touched = true;
 
         uninstall_mods();
 
@@ -1863,7 +1830,7 @@ namespace RC
         start_cpp_mods();
         start_lua_mods();
 
-        if (Unreal::UnrealInitializer::StaticStorage::bIsInitialized)
+        if (Unreal::UnrealInitializer::IsInitialized())
         {
             fire_unreal_init_for_cpp_mods();
         }
@@ -1873,19 +1840,22 @@ namespace RC
             fire_program_start_for_cpp_mods();
         }
 
+        m_mods_are_being_touched = false;
+
         Output::send(STR("All mods re-installed\n"));
     }
 
-    auto UE4SSProgram::queue_reinstall_mod(LuaMod* mod) -> void
+    template <typename T>
+    static auto queue_reinstall_mod_internal(UE4SSProgram* self, T* mod) -> void
     {
         if (!mod)
         {
             return;
         }
 
-        if (!is_event_loop_thread())
+        if (!self->is_event_loop_thread())
         {
-            queue_event([this, mod]() { queue_reinstall_mod(mod); });
+            self->queue_event([self, mod]() { queue_reinstall_mod_internal(self, mod); });
             return;
         }
 
@@ -1896,40 +1866,57 @@ namespace RC
         Output::send(STR("Reinstalling mod: {}\n"), mod_name);
 
         // Pause event processing for safety
-        m_pause_events_processing = true;
+        self->m_pause_events_processing = true;
+        self->m_mods_are_being_touched = true;
 
         mod->uninstall();
 
         // Remove key binds registered by this specific mod
-        unregister_keydown_events_for_lua_mod(mod, AllMods::No);
+        if constexpr (std::is_same_v<decltype(mod), LuaMod>)
+        {
+            unregister_keydown_events_for_lua_mod(mod, UE4SSProgram::AllMods::No);
+        }
 
         // Remove the old mod from the list
-        delete_mod(mod);
+        self->delete_mod(mod);
         mod = nullptr;
 
         // Resume event processing before starting the new mod
-        m_pause_events_processing = false;
+        self->m_pause_events_processing = false;
 
-        // Create a new LuaMod for this mod (same as setup_mods does)
-        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::move(mod_path));
-        LuaMod* new_mod_ptr = new_mod.get();
-        m_mods.emplace_back(std::move(new_mod));
+        // Create a new Mod for this mod (same as setup_mods does)
+        auto new_mod = std::make_unique<T>(*self, std::move(mod_name), std::move(mod_path));
+        Mod* new_mod_ptr = new_mod.get();
+        self->m_mods.emplace_back(std::move(new_mod));
 
         new_mod_ptr->start_mod();
+
+        self->m_mods_are_being_touched = false;
 
         Output::send(STR("Mod '{}' reinstalled\n"), new_mod_ptr->get_name());
     }
 
-    auto UE4SSProgram::queue_uninstall_mod(LuaMod* mod) -> void
+    auto UE4SSProgram::queue_reinstall_mod(CppMod* mod) -> void
+    {
+        queue_reinstall_mod_internal(this, mod);
+    }
+
+    auto UE4SSProgram::queue_reinstall_mod(LuaMod* mod) -> void
+    {
+        queue_reinstall_mod_internal(this, mod);
+    }
+
+    template <typename T>
+    static auto queue_uninstall_mod_internal(UE4SSProgram* self, T* mod) -> void
     {
         if (!mod)
         {
             return;
         }
 
-        if (!is_event_loop_thread())
+        if (!self->is_event_loop_thread())
         {
-            queue_event([this, mod]() { queue_uninstall_mod(mod); });
+            self->queue_event([self, mod]() { queue_uninstall_mod_internal(self, mod); });
             return;
         }
 
@@ -1937,19 +1924,32 @@ namespace RC
         Output::send(STR("Uninstalling mod: {}\n"), mod_name);
 
         // Pause event processing for safety
-        m_pause_events_processing = true;
+        self->m_pause_events_processing = true;
+        self->m_mods_are_being_touched = true;
 
         mod->uninstall();
 
         // Remove key binds registered by this specific mod
-        unregister_keydown_events_for_lua_mod(mod, AllMods::No);
+        if constexpr (std::is_same_v<T, LuaMod>)
+        {
+            self->unregister_keydown_events_for_lua_mod(mod, UE4SSProgram::AllMods::No);
+        }
 
-        delete_mod(mod);
+        self->delete_mod(mod);
 
         // Resume event processing
-        m_pause_events_processing = false;
+        self->m_pause_events_processing = false;
+        self->m_mods_are_being_touched = false;
 
         Output::send(STR("Mod '{}' uninstalled\n"), mod_name);
+    }
+    auto UE4SSProgram::queue_uninstall_mod(CppMod* mod) -> void
+    {
+        queue_uninstall_mod_internal(this, mod);
+    }
+    auto UE4SSProgram::queue_uninstall_mod(LuaMod* mod) -> void
+    {
+        queue_uninstall_mod_internal(this, mod);
     }
 
     auto UE4SSProgram::queue_reinstall_mod(ModId mod_id) -> void
@@ -2000,25 +2000,32 @@ namespace RC
         }
     }
 
-    auto UE4SSProgram::queue_reinstall_mod_by_name(const std::string& mod_name) -> void
+    template <typename T>
+    static auto queue_reinstall_mod_by_name_internal(UE4SSProgram* self, const std::string& mod_name) -> void
     {
-        if (!is_event_loop_thread())
+        if (!self->is_event_loop_thread())
         {
-            queue_event([this, mod_name]() { queue_reinstall_mod_by_name(mod_name); });
+            self->queue_event([self, mod_name]() { queue_reinstall_mod_by_name_internal<T>(self, mod_name); });
             return;
         }
 
         // Find the mod by name at execution time (safe for queued events)
-        for (auto& mod : m_mods)
+        for (auto& mod : self->m_mods)
         {
-            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
-            if (lua_mod && to_string(lua_mod->get_name()) == mod_name)
+            const auto mod_ptr = dynamic_cast<T*>(mod.get());
+            if (mod_ptr && to_string(mod->get_name()) == mod_name)
             {
-                queue_reinstall_mod(lua_mod);
+                queue_reinstall_mod_internal(self, mod_ptr);
                 return;
             }
         }
         Output::send<LogLevel::Warning>(STR("Could not find mod to reinstall: {}\n"), ensure_str(mod_name));
+    }
+
+    auto UE4SSProgram::queue_reinstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        queue_reinstall_mod_by_name_internal<LuaMod>(this, mod_name);
+        queue_reinstall_mod_by_name_internal<CppMod>(this, mod_name);
     }
 
     auto UE4SSProgram::queue_reinstall_mod_by_name(std::string_view mod_name) -> void
@@ -2026,25 +2033,42 @@ namespace RC
         queue_reinstall_mod_by_name(std::string{mod_name});
     }
 
-    auto UE4SSProgram::queue_uninstall_mod_by_name(const std::string& mod_name) -> void
+    auto UE4SSProgram::queue_reinstall_lua_mod_by_name(std::string_view mod_name) -> void
     {
-        if (!is_event_loop_thread())
+        queue_reinstall_mod_by_name_internal<LuaMod>(this, std::string{mod_name});
+    }
+
+    auto UE4SSProgram::queue_reinstall_cpp_mod_by_name(std::string_view mod_name) -> void
+    {
+        queue_reinstall_mod_by_name_internal<CppMod>(this, std::string{mod_name});
+    }
+
+    template <typename T>
+    static auto queue_uninstall_mod_by_name_internal(UE4SSProgram* self, const std::string& mod_name) -> void
+    {
+        if (!self->is_event_loop_thread())
         {
-            queue_event([this, mod_name]() { queue_uninstall_mod_by_name(mod_name); });
+            self->queue_event([self, mod_name]() { queue_uninstall_mod_by_name_internal<T>(self, mod_name); });
             return;
         }
 
         // Find the mod by name at execution time (safe for queued events)
-        for (auto& mod : m_mods)
+        for (auto& mod : self->m_mods)
         {
-            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
-            if (lua_mod && to_string(lua_mod->get_name()) == mod_name)
+            const auto mod_ptr = dynamic_cast<T*>(mod.get());
+            if (mod_ptr && to_string(mod->get_name()) == mod_name)
             {
-                queue_uninstall_mod(lua_mod);
+                queue_uninstall_mod_internal(self, mod_ptr);
                 return;
             }
         }
         Output::send<LogLevel::Warning>(STR("Could not find mod to uninstall: {}\n"), ensure_str(mod_name));
+    }
+
+    auto UE4SSProgram::queue_uninstall_mod_by_name(const std::string& mod_name) -> void
+    {
+        queue_uninstall_mod_by_name_internal<LuaMod>(this, mod_name);
+        queue_uninstall_mod_by_name_internal<CppMod>(this, mod_name);
     }
 
     auto UE4SSProgram::queue_uninstall_mod_by_name(std::string_view mod_name) -> void
@@ -2052,43 +2076,79 @@ namespace RC
         queue_uninstall_mod_by_name(std::string{mod_name});
     }
 
-    auto UE4SSProgram::queue_start_lua_mod_by_path(const std::filesystem::path& mod_path) -> void
+    auto UE4SSProgram::queue_uninstall_lua_mod_by_name(std::string_view mod_name) -> void
+    {
+        queue_uninstall_mod_by_name_internal<LuaMod>(this, std::string{mod_name});
+    }
+
+    auto UE4SSProgram::queue_uninstall_cpp_mod_by_name(std::string_view mod_name) -> void
+    {
+        queue_uninstall_mod_by_name_internal<CppMod>(this, std::string{mod_name});
+    }
+
+    // TODO: Make generic function, and add queue_start_lua_mod as well because we need to fire different events for Lua mods.
+    auto UE4SSProgram::queue_start_cpp_mod(CppMod* mod) -> void
     {
         if (!is_event_loop_thread())
         {
-            queue_event([this, mod_path]() { queue_start_lua_mod_by_path(mod_path); });
+            queue_event([this, mod]() { queue_start_cpp_mod(mod); });
+            return;
+        }
+
+        mod->start_mod();
+        if (m_render_thread.get_id() != std::this_thread::get_id())
+        {
+            fire_ui_init_for_cpp_mods();
+        }
+        fire_on_cpp_mods_loaded_for_cpp_mods();
+    }
+
+    template <typename T>
+    static auto queue_start_mod_internal(UE4SSProgram* self, const std::filesystem::path& mod_path) -> void
+    {
+        if (!self->is_event_loop_thread())
+        {
+            self->queue_event([self, mod_path]() { queue_start_mod_internal<T>(self, mod_path); });
             return;
         }
 
         std::string mod_name_str = mod_path.stem().string();
 
         // Check if mod already exists in m_mods
-        for (auto& mod : m_mods)
+        for (auto& mod : self->m_mods)
         {
-            auto* lua_mod = dynamic_cast<LuaMod*>(mod.get());
-            if (lua_mod && to_string(lua_mod->get_name()) == mod_name_str)
+            const auto mod_ptr = dynamic_cast<T*>(mod.get());
+            if (mod_ptr && to_string(mod->get_name()) == mod_name_str)
             {
-                if (lua_mod->is_started())
+                if (mod->is_started())
                 {
                     Output::send<LogLevel::Warning>(STR("Mod '{}' is already running\n"), ensure_str(mod_name_str));
                     return;
                 }
                 else
                 {
-                    // Mod exists but is not started - remove it first (its Lua state is invalid)
+                    // Mod exists but is not started - remove it first (its internal state could be invalid)
                     // Then we'll create a fresh one below
-                    delete_mod(lua_mod);
+                    self->delete_mod(mod.get());
                     break;
                 }
             }
         }
 
-        // Verify the mod path exists and has a main.lua
-        std::filesystem::path scripts_path = mod_path / STR("Scripts");
-        std::filesystem::path main_lua = scripts_path / STR("main.lua");
-        if (!std::filesystem::exists(main_lua))
+        // Verify the mod path exists
+        const std::filesystem::path mod_file = [&]() {
+            if constexpr (std::is_same_v<T, LuaMod>)
+            {
+                return mod_path / "Scripts" / "main.lua";
+            }
+            else
+            {
+                return mod_path / "dlls";
+            }
+        }();
+        if (!std::filesystem::exists(mod_file))
         {
-            Output::send<LogLevel::Error>(STR("Cannot start mod '{}': main.lua not found\n"), ensure_str(mod_name_str));
+            Output::send<LogLevel::Error>(STR("Cannot start mod '{}': path not found: '{}'\n"), ensure_str(mod_name_str), ensure_str(mod_file));
             return;
         }
 
@@ -2096,13 +2156,20 @@ namespace RC
 
         StringType mod_name = ensure_str(mod_name_str);
 
-        auto new_mod = std::make_unique<LuaMod>(*this, std::move(mod_name), std::filesystem::path(mod_path));
-        LuaMod* new_mod_ptr = new_mod.get();
-        m_mods.emplace_back(std::move(new_mod));
+        const auto& mod = self->m_mods.emplace_back(std::make_unique<T>(*self, std::move(mod_name), std::filesystem::path(mod_path)));
+        mod->start_mod();
 
-        new_mod_ptr->start_mod();
+        Output::send(STR("Mod '{}' started\n"), mod->get_name());
+    }
 
-        Output::send(STR("Mod '{}' started\n"), new_mod_ptr->get_name());
+    auto UE4SSProgram::queue_start_lua_mod_by_path(const std::filesystem::path& mod_path) -> void
+    {
+        queue_start_mod_internal<LuaMod>(this, mod_path);
+    }
+
+    auto UE4SSProgram::queue_start_cpp_mod_by_path(const std::filesystem::path& mod_path) -> void
+    {
+        queue_start_mod_internal<CppMod>(this, mod_path);
     }
 
     auto UE4SSProgram::get_module_directory() -> File::StringType
@@ -2462,6 +2529,49 @@ namespace RC
     auto UE4SSProgram::find_lua_mod_by_name(StringViewType mod_name, UE4SSProgram::IsInstalled installed_only, IsStarted is_started) -> LuaMod*
     {
         return static_cast<LuaMod*>(find_mod_by_name<LuaMod>(mod_name, installed_only, is_started));
+    }
+
+    auto UE4SSProgram::find_lua_mod_by_lua_state(lua_State* lua_state, IsInstalled is_installed, IsStarted is_started) -> LuaMod*
+    {
+        if (!lua_state)
+        {
+            return nullptr;
+        }
+
+        const auto mod = std::ranges::find_if(get_program().m_mods, [&](auto& elem) -> bool {
+            bool found = false;
+
+            const auto lua_mod = dynamic_cast<LuaMod*>(elem.get());
+            if (!lua_mod)
+            {
+                return false;
+            }
+            if (lua_state == lua_mod->get_lua_state() || (lua_mod->m_main_lua && lua_mod->m_main_lua->get_lua_state() == lua_state) ||
+                (lua_mod->m_hook_lua && lua_mod->m_hook_lua->get_lua_state() == lua_state) ||
+                (lua_mod->m_async_lua && lua_mod->m_async_lua->get_lua_state() == lua_state))
+            {
+                found = true;
+            }
+            if (is_installed == IsInstalled::Yes && !elem->is_installable())
+            {
+                found = false;
+            }
+            if (is_started == IsStarted::Yes && !elem->is_started())
+            {
+                found = false;
+            }
+
+            return found;
+        });
+
+        if (mod != get_program().m_mods.end())
+        {
+            return static_cast<LuaMod*>(mod->get());
+        }
+        else
+        {
+            return nullptr;
+        }
     }
 
     auto UE4SSProgram::get_object_dumper_output_directory() -> const File::StringType

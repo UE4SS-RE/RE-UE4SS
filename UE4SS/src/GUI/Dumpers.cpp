@@ -620,7 +620,7 @@ namespace RC::GUI::Dumpers
 
     auto render() -> void
     {
-        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        if (!UnrealInitializer::IsInitialized())
         {
             return;
         }

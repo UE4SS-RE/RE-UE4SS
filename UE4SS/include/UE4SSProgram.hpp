@@ -94,7 +94,6 @@ namespace RC
 
       public:
         RC_UE4SS_API static SettingsManager settings_manager;
-        static inline bool unreal_is_shutting_down{};
         static inline std::atomic_bool cpp_mods_done_loading{};
 
       public:
@@ -165,6 +164,7 @@ namespace RC
         bool m_has_game_specific_config{};
         bool m_processing_events{};
         bool m_pause_events_processing{};
+        std::atomic_bool m_mods_are_being_touched{};
         bool m_custom_member_variable_layout_loaded{};
 
       public:
@@ -227,14 +227,22 @@ namespace RC
         auto find_lua_mod_by_id(ModId mod_id) -> LuaMod*;
         auto queue_reinstall_mods() -> void;
         auto queue_reinstall_mod(LuaMod* mod) -> void;
+        auto queue_reinstall_mod(CppMod* mod) -> void;
         auto queue_reinstall_mod(ModId mod_id) -> void;
         auto queue_uninstall_mod(LuaMod* mod) -> void;
+        auto queue_uninstall_mod(CppMod* mod) -> void;
         auto queue_uninstall_mod(ModId mod_id) -> void;
         auto queue_reinstall_mod_by_name(const std::string& mod_name) -> void;
         auto queue_reinstall_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_reinstall_lua_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_reinstall_cpp_mod_by_name(std::string_view mod_name) -> void;
         auto queue_uninstall_mod_by_name(const std::string& mod_name) -> void;
         auto queue_uninstall_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_uninstall_lua_mod_by_name(std::string_view mod_name) -> void;
+        auto queue_uninstall_cpp_mod_by_name(std::string_view mod_name) -> void;
         auto queue_start_lua_mod_by_path(const std::filesystem::path& mod_path) -> void;
+        auto queue_start_cpp_mod_by_path(const std::filesystem::path& mod_path) -> void;
+        auto queue_start_cpp_mod(CppMod* mod) -> void;
         auto get_object_dumper_output_directory() -> const File::StringType;
         RC_UE4SS_API auto get_module_directory() -> File::StringType;
         RC_UE4SS_API auto get_game_executable_directory() -> File::StringType;
@@ -280,6 +288,10 @@ namespace RC
         RC_UE4SS_API auto is_event_loop_thread() -> bool
         {
             return std::this_thread::get_id() == m_event_loop_thread_id;
+        }
+        RC_UE4SS_API auto are_mods_being_touched() -> bool
+        {
+            return m_mods_are_being_touched;
         }
         RC_UE4SS_API auto delete_mod(Mod*) -> void;
 
@@ -357,6 +369,7 @@ namespace RC
 
         RC_UE4SS_API static auto find_lua_mod_by_name(StringViewType mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         RC_UE4SS_API static auto find_lua_mod_by_name(std::string_view mod_name, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
+        RC_UE4SS_API static auto find_lua_mod_by_lua_state(lua_State* lua_state, IsInstalled = IsInstalled::No, IsStarted = IsStarted::No) -> LuaMod*;
         static auto static_cleanup() -> void;
         RC_UE4SS_API static auto get_program() -> UE4SSProgram&
         {

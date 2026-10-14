@@ -914,7 +914,7 @@ namespace RC::GUI
 
     static auto get_object_full_name(const UObject* object) -> const char*
     {
-        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        if (!UnrealInitializer::IsInitialized())
         {
             return "";
         }
@@ -931,7 +931,7 @@ namespace RC::GUI
 
     static auto get_object_full_name_cxx_string(UObject* object) -> std::string
     {
-        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        if (!UnrealInitializer::IsInitialized())
         {
             return "";
         }
@@ -2405,7 +2405,7 @@ namespace RC::GUI
 
     auto LiveView::process_function_post_watch(Unreal::UnrealScriptFunctionCallableContext& context, void*) -> void
     {
-        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        if (!UnrealInitializer::IsInitialized())
         {
             return;
         }
@@ -2497,7 +2497,7 @@ namespace RC::GUI
 
     auto LiveView::process_watches() -> void
     {
-        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        if (!UnrealInitializer::IsInitialized())
         {
             return;
         }
@@ -2554,7 +2554,7 @@ namespace RC::GUI
 
     auto LiveView::render() -> void
     {
-        if (!UnrealInitializer::StaticStorage::bIsInitialized)
+        if (!UnrealInitializer::IsInitialized())
         {
             return;
         }
