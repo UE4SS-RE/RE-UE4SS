@@ -11,6 +11,7 @@
 #include <string_view>
 #include <system_error>
 #include <unordered_map>
+#include <utility>
 
 #include <UE4SSProgram.hpp>
 
@@ -184,38 +185,22 @@ namespace RC::EventViewerMod
                 break;
             }
         }
-        if (RC::Unreal::Version::IsAbove(4, 21))
-        {
-            if (combo_with_flags("Target", &hook_target_idx, EMiddlewareHookTarget_NameArray, EMiddlewareHookTarget_Size, ImGuiComboFlags_WidthFitPreview))
-            {
-                request_save_state();
-                m_state.hook_target = EMiddlewareHookTarget_ValueArray[hook_target_idx];
+        static const auto excluded_items = [] -> std::vector<int> {
+            return Unreal::Version::IsAtMost(4, 21) ? std::vector<int>{std::to_underlying(EMiddlewareHookTarget::ProcessLocalScriptFunction)} : std::vector<int>{};
+        }();
 
-                // Hook target is an implicit filter for the stack view.
-                // Rebuild per-thread render sets immediately so the UI reflects the new selection.
-                // (Disabled state is controlled by whitelist/blacklist/tick and is handled elsewhere.)
-                for (auto& thread : m_state.threads)
-                {
-                    thread.call_stack_render_set.clear();
-                    resize_render_set(thread, m_state.text_temp_virtualization_count);
-                }
-            }
-        }
-        else
+        if (combo_with_flags("Target", &hook_target_idx, EMiddlewareHookTarget_NameArray, EMiddlewareHookTarget_Size, ImGuiComboFlags_WidthFitPreview, excluded_items))
         {
-            if (combo_with_flags("Target", &hook_target_idx, EMiddlewareHookTargetLE421_NameArray, EMiddlewareHookTargetLE421_Size, ImGuiComboFlags_WidthFitPreview))
-            {
-                request_save_state();
-                m_state.hook_target = EMiddlewareHookTarget_ValueArray[hook_target_idx];
+            request_save_state();
+            m_state.hook_target = EMiddlewareHookTarget_ValueArray[hook_target_idx];
 
-                // Hook target is an implicit filter for the stack view.
-                // Rebuild per-thread render sets immediately so the UI reflects the new selection.
-                // (Disabled state is controlled by whitelist/blacklist/tick and is handled elsewhere.)
-                for (auto& thread : m_state.threads)
-                {
-                    thread.call_stack_render_set.clear();
-                    resize_render_set(thread, m_state.text_temp_virtualization_count);
-                }
+            // Hook target is an implicit filter for the stack view.
+            // Rebuild per-thread render sets immediately so the UI reflects the new selection.
+            // (Disabled state is controlled by whitelist/blacklist/tick and is handled elsewhere.)
+            for (auto& thread : m_state.threads)
+            {
+                thread.call_stack_render_set.clear();
+                resize_render_set(thread, m_state.text_temp_virtualization_count);
             }
         }
         HelpMarker(HelpStrings::HELP_TARGET);
@@ -564,18 +549,32 @@ namespace RC::EventViewerMod
         }
     }
 
-    auto Client::combo_with_flags(const char* label, int* current_item, const char* const items[], const int items_count, const ImGuiComboFlags_ flags) -> bool
+    auto Client::combo_with_flags(const char* label,
+                                  int* current_item,
+                                  const char* const items[],
+                                  const int items_count,
+                                  const ImGuiComboFlags_ flags,
+                                  const std::vector<int>& excluded_items) -> bool
     {
         bool changed = false;
         if (ImGui::BeginCombo(label, items[*current_item], flags))
         {
             for (int i = 0; i < items_count; ++i)
             {
+                const auto is_excluded = std::ranges::find(excluded_items, std::to_underlying(EMiddlewareHookTarget_ValueArray[i])) != excluded_items.end();
+                if (is_excluded)
+                {
+                    ImGui::BeginDisabled();
+                }
                 const auto is_selected = i == *current_item;
                 if (ImGui::Selectable(items[i], is_selected))
                 {
                     *current_item = i;
                     changed = true;
+                }
+                if (is_excluded)
+                {
+                    ImGui::EndDisabled();
                 }
                 if (is_selected) ImGui::SetItemDefaultFocus();
             }
