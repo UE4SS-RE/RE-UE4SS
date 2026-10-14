@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <functional>
 
+#include <Unreal/Hooks/GlobalCallbackId.hpp>
+
 namespace RC::GUI
 {
     enum class ModType
@@ -50,6 +52,7 @@ namespace RC::GUI
         bool m_add_require_to_main{true};
         std::filesystem::path m_create_file_mod_path{};
         size_t m_expanded_mod{s_invalid_mod_id};
+        Unreal::Hook::GlobalCallbackId m_sco_hook_id{Unreal::Hook::ERROR_ID};
 
         // Handlers.
         void* m_handler_context{};
@@ -62,6 +65,7 @@ namespace RC::GUI
 
     public:
         auto render() -> void;
+        auto cleanup() -> void;
 
     private:
         auto refresh_mods_list() -> void;

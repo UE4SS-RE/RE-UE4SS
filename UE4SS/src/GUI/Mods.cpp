@@ -67,6 +67,20 @@ namespace RC::GUI
             ImGui::BeginDisabled();
         }
 
+        // Always look for new BP mods being constructed so that we can keep the mods list up-to-date.
+        if (m_sco_hook_id == Hook::ERROR_ID)
+        {
+            m_sco_hook_id = Hook::RegisterStaticConstructObjectPostCallback([this] (const auto& data, const Unreal::FStaticConstructObjectParameters&) {
+                static const auto mod_actor_fname = FName(STR("ModActor_C"));
+                auto constructed_object = data.GetCurrentResolvedReturnValue();
+                if (!constructed_object->GetNamePrivate().Equals(mod_actor_fname))
+                {
+                    return;
+                }
+                m_mods_list_dirty = true;
+            }, {false, true, STR("UE4SS"), STR("ModsTabBPModDirtyDetector")});
+        }
+
         if (m_mods_list_dirty)
         {
             refresh_mods_list();
@@ -460,6 +474,16 @@ namespace RC::GUI
         }
     }
 
+    auto ModsWidget::cleanup() -> void
+    {
+        // Note: This function fires every frame of the GUI while the Mods tab is NOT active.
+        if (m_sco_hook_id != Hook::ERROR_ID)
+        {
+            Hook::UnregisterCallback(m_sco_hook_id);
+            m_sco_hook_id = Hook::ERROR_ID;
+        }
+    }
+
     auto ModsWidget::refresh_mods_list() -> void
     {
         m_discovered_mods.clear();
@@ -596,21 +620,6 @@ namespace RC::GUI
                   });
 
         m_mods_list_dirty = false;
-
-        static bool sco_hooked = false;
-        if (!sco_hooked)
-        {
-            Hook::RegisterStaticConstructObjectPostCallback([this] (const auto& data, const Unreal::FStaticConstructObjectParameters&) {
-                static const auto mod_actor_fname = FName(STR("ModActor_C"));
-                auto constructed_object = data.GetCurrentResolvedReturnValue();
-                if (!constructed_object->GetNamePrivate().Equals(mod_actor_fname))
-                {
-                    return;
-                }
-                m_mods_list_dirty = true;
-            }, {false, true, STR("UE4SS"), STR("ModsTabBPModDirtyDetector")});
-            sco_hooked = true;
-        }
     }
 
     auto ModsWidget::set_mod_enabled(const std::filesystem::path& mod_path, bool enabled) -> void

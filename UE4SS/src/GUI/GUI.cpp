@@ -178,6 +178,10 @@ namespace RC::GUI
                     m_mods_widget.render();
                     ImGui::EndTabItem();
                 }
+                else
+                {
+                    m_mods_widget.cleanup();
+                }
 
                 if (ImGui::BeginTabItem(ICON_FA_BUG " Lua Debugger"))
                 {
