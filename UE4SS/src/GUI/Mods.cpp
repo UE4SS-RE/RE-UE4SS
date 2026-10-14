@@ -609,6 +609,7 @@ namespace RC::GUI
                 }
                 m_mods_list_dirty = true;
             }, {false, true, STR("UE4SS"), STR("ModsTabBPModDirtyDetector")});
+            sco_hooked = true;
         }
     }
 
