@@ -58,6 +58,14 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 - `path.SubPathString` -> `path.GetSubPathString()` (non-const overload available for assignment)
 - Lua mods are unaffected; the Lua API is unchanged
 
+**BREAKING:** `FSoftObjectPtr` (and its `TPersistentObjectPtr<FSoftObjectPath>` base) no longer exposes the `ObjectID` and `TagAtLastTest` member variables. Soft object and class pointers now resolve their layout at runtime, accounting for UE 5.3 removing `TagAtLastTest`. C++ mods must migrate:
+
+- `ptr.ObjectID` -> `ptr.GetUniqueID()` (const and non-const reference overloads)
+- `ptr.TagAtLastTest` -> `ptr.GetTagAtLastTest()` for reads, `ptr.SetTagAtLastTest(value)` for writes; engines without the field return zero and ignore writes
+- Use `FSoftObjectPtr::StaticSize()`, `TSoftObjectPtr<T>::StaticSize()` or `TSoftClassPtr<T>::StaticSize()` when calculating strides through engine memory
+- Rebuild affected C++ mods against the updated headers; see the [upgrade guide](../docs/upgrade-guide.md#soft-object-pointer-member-variables-replaced-by-accessors)
+- The Lua API is unchanged
+
 **BREAKING:** `FText` no longer exposes the `Data`, `SharedRefCollector`, `Flags` and `Unk` member variables. The layout adapts at runtime (5.4 changed TSharedRef to TRefCountPtr, shrinking FText from 0x18 to 0x10), and copies/destruction now use the engine's own FTextProperty value operations, so FText copies are properly reference counted in every engine version. C++ mods must migrate:
 - `text.Data` -> `text.GetTextData()`
 - `text.Flags` -> `text.GetFlags()`
@@ -85,6 +93,8 @@ Added custom game configurations for Project Silverfish ([UE4SS #1066](https://g
 Added custom game configurations for Whiskerwood ([UE4SS #1079](https://github.com/UE4SS-RE/RE-UE4SS/pull/1079))
 
 Added custom game configurations for StarRupture ([UE4SS #1150](https://github.com/UE4SS-RE/RE-UE4SS/pull/1150))
+
+Added custom game configuration for The Talos Principle 2 ([UE4SS #1458](https://github.com/UE4SS-RE/RE-UE4SS/pull/1458))
 
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
@@ -251,6 +261,8 @@ Added support for handling structs as userdata (Fixed `StructData as userdata is
 
 Added `ModRef.OnUnload` lua function, registers a callback to be called when the mod is unloaded via hot reload or any other means ([UE4SS #1394](https://github.com/UE4SS-RE/RE-UE4SS/pull/1394))
 
+Added `println` global lua function, just like `print`, except adds a new line character automatically ([UE4SS #1451](https://github.com/UE4SS-RE/RE-UE4SS/pull/1451))
+
 #### Types.lua [PR #650](https://github.com/UE4SS-RE/RE-UE4SS/pull/650) 
 - Added `NAME_None` definition 
 - Added `EFindName` enum definition 
@@ -337,6 +349,11 @@ Added improved string and path conversion utilities with proper UTF-8 support ([
 - **BREAKING:** `to_charT_string_path()` now returns UTF-8 encoded strings for char type instead of locale-dependent encoding
 
 Added `RC::await_debugger` in `Helpers/Debug.hpp`. ([UE4SS #1314](https://github.com/UE4SS-RE/RE-UE4SS/pull/1314))
+
+Added registration functions for C++ mod events. ([UE4SS #1431](https://github.com/UE4SS-RE/RE-UE4SS/pull/1431))
+- These are analogous to the virtual functions that can be overridden from CppUserModBase.
+- They are intended to replace the virtual functions for ABI reasons, but the virtual functions will also be maintained for now.
+- No new virtual functions will be added to CppUserModBase, and no existing virtual functions will be removed.
 
 ### BPModLoader 
 
@@ -440,6 +457,8 @@ This was fixed by introducing a new atomic bool: `UnrealInitializer::IsInitializ
 The old variable will stay for ABI/API reasons.
 
 Fixed proxy injection incorrectly running UE4SS initialization inside the loader lock when the main thread was the first thread snapshot entry.
+
+Fixed a crash in `FUObjectArray::AllocateSerialNumber` when assigning an object without a serial number to an `FWeakObjectPtr` on UE 5.3+ (reported on UE 5.4.3). Soft pointer copies now use the runtime `ObjectID` offset, including in Kismet object/class reference conversions and Lua soft-property access. ([UE4SS #1433](https://github.com/UE4SS-RE/RE-UE4SS/issues/1433))
 
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
@@ -561,6 +580,8 @@ Fixed the `RegisterCustomProperty` sometimes not working because of an unknown p
 
 Fixed a memory leak when calling a UFunction with an 'Out' parameter from Lua: every call left a registry reference to the 'Out' table behind, so the table and everything in it were never garbage collected. ([UE4SS #1446](https://github.com/UE4SS-RE/RE-UE4SS/issues/1446))
 
+Fixed a crash when calling UFunctions with params taking >512 bytes. ([UE4SS #1462](https://github.com/UE4SS-RE/RE-UE4SS/issues/1462))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
@@ -580,6 +601,10 @@ Fixed displaying 'PostBeginPlay not valid' when VerboseLogging is set to false (
 Fixes mods not loading when UE4SS initializes too late ([UE4SS #454](https://github.com/UE4SS-RE/RE-UE4SS/pull/454)) - localcc 
 
 Fixed `LoadMod` function issue that variables would go out-of-scope in the `ExecuteInGameThread` callback. Instead, `LoadMods` is now always called in a game thread. ([UE4SS #752](https://github.com/UE4SS-RE/RE-UE4SS/pull/752))
+
+### EventViewerMod
+
+Fixed the mod failing on LE421 builds due to plsf being added in 4.22 ([UE4SS #1426](https://github.com/UE4SS-RE/RE-UE4SS/pull/1426)) - Willow
 
 ## Settings 
 

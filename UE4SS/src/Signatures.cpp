@@ -42,6 +42,8 @@ namespace RC
         lua.open_all_libs();
         lua.register_function("Print", LuaLibrary::global_print);
         lua.register_function("print", LuaLibrary::global_print);
+        lua.register_function("PrintLn", LuaLibrary::global_println);
+        lua.register_function("println", LuaLibrary::global_println);
         lua.register_function("DerefToInt32", LuaLibrary::deref_to_int32);
         lua.register_function("dereftoint32", LuaLibrary::deref_to_int32);
         lua.register_function("LoadExport", LuaLibrary::load_export);
