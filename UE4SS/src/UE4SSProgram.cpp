@@ -1891,7 +1891,7 @@ namespace RC
 
         new_mod_ptr->start_mod();
 
-        m_mods_are_being_touched = false;
+        self->m_mods_are_being_touched = false;
 
         Output::send(STR("Mod '{}' reinstalled\n"), new_mod_ptr->get_name());
     }
