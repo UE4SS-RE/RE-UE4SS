@@ -136,7 +136,8 @@ namespace RC::GUI
                 std::string tooltip = "Enable/disable on next reload";
                 if (mod.enabled_via_mods_txt && !mod.enabled_via_txt)
                 {
-                    tooltip += "\n(Currently enabled via mods.txt)";
+                    tooltip += "\n(Currently forced enabled via mods.txt)";
+                    tooltip += "\n(Remove from mods.txt to gain control)";
                 }
                 ImGui::SetTooltip("%s", tooltip.c_str());
             }
