@@ -51,9 +51,6 @@ namespace RC::File
         // Exchange the complete file state, including file and mapping
         // ownership. Paths, open properties and serialization state must
         // follow their associated native handles during ownership transfers.
-        //
-        // Preserve the existing Windows serialization representation and
-        // cursor state without modifying their implementation.
         friend auto swap(WinFile& Lhs, WinFile& Rhs) noexcept -> void
         {
             using std::swap;

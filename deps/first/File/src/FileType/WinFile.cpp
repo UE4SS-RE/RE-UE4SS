@@ -588,7 +588,7 @@ namespace RC::File
                                                       FileContents.data(), InputSize, nullptr, 0);
             if (WideSize == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::read_all] Invalid UTF-8 input: {}",
+                THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::read_all] UTF-8 conversion size query failed: {}",
                                                       to_string(SysError(GetLastError())).c_str()))
             }
 

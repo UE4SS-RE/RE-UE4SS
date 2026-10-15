@@ -780,9 +780,9 @@ namespace RC::File
                 fmt::format("[LinuxFile::open_file] fstat failed: {}", ErrnoString(StatError)))
         }
 
-        // Linux allows opening directories as files (you can open them with a 
-		// text editor even - but please don't!). Windows ordinarily does not allow
-		// this and neither should we.
+        // Linux allows opening directories as files (you can open them with a
+        // text editor even - but please don't!). Windows ordinarily does not allow
+        // this and neither should we.
         if (S_ISDIR(FileInfo.st_mode))
         {
             ::close(File.get_file());
