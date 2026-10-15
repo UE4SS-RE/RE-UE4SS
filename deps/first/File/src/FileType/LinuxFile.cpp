@@ -11,12 +11,10 @@
 #include <unistd.h>
 #include <bit>
 #include <cerrno>
-#include <codecvt>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <locale>
-#include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -94,37 +92,72 @@ namespace RC::File
         };
     } // namespace
 
-    // Proper UTF-8 -> UTF-16 decode. Helpers' to_u16string(const std::string&) widens
-    // byte-wise and therefore mangles non-ASCII; this mirrors to_string(std::u16string_view)
-    // which encodes UTF-16 -> UTF-8 with the same facet.
+    // Helpers::to_u16string widens bytes without decoding UTF-8.
+    // Decode leniently, replacing malformed sequences with U+FFFD to match Windows.
     static auto Utf8ToU16String(const std::string& Input) -> std::u16string
     {
-#if __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-        std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> Converter{};
         std::u16string Decoded;
+        Decoded.reserve(Input.size());
 
-        try
+        for (size_t Index = 0; Index < Input.size();)
         {
-            Decoded = Converter.from_bytes(Input);
-        }
-        catch (const std::range_error& Error)
-        {
-            THROW_INTERNAL_FILE_ERROR(
-                fmt::format("[LinuxFile::read_all] UTF-8 conversion failed: {}", Error.what()))
-        }
+            std::uint32_t CodePoint = static_cast<std::uint8_t>(Input[Index++]);
+            if (CodePoint < 0x80)
+            {
+                Decoded.push_back(static_cast<char16_t>(CodePoint));
+                continue;
+            }
 
-        if (Converter.converted() != Input.size())
-        {
-            THROW_INTERNAL_FILE_ERROR("[LinuxFile::read_all] Incomplete UTF-8 sequence")
+            size_t Remaining{};
+            std::uint32_t Minimum{};
+            if (CodePoint >= 0xC2 && CodePoint <= 0xDF)
+            {
+                CodePoint &= 0x1F;
+                Remaining = 1;
+                Minimum = 0x80;
+            }
+            else if (CodePoint >= 0xE0 && CodePoint <= 0xEF)
+            {
+                CodePoint &= 0x0F;
+                Remaining = 2;
+                Minimum = 0x800;
+            }
+            else if (CodePoint >= 0xF0 && CodePoint <= 0xF4)
+            {
+                CodePoint &= 0x07;
+                Remaining = 3;
+                Minimum = 0x10000;
+            }
+            else
+            {
+                Decoded.push_back(u'\uFFFD');
+                continue;
+            }
+
+            while (Remaining > 0 && Index < Input.size() && (static_cast<std::uint8_t>(Input[Index]) & 0xC0) == 0x80)
+            {
+                CodePoint = (CodePoint << 6) | (static_cast<std::uint8_t>(Input[Index++]) & 0x3F);
+                --Remaining;
+            }
+
+            // Require shortest-form encodings of Unicode scalar values, excluding surrogates.
+            if (Remaining != 0 || CodePoint < Minimum || CodePoint > 0x10FFFF || (CodePoint >= 0xD800 && CodePoint <= 0xDFFF))
+            {
+                Decoded.push_back(u'\uFFFD');
+            }
+            else if (CodePoint <= 0xFFFF)
+            {
+                Decoded.push_back(static_cast<char16_t>(CodePoint));
+            }
+            else
+            {
+                CodePoint -= 0x10000;
+                Decoded.push_back(static_cast<char16_t>(0xD800 + (CodePoint >> 10)));
+                Decoded.push_back(static_cast<char16_t>(0xDC00 + (CodePoint & 0x3FF)));
+            }
         }
 
         return Decoded;
-#if __clang__
-#pragma clang diagnostic pop
-#endif
     }
 
     auto LinuxFile::is_valid() noexcept -> bool
@@ -501,59 +534,54 @@ namespace RC::File
         return m_is_file_open;
     }
 
+    // Write UTF-8 from UTF-16 input, replacing unpaired surrogates with U+FFFD to match Windows.
     auto LinuxFile::write_string_to_file(StringViewType StringToWrite) -> void
     {
-        // StringType is UTF-16 (char16_t) on Linux; files on disk are UTF-8.
-        // Match Windows UTF-8 conversion by replacing isolated surrogate
-        // code units with U+FFFD while preserving valid surrogate pairs.
-        std::u16string NormalisedInput{StringToWrite};
+        std::string StringConvertedToUtf8;
+        // Three bytes per UTF-16 unit also covers a four-byte surrogate pair.
+        StringConvertedToUtf8.reserve(StringToWrite.size() * 3);
 
-        for (size_t Index = 0; Index < NormalisedInput.size(); ++Index)
+        for (size_t Index = 0; Index < StringToWrite.size(); ++Index)
         {
-            const char16_t Unit = NormalisedInput[Index];
-
-            if (Unit >= 0xD800 && Unit <= 0xDBFF)
+            std::uint32_t CodePoint = StringToWrite[Index];
+            if (CodePoint >= 0xD800 && CodePoint <= 0xDBFF)
             {
-                if (Index + 1 < NormalisedInput.size() &&
-                    NormalisedInput[Index + 1] >= 0xDC00 &&
-                    NormalisedInput[Index + 1] <= 0xDFFF)
+                if (Index + 1 < StringToWrite.size() && StringToWrite[Index + 1] >= 0xDC00 && StringToWrite[Index + 1] <= 0xDFFF)
                 {
-                    ++Index;
+                    CodePoint = 0x10000 + ((CodePoint - 0xD800) << 10) + (StringToWrite[++Index] - 0xDC00);
                 }
                 else
                 {
-                    NormalisedInput[Index] = u'\uFFFD';
+                    CodePoint = 0xFFFD;
                 }
             }
-            else if (Unit >= 0xDC00 && Unit <= 0xDFFF)
+            else if (CodePoint >= 0xDC00 && CodePoint <= 0xDFFF)
             {
-                NormalisedInput[Index] = u'\uFFFD';
+                CodePoint = 0xFFFD;
             }
-        }
 
-#if __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-        std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> Converter{};
-        std::string StringConvertedToUtf8;
-
-        try
-        {
-            StringConvertedToUtf8 = Converter.to_bytes(
-                NormalisedInput.data(), NormalisedInput.data() + NormalisedInput.size());
-        }
-        catch (const std::range_error& Error)
-        {
-            THROW_INTERNAL_FILE_ERROR(
-                fmt::format("[LinuxFile::write_string_to_file] UTF-16 conversion failed: {}", Error.what()))
-        }
-#if __clang__
-#pragma clang diagnostic pop
-#endif
-        if (Converter.converted() != NormalisedInput.size())
-        {
-            THROW_INTERNAL_FILE_ERROR("[LinuxFile::write_string_to_file] Incomplete UTF-16 conversion")
+            if (CodePoint < 0x80)
+            {
+                StringConvertedToUtf8.push_back(static_cast<char>(CodePoint));
+            }
+            else if (CodePoint < 0x800)
+            {
+                StringConvertedToUtf8.push_back(static_cast<char>(0xC0 | (CodePoint >> 6)));
+                StringConvertedToUtf8.push_back(static_cast<char>(0x80 | (CodePoint & 0x3F)));
+            }
+            else if (CodePoint < 0x10000)
+            {
+                StringConvertedToUtf8.push_back(static_cast<char>(0xE0 | (CodePoint >> 12)));
+                StringConvertedToUtf8.push_back(static_cast<char>(0x80 | ((CodePoint >> 6) & 0x3F)));
+                StringConvertedToUtf8.push_back(static_cast<char>(0x80 | (CodePoint & 0x3F)));
+            }
+            else
+            {
+                StringConvertedToUtf8.push_back(static_cast<char>(0xF0 | (CodePoint >> 18)));
+                StringConvertedToUtf8.push_back(static_cast<char>(0x80 | ((CodePoint >> 12) & 0x3F)));
+                StringConvertedToUtf8.push_back(static_cast<char>(0x80 | ((CodePoint >> 6) & 0x3F)));
+                StringConvertedToUtf8.push_back(static_cast<char>(0x80 | (CodePoint & 0x3F)));
+            }
         }
 
         WriteToFile(*this, StringConvertedToUtf8.data(), StringConvertedToUtf8.size());
