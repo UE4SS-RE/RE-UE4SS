@@ -192,22 +192,17 @@ namespace RC::File
                 THROW_INTERNAL_FILE_ERROR("Attempted to get serialized item but the data was nullptr")
             }
 
-            if constexpr (std::is_integral_v<SerializedDataType> &&
-                          (sizeof(SerializedDataType) == 4 || sizeof(SerializedDataType) == 8))
+            if constexpr (std::is_trivially_copyable_v<SerializedDataType>)
             {
-                // The supported integer types are returned as native bytes.
-                // Copy into byte storage before constructing the value:
-                // the source need not contain a live, aligned integer object.
-                // This also avoids requiring a default constructor.
+                // The source contains native bytes, not necessarily an aligned object.
+                // Copying before bit_cast also avoids requiring a default constructor.
                 std::array<std::byte, sizeof(SerializedDataType)> Bytes{};
                 std::memcpy(Bytes.data(), Data, Bytes.size());
                 return std::bit_cast<SerializedDataType>(Bytes);
             }
             else
             {
-                // Preserve the previous template behaviour for types outside
-                // the documented integer serialisation contract. In
-                // particular, do not add new construction requirements.
+                // Preserve the existing behaviour for non-trivially-copyable types.
                 return *static_cast<SerializedDataType*>(Data);
             }
         }
