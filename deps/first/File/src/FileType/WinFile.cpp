@@ -584,7 +584,7 @@ namespace RC::File
 
             const int InputSize = static_cast<int>(FileContents.size());
 
-            const int WideSize = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+            const int WideSize = MultiByteToWideChar(CP_UTF8, 0,
                                                       FileContents.data(), InputSize, nullptr, 0);
             if (WideSize == 0)
             {
@@ -594,7 +594,7 @@ namespace RC::File
 
             StringType Decoded(static_cast<size_t>(WideSize), CharType{});
 
-            const int Converted = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+            const int Converted = MultiByteToWideChar(CP_UTF8, 0,
                                                       FileContents.data(), InputSize,
                                                       FromCharTypePtr<wchar_t>(Decoded.data()), WideSize);
             if (Converted == 0)
