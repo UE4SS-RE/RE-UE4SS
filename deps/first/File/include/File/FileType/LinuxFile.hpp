@@ -22,23 +22,11 @@ namespace RC::File
       private:
         struct IdentifyingProperties
         {
-            uint64_t Device{};
-            uint64_t Inode{};
-            int64_t ModificationTimeSeconds{};
-            int64_t ModificationTimeNanoseconds{};
-            uint64_t FileSize{};
-        };
-
-        struct SerializedRecord
-        {
-            GenericDataType Type{};
-            std::uint64_t ValueBits{};
-        };
-
-        struct CacheSnapshot
-        {
-            IdentifyingProperties Properties{};
-            std::vector<SerializedRecord> Records{};
+            std::uint64_t Device{};
+            std::uint64_t Inode{};
+            std::int64_t ModificationTimeSeconds{};
+            std::int64_t ModificationTimeNanoseconds{};
+            std::int64_t FileSize{};
         };
 
       private:
@@ -48,7 +36,8 @@ namespace RC::File
         OpenProperties m_open_properties{};
         std::filesystem::path m_file_path_and_name{};
         std::filesystem::path m_serialization_file_path_and_name{};
-        std::optional<CacheSnapshot> CachedSnapshot{};
+        std::vector<std::uint8_t> CacheBytes{};
+        std::optional<IdentifyingProperties> CachedProperties{};
         size_t NextRecordIndex{};
         alignas(std::uint64_t) std::array<std::byte, sizeof(std::uint64_t)> ReturnStorage{};
         bool m_is_file_open{};
@@ -82,7 +71,8 @@ namespace RC::File
             swap(Lhs.m_open_properties, Rhs.m_open_properties);
             Lhs.m_file_path_and_name.swap(Rhs.m_file_path_and_name);
             Lhs.m_serialization_file_path_and_name.swap(Rhs.m_serialization_file_path_and_name);
-            swap(Lhs.CachedSnapshot, Rhs.CachedSnapshot);
+            swap(Lhs.CacheBytes, Rhs.CacheBytes);
+            swap(Lhs.CachedProperties, Rhs.CachedProperties);
             swap(Lhs.NextRecordIndex, Rhs.NextRecordIndex);
             swap(Lhs.ReturnStorage, Rhs.ReturnStorage);
             swap(Lhs.m_is_file_open, Rhs.m_is_file_open);
@@ -92,7 +82,8 @@ namespace RC::File
         auto static CreateAllDirectories(const std::filesystem::path& file_name_and_path) -> void;
 
       private:
-        auto LoadSerializationSnapshot() -> bool;
+        auto ResetSerializationState() noexcept -> void;
+        auto LoadSerializationCache() -> bool;
         auto CloseFile() -> void;
 
       public:
