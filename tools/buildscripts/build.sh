@@ -216,6 +216,16 @@ if [ -n "$TOOLCHAIN" ]; then
             fi
             export XWIN_DIR
 
+            # Use LLVM's MASM-compatible assembler for Windows x64 objects
+            check_tool llvm-ml || exit 1
+            CMAKE_ARGS+=(
+                "-DCMAKE_ASM_MASM_COMPILER:FILEPATH=$(command -v llvm-ml)"
+                "-DCMAKE_ASM_MASM_FLAGS:STRING=-m64"
+            )
+
+            # Suppress Wine diagnostics for Windows build-time tools
+            export WINEDEBUG="-all"
+
             # Don't set UE4SS_PROXY_PATH - let CMake use its default behavior
             ;;
         *wine*)
