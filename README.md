@@ -62,9 +62,8 @@ RE-UE4SS supports the following environment variables:
 
 ## Build requirements
 
-- A computer running Windows.
-  - Linux support might happen at some point but not soon.
-- A version of MSVC that supports C++23:
+- Windows is required for native builds. Native Linux builds are not currently supported, but Windows binaries can be [cross-compiled from Linux](#cross-compiling-windows-binaries-on-linux) using the separate prerequisites and instructions below.
+- For native Windows builds, a version of MSVC that supports C++23:
   - MSVC toolset version >= 14.43.0
   - MSVC version >= 19.43
   - Visual Studio version >= 17.13
@@ -191,6 +190,7 @@ UE4SS supports cross-compilation from Linux to Windows using two approaches: **x
   ```bash
   rustup target add x86_64-pc-windows-msvc
   ```
+  For Rust installations without rustup, install the Windows target standard library separately. It must match the installed Rust compiler build.
 - [CMake >= 3.22](https://cmake.org/download/)
 - [Ninja build system](https://ninja-build.org/)
 
@@ -200,68 +200,114 @@ UE4SS supports cross-compilation from Linux to Windows using two approaches: **x
 
 ##### Prerequisites
 
-- LLVM/Clang with Windows target support:
+- LLVM/Clang with Windows target support, including `clang-cl`, `lld-link`, and the MASM-compatible `llvm-ml` assembler:
   ```bash
   # On Ubuntu/Debian
   sudo apt install clang lld llvm
 
   # On Arch Linux
   sudo pacman -S clang lld llvm
+
+  # On Enterprise Linux 10 (e.g. RHEL, CentOS Stream, AlmaLinux)
+  sudo dnf install clang lld llvm
   ```
-- [xwin](https://github.com/Jake-Shadle/xwin):
+- [xwin](https://github.com/Jake-Shadle/xwin), installed using Cargo:
   ```bash
   cargo install xwin
   ```
+- Wine and Linux `binfmt_misc` support for a complete cross-build. UE4SS runs Windows build-time tools such as `proxy_generator.exe` directly. The host must be able to execute Windows PE binaries without an explicit `wine` command. A headless Wine installation is sufficient to build UE4SS.
 
 ##### Setup
 
-1. Download the Microsoft tools and SDK using xwin (this only needs to be done once):
-   ```bash
-   xwin --accept-license splat --output ~/.xwin
-   ```
-   This will download approximately 300MB and can take a few minutes.
+1. If you have not already done so, clone the repository and initialise its submodules as described in [Build instructions](#build-instructions). Change into the root of the cloned repository (normally `RE-UE4SS/`, containing `CMakeLists.txt`). Run the commands below from that directory.
 
-2. Set the XWIN_DIR environment variable:
+2. Download and unpack the Microsoft SDK and CRT into the repository's `xwin/` directory (installing the `xwin` executable alone does not install the SDK):
    ```bash
-   export XWIN_DIR=~/.xwin
+   xwin --accept-license splat --output ./xwin
    ```
+   Both xwin CMake toolchains and `build.sh` find the SDK and CRT there automatically, but if you prefer to store the SDK and CRT elsewhere, set `XWIN_DIR` to that directory before configuring or building, for example `export XWIN_DIR="$HOME/.xwin"`. When set, `XWIN_DIR` overrides the repository-local default.
+
+3.3. Wine must be registered with Linux's `binfmt_misc` mechanism to allow Windows `.exe` files to be executed directly during the build. Your distribution may already have configured this.
+
+   Check with:
+
+   ```bash
+   cat /proc/sys/fs/binfmt_misc/status
+   grep -il '^interpreter .*wine' /proc/sys/fs/binfmt_misc/* 2>/dev/null
+   ```
+
+   You should see a short list including output similar to:
+
+   ```text
+   enabled
+   /proc/sys/fs/binfmt_misc/DOSWin
+   ```
+
+   The handler name may differ between distributions. If `binfmt_misc` is not enabled, or no Wine interpreter is listed, follow the configuration instructions below.
+
+   On most Linux distributions, you can make the Wine registration persistent across reboots using the following procedure. These instructions use `systemd`, which is included in most mainstream Linux distributions. If your distribution uses a different init system, consult its documentation for making `binfmt_misc` registrations persistent.
+
+   ```bash
+   sudo mkdir -p /etc/binfmt.d
+   printf '%s\n' ':DOSWin:M::MZ::/usr/bin/wine:' | sudo tee /etc/binfmt.d/wine.conf
+   sudo systemctl restart systemd-binfmt.service
+   ```
+   Use the actual absolute path to Wine if it is not `/usr/bin/wine`. Distribution packaging and registration may differ. Check the configuration by executing a Windows console `.exe` directly, without prefixing the command with `wine`.
+
+##### Optional: Suppress Wine Diagnostic Output
+
+Wine can produce extensive diagnostic output when running Windows build-time tools, particularly on headless systems. To suppress it for the current shell session:
+
+```bash
+export WINEDEBUG=-all
+```
+
+You can also prefix an individual command (for example, `WINEDEBUG=-all cmake --build build_xwin`), or add the export to your shell startup configuration if you prefer. This setting is optional; unset it when you need Wine diagnostics. The xwin modes of `build.sh` suppress Wine diagnostics automatically.
 
 ##### Building Manually with CMake
 
-```bash
-# Configure with xwin-clang-cl toolchain (uses clang with MSVC-compatible flags)
-XWIN_DIR=~/.xwin cmake -B build_xwin \
-  -G Ninja \
-  -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 \
-  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/xwin-clang-cl-toolchain.cmake
+Run the following commands from the repository root. Select one toolchain and use its own build directory; CMake caches the compiler selection. Both xwin toolchains need `llvm-ml` with `-m64` for the Windows x64 proxy assembly.
 
-# Or use xwin-clang toolchain (uses clang with GNU-style flags)
-XWIN_DIR=~/.xwin cmake -B build_xwin \
-  -G Ninja \
+```bash
+# Configure with xwin-clang-cl (MSVC-compatible compiler interface)
+cmake -S . -B build_xwin -G Ninja \
   -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 \
-  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/xwin-clang-toolchain.cmake
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/xwin-clang-cl-toolchain.cmake \
+  -DCMAKE_ASM_MASM_COMPILER:FILEPATH="$(command -v llvm-ml)" \
+  -DCMAKE_ASM_MASM_FLAGS:STRING=-m64
 
 # Build
 cmake --build build_xwin
 ```
 
-##### Building with build.sh Script
+Alternatively, use the xwin-clang toolchain (GNU-style compiler interface) in a separate build directory:
 
 ```bash
-# Set XWIN_DIR
-export XWIN_DIR=~/.xwin
+cmake -S . -B build_xwin_clang -G Ninja \
+  -DCMAKE_BUILD_TYPE=Game__Shipping__Win64 \
+  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/xwin-clang-toolchain.cmake \
+  -DCMAKE_ASM_MASM_COMPILER:FILEPATH="$(command -v llvm-ml)" \
+  -DCMAKE_ASM_MASM_FLAGS:STRING=-m64
 
-# Build with xwin-clang-cl
-./tools/buildscripts/build.sh --toolchain xwin-clang-cl
+cmake --build build_xwin_clang
+```
 
-# Or build with xwin-clang
-./tools/buildscripts/build.sh --toolchain xwin-clang
+##### Building with build.sh Script
 
-# Build specific configuration
-./tools/buildscripts/build.sh --toolchain xwin-clang-cl --build-config Game__Debug__Win64
+The xwin toolchains use `llvm-ml -m64` automatically when building through `build.sh`. Invoke the script with `bash`; executable file permissions are not required. By default it builds only the `UE4SS` target; use `--target all` for the complete build, including the proxy DLL.
 
-# Clean build with verbose output
-./tools/buildscripts/build.sh --toolchain xwin-clang-cl --clean --verbose
+```bash
+# Build the complete project with xwin-clang-cl
+bash tools/buildscripts/build.sh --toolchain xwin-clang-cl --target all
+
+# Or build the complete project with xwin-clang
+bash tools/buildscripts/build.sh --toolchain xwin-clang --target all
+
+# Build a specific configuration (UE4SS target by default)
+bash tools/buildscripts/build.sh --toolchain xwin-clang-cl --build-config Game__Debug__Win64
+
+# Clean, full build with verbose output
+bash tools/buildscripts/build.sh --toolchain xwin-clang-cl --target all --clean --verbose
 ```
 
 #### Option 2: Cross-Compiling with msvc-wine
@@ -319,26 +365,28 @@ cmake --build build_wine
 
 ```bash
 # Build with wine-clang-cl
-./tools/buildscripts/build.sh --toolchain wine-clang-cl
+bash tools/buildscripts/build.sh --toolchain wine-clang-cl
 
 # Or build with wine-msvc
-./tools/buildscripts/build.sh --toolchain wine-msvc
+bash tools/buildscripts/build.sh --toolchain wine-msvc
 
 # Build specific configuration
-./tools/buildscripts/build.sh --toolchain wine-clang-cl --build-config Game__Debug__Win64
+bash tools/buildscripts/build.sh --toolchain wine-clang-cl --build-config Game__Debug__Win64
 ```
 
 #### Build Output
 
-Cross-compiled binaries will be in the build directory under `<BuildMode>/bin/`:
+Cross-compiled binaries will be in the chosen build directory under `<BuildMode>/bin/`. For example, the manual `xwin-clang-cl` build produces:
 ```
-build_xwin_Game__Shipping__Win64/
+build_xwin/
 └── Game__Shipping__Win64/
     └── bin/
         ├── UE4SS.dll
         ├── dwmapi.dll  (proxy DLL)
         └── ... (other files)
 ```
+
+The `build.sh --toolchain xwin-clang-cl` example instead uses `build_xwin-clang-cl_Game__Shipping__Win64/`.
 
 ### Debugging Under Wine
 
@@ -366,7 +414,6 @@ winedbg crash_2024_12_26_07_39_15.dmp
 
 #### Tips
 
-- Set `WINEDEBUG=-all` to reduce Wine's debug output during builds (already done by build.sh)
 - If you encounter "access denied" errors, ensure you have `winbind` or `samba` installed
 - PDB files are generated in the same directory as the DLL files
 
