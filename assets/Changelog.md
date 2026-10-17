@@ -649,6 +649,11 @@ EnableAutoReloadingLuaMods = 0
 ; Default: false
 DebugBuild =
 
+; Auto detects pointer hashing in the object hash tables.
+; Override: Auto, HashCombine, Murmur32, or Murmur64.
+; Default: Auto
+PointerHash =
+
 [ObjectDumper]
 ; Whether to display the offset from the main executable for functions instead of the function pointer
 ; Default: 0
