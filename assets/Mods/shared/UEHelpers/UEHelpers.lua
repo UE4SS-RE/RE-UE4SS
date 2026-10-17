@@ -69,6 +69,14 @@ end
 function UEHelpers.GetPlayerController()
     -- local Controllers = jsb.simpleBench("FindAllOf: PlayerController", FindAllOf, "PlayerController")
     -- Controllers = jsb.simpleBench("FindAllOf: Controller", FindAllOf, "Controller")
+    local Players = UEHelpers.GetGameInstance().LocalPlayers
+    if Players:IsValid() and Players:GetArrayNum() >= 1 then
+        local FirstController = Players[1].PlayerController
+        if FirstController:IsValid() and (FirstController.IsPlayerController and FirstController:IsPlayerController() or FirstController:IsLocalPlayerController()) then
+            return FirstController
+        end
+    end
+
     local Controllers = FindAllOf("PlayerController") or FindAllOf("Controller") ---@type AController[]?
     if Controllers then
         for _, Controller in ipairs(Controllers) do
