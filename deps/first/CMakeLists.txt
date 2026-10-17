@@ -18,6 +18,7 @@ add_subdirectory("ScopedTimer")
 add_subdirectory("SinglePassSigScanner")
 add_subdirectory("Unreal")
 add_subdirectory("Profiler")
+add_subdirectory("CallStackDebug")
 
 # Add our Rust components for IDE visibility
 if(DEFINED ENABLE_IDE_SOURCE_VISIBILITY AND ENABLE_IDE_SOURCE_VISIBILITY)
