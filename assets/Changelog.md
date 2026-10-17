@@ -356,6 +356,7 @@ Added registration functions for C++ mod events. ([UE4SS #1431](https://github.c
 - No new virtual functions will be added to CppUserModBase, and no existing virtual functions will be removed.
 
 ### BPModLoader 
+BREAKING: default INSERT keybind to manually reload the ModActors was changed to les obtrusive ALT+INSERT
 
 ### Experimental 
 
