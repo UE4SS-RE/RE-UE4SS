@@ -8,6 +8,7 @@
 #include <GUI/GUI.hpp>
 #include <Input/KeyDef.hpp>
 #include <Unreal/UnrealInitializer.hpp>
+#include <Unreal/UnrealVersion.hpp>
 
 namespace RC
 {
@@ -51,6 +52,7 @@ namespace RC
             int64_t MinorVersion{-1};
             Unreal::UnrealInitializer::DebugBuildMode DebugBuild{Unreal::UnrealInitializer::DebugBuildMode::Detect};
             Unreal::UnrealInitializer::StatsMode Stats{Unreal::UnrealInitializer::StatsMode::Detect};
+            Unreal::PointerHashAlgorithm PointerHash{Unreal::PointerHashAlgorithm::Auto};
         } EngineVersionOverride;
 
         struct SectionObjectDumper

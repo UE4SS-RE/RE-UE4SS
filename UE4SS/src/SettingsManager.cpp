@@ -151,6 +151,30 @@ namespace RC
             EngineVersionOverride.Stats = Unreal::UnrealInitializer::StatsMode::ForceOff;
         }
 
+        StringType pointer_hash_string{};
+        REGISTER_STRING_SETTING(pointer_hash_string, section_engine_version_override, PointerHash)
+        if (pointer_hash_string.empty() || String::iequal(pointer_hash_string, STR("Auto")))
+        {
+            EngineVersionOverride.PointerHash = Unreal::PointerHashAlgorithm::Auto;
+        }
+        else if (String::iequal(pointer_hash_string, STR("HashCombine")))
+        {
+            EngineVersionOverride.PointerHash = Unreal::PointerHashAlgorithm::HashCombine;
+        }
+        else if (String::iequal(pointer_hash_string, STR("Murmur32")))
+        {
+            EngineVersionOverride.PointerHash = Unreal::PointerHashAlgorithm::Murmur32;
+        }
+        else if (String::iequal(pointer_hash_string, STR("Murmur64")))
+        {
+            EngineVersionOverride.PointerHash = Unreal::PointerHashAlgorithm::Murmur64;
+        }
+        else
+        {
+            throw std::runtime_error{fmt::format("Invalid EngineVersionOverride.PointerHash '{}': expected Auto, HashCombine, Murmur32, or Murmur64",
+                                                 to_string(pointer_hash_string))};
+        }
+
         constexpr static File::CharType section_object_dumper[] = STR("ObjectDumper");
         REGISTER_BOOL_SETTING(ObjectDumper.LoadAllAssetsBeforeDumpingObjects, section_object_dumper, LoadAllAssetsBeforeDumpingObjects)
         REGISTER_BOOL_SETTING(ObjectDumper.UseModuleOffsets, section_object_dumper, UseModuleOffsets)
