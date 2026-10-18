@@ -7,8 +7,8 @@
 #include <filesystem>
 #include <memory>
 #include <span>
-#include <type_traits>
 #include <string>
+#include <type_traits>
 
 #include <File/Common.hpp>
 #include <File/Enums.hpp>
@@ -36,21 +36,21 @@ namespace RC::File
         FileType m_internal_handle{};
 
       protected:
-        explicit HandleTemplate(FileType&& InternalHandle)
+        explicit HandleTemplate(FileType&& internal_handle)
         {
             // Transfer the complete platform-specific state rather than
             // copying native resource handles and invalidating the source.
             using std::swap;
-            swap(m_internal_handle, InternalHandle);
+            swap(m_internal_handle, internal_handle);
         }
 
       public:
         HandleTemplate() = default;
         HandleTemplate(const HandleTemplate&) = delete;
         HandleTemplate& operator=(const HandleTemplate& original) = delete;
-        HandleTemplate& operator=(HandleTemplate&& Original)
+        HandleTemplate& operator=(HandleTemplate&& original)
         {
-            if (this == &Original)
+            if (this == &original)
             {
                 return *this;
             }
@@ -61,15 +61,15 @@ namespace RC::File
             close();
 
             using std::swap;
-            swap(m_internal_handle, Original.m_internal_handle);
+            swap(m_internal_handle, original.m_internal_handle);
             return *this;
         };
-        HandleTemplate(HandleTemplate&& Original) noexcept(std::is_nothrow_default_constructible_v<FileType> && std::is_nothrow_swappable_v<FileType>)
+        HandleTemplate(HandleTemplate&& original) noexcept(std::is_nothrow_default_constructible_v<FileType> && std::is_nothrow_swappable_v<FileType>)
         {
             // A moved-from handle receives the default, unowned state.
             // No native resource is copied or independently duplicated.
             using std::swap;
-            swap(m_internal_handle, Original.m_internal_handle);
+            swap(m_internal_handle, original.m_internal_handle);
         }
         ~HandleTemplate() noexcept
         {
@@ -186,8 +186,8 @@ namespace RC::File
         template <typename SerializedDataType>
         auto get_serialized_item() -> SerializedDataType
         {
-            void* Data = m_internal_handle.get_serialized_item(sizeof(SerializedDataType), false);
-            if (!Data)
+            void* data = m_internal_handle.get_serialized_item(sizeof(SerializedDataType), false);
+            if (!data)
             {
                 THROW_INTERNAL_FILE_ERROR("Attempted to get serialized item but the data was nullptr")
             }
@@ -196,14 +196,14 @@ namespace RC::File
             {
                 // The source contains native bytes, not necessarily an aligned object.
                 // Copying before bit_cast also avoids requiring a default constructor.
-                std::array<std::byte, sizeof(SerializedDataType)> Bytes{};
-                std::memcpy(Bytes.data(), Data, Bytes.size());
-                return std::bit_cast<SerializedDataType>(Bytes);
+                std::array<std::byte, sizeof(SerializedDataType)> bytes{};
+                std::memcpy(bytes.data(), data, bytes.size());
+                return std::bit_cast<SerializedDataType>(bytes);
             }
             else
             {
                 // Preserve the existing behaviour for non-trivially-copyable types.
-                return *static_cast<SerializedDataType*>(Data);
+                return *static_cast<SerializedDataType*>(data);
             }
         }
 

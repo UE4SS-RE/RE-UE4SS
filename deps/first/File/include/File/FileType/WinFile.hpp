@@ -51,22 +51,22 @@ namespace RC::File
         // Exchange the complete file state, including file and mapping
         // ownership. Paths, open properties and serialization state must
         // follow their associated native handles during ownership transfers.
-        friend auto swap(WinFile& Lhs, WinFile& Rhs) noexcept -> void
+        friend auto swap(WinFile& lhs, WinFile& rhs) noexcept -> void
         {
             using std::swap;
 
-            swap(Lhs.m_file, Rhs.m_file);
-            swap(Lhs.m_map_handle, Rhs.m_map_handle);
-            swap(Lhs.m_memory_map, Rhs.m_memory_map);
-            swap(Lhs.m_open_properties, Rhs.m_open_properties);
-            Lhs.m_file_path_and_name.swap(Rhs.m_file_path_and_name);
-            Lhs.m_serialization_file_path_and_name.swap(Rhs.m_serialization_file_path_and_name);
-            swap(Lhs.m_identifying_properties, Rhs.m_identifying_properties);
-            swap(Lhs.m_cache, Rhs.m_cache);
-            swap(Lhs.m_offset_to_next_serialized_item, Rhs.m_offset_to_next_serialized_item);
-            swap(Lhs.m_has_cache_in_memory, Rhs.m_has_cache_in_memory);
-            swap(Lhs.m_has_cached_identifying_properties, Rhs.m_has_cached_identifying_properties);
-            swap(Lhs.m_is_file_open, Rhs.m_is_file_open);
+            swap(lhs.m_file, rhs.m_file);
+            swap(lhs.m_map_handle, rhs.m_map_handle);
+            swap(lhs.m_memory_map, rhs.m_memory_map);
+            swap(lhs.m_open_properties, rhs.m_open_properties);
+            lhs.m_file_path_and_name.swap(rhs.m_file_path_and_name);
+            lhs.m_serialization_file_path_and_name.swap(rhs.m_serialization_file_path_and_name);
+            swap(lhs.m_identifying_properties, rhs.m_identifying_properties);
+            swap(lhs.m_cache, rhs.m_cache);
+            swap(lhs.m_offset_to_next_serialized_item, rhs.m_offset_to_next_serialized_item);
+            swap(lhs.m_has_cache_in_memory, rhs.m_has_cache_in_memory);
+            swap(lhs.m_has_cached_identifying_properties, rhs.m_has_cached_identifying_properties);
+            swap(lhs.m_is_file_open, rhs.m_is_file_open);
         }
 
       private:

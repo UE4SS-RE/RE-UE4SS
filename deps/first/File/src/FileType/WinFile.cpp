@@ -1,4 +1,5 @@
 #ifdef _WIN32
+#include <cstring>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -23,8 +24,8 @@ namespace RC::File
         // Keep mapping metadata outside WinFile to preserve its original ABI.
         struct WinFileMappingState
         {
-            uint8_t* View{};
-            size_t Size{};
+            uint8_t* view{};
+            size_t size{};
         };
     }
 
@@ -116,16 +117,16 @@ namespace RC::File
             THROW_INTERNAL_FILE_ERROR("[WinFile::write_to_file] Tried writing to file but the file is not open")
         }
 
-        const auto* Bytes = reinterpret_cast<const unsigned char*>(data);
-        DWORD TotalWritten{};
+        const auto* bytes = reinterpret_cast<const unsigned char*>(data);
+        DWORD total_written{};
 
         // WriteFile() can succeed without transferring the entire buffer.
         // Continue from the last completed byte rather than silently
         // accepting a partial write as successful.
-        while (TotalWritten < num_bytes_to_write)
+        while (total_written < num_bytes_to_write)
         {
-            DWORD BytesWritten{};
-            if (!WriteFile(file.get_file(), Bytes + TotalWritten, num_bytes_to_write - TotalWritten, &BytesWritten, nullptr))
+            DWORD bytes_written{};
+            if (!WriteFile(file.get_file(), bytes + total_written, num_bytes_to_write - total_written, &bytes_written, nullptr))
             {
                 THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::write_to_file] Tried writing to file but was unable to complete operation. error: {}",
                                                       to_string(SysError(GetLastError())).c_str()))
@@ -133,12 +134,12 @@ namespace RC::File
 
             // A successful call reporting no progress would otherwise
             // leave us retrying the same operation indefinitely.
-            if (BytesWritten == 0)
+            if (bytes_written == 0)
             {
                 THROW_INTERNAL_FILE_ERROR("[WinFile::write_to_file] Write made no progress")
             }
 
-            TotalWritten += BytesWritten;
+            total_written += bytes_written;
         }
     }
 
@@ -160,6 +161,15 @@ namespace RC::File
             THROW_INTERNAL_FILE_ERROR("[WinFile::serialize_identifying_properties]: Path & file name for serialization file is empty, please call "
                                       "'set_serialization_output_file'")
         }
+
+        // Replace any existing cache before writing a fresh header.
+        auto cache_file = open(m_serialization_file_path_and_name, OpenFor::Writing, OverwriteExistingFile::Yes);
+        cache_file.close();
+
+        m_has_cache_in_memory = false;
+        m_has_cached_identifying_properties = false;
+        m_offset_to_next_serialized_item = 0;
+        std::memset(m_cache, 0, sizeof(m_cache));
 
         BY_HANDLE_FILE_INFORMATION file_info{};
         GetFileInformationByHandle(m_file, &file_info);
@@ -374,26 +384,26 @@ namespace RC::File
 
     auto WinFile::close_file() -> void
     {
-        DWORD UnmapError{};
-        auto* MappingState = reinterpret_cast<WinFileMappingState*>(m_memory_map);
-        if (MappingState && MappingState->View)
+        DWORD unmap_error{};
+        auto* mapping_state = reinterpret_cast<WinFileMappingState*>(m_memory_map);
+        if (mapping_state && mapping_state->view)
         {
-            if (UnmapViewOfFile(MappingState->View) == 0)
+            if (UnmapViewOfFile(mapping_state->view) == 0)
             {
-                UnmapError = GetLastError();
+                unmap_error = GetLastError();
             }
             else
             {
-                MappingState->View = nullptr;
+                mapping_state->view = nullptr;
             }
         }
 
-        DWORD MappingCloseError{};
+        DWORD mapping_close_error{};
         if (m_map_handle)
         {
             if (CloseHandle(m_map_handle) == 0)
             {
-                MappingCloseError = GetLastError();
+                mapping_close_error = GetLastError();
             }
             else
             {
@@ -403,18 +413,18 @@ namespace RC::File
 
         // Retain metadata while either mapping resource remains owned.
         // This preserves the information needed to retry failed cleanup.
-        if (MappingState && !MappingState->View && !m_map_handle)
+        if (mapping_state && !mapping_state->view && !m_map_handle)
         {
-            delete MappingState;
+            delete mapping_state;
             m_memory_map = nullptr;
         }
 
-        DWORD FileCloseError{};
+        DWORD file_close_error{};
         if (is_valid() && is_file_open())
         {
             if (CloseHandle(m_file) == 0)
             {
-                FileCloseError = GetLastError();
+                file_close_error = GetLastError();
             }
             else
             {
@@ -429,19 +439,19 @@ namespace RC::File
         // Views, mapping handles and file handles have independent lifetimes.
         // Attempt all cleanup operations before reporting failures, preserving
         // each error because subsequent Windows API calls may change it.
-        if (UnmapError)
+        if (unmap_error)
         {
-            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to unmap file, error: {}", to_string(SysError(UnmapError)).c_str()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to unmap file, error: {}", to_string(SysError(unmap_error)).c_str()))
         }
 
-        if (MappingCloseError)
+        if (mapping_close_error)
         {
-            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close map handle, {}", to_string(SysError(MappingCloseError)).c_str()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close map handle, {}", to_string(SysError(mapping_close_error)).c_str()))
         }
 
-        if (FileCloseError)
+        if (file_close_error)
         {
-            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close file, {}", to_string(SysError(FileCloseError)).c_str()))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::close_file] Was unable to close file, {}", to_string(SysError(file_close_error)).c_str()))
         }
     }
 
@@ -533,82 +543,80 @@ namespace RC::File
 
     auto WinFile::read_all() const -> StringType
     {
-        std::ifstream Stream{get_file_path(), std::ios::in | std::ios::binary};
-        if (!Stream)
+        std::ifstream stream{get_file_path(), std::ios::in | std::ios::binary};
+        if (!stream)
         {
             THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::read_all] Tried to read entire file but returned error {}", errno))
         }
         else
         {
-            std::string FileContents;
-            constexpr std::streamsize BufferSize = 4096;
-            char Buffer[BufferSize];
+            std::string file_contents;
+            constexpr std::streamsize buffer_size = 4096;
+            char buffer[buffer_size];
 
             // Read raw bytes rather than wide characters. Files are UTF-8,
             // while StringType uses UTF-16 on Windows.
-            while (Stream.read(Buffer, BufferSize))
+            while (stream.read(buffer, buffer_size))
             {
-                FileContents.append(Buffer, static_cast<size_t>(BufferSize));
+                file_contents.append(buffer, static_cast<size_t>(buffer_size));
             }
 
             // Preserve the final partial chunk and reject genuine I/O failures.
-            FileContents.append(Buffer, static_cast<size_t>(Stream.gcount()));
+            file_contents.append(buffer, static_cast<size_t>(stream.gcount()));
 
-            if (Stream.bad() || !Stream.eof())
+            if (stream.bad() || !stream.eof())
             {
                 THROW_INTERNAL_FILE_ERROR("[WinFile::read_all] Unable to read complete file")
             }
 
-            Stream.close();
-
             // Strip the BOM if it exists
-            if (FileContents.size() >= 3 &&
-                static_cast<unsigned char>(FileContents[0]) == 0xEF &&
-                static_cast<unsigned char>(FileContents[1]) == 0xBB &&
-                static_cast<unsigned char>(FileContents[2]) == 0xBF)
+            if (file_contents.size() >= 3 &&
+                static_cast<unsigned char>(file_contents[0]) == 0xEF &&
+                static_cast<unsigned char>(file_contents[1]) == 0xBB &&
+                static_cast<unsigned char>(file_contents[2]) == 0xBF)
             {
                 // BOM: UTF-8
-                FileContents.erase(0, 3);
+                file_contents.erase(0, 3);
             }
 
-            if (FileContents.empty())
+            if (file_contents.empty())
             {
                 return {};
             }
 
             // MultiByteToWideChar accepts an int-sized input length.
-            if (FileContents.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
+            if (file_contents.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
             {
                 THROW_INTERNAL_FILE_ERROR("[WinFile::read_all] File exceeds UTF-8 conversion input limit")
             }
 
-            const int InputSize = static_cast<int>(FileContents.size());
+            const int input_size = static_cast<int>(file_contents.size());
 
-            const int WideSize = MultiByteToWideChar(CP_UTF8, 0,
-                                                      FileContents.data(), InputSize, nullptr, 0);
-            if (WideSize == 0)
+            const int wide_size = MultiByteToWideChar(CP_UTF8, 0,
+                                                      file_contents.data(), input_size, nullptr, 0);
+            if (wide_size == 0)
             {
                 THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::read_all] UTF-8 conversion size query failed: {}",
                                                       to_string(SysError(GetLastError())).c_str()))
             }
 
-            StringType Decoded(static_cast<size_t>(WideSize), CharType{});
+            StringType decoded(static_cast<size_t>(wide_size), CharType{});
 
-            const int Converted = MultiByteToWideChar(CP_UTF8, 0,
-                                                      FileContents.data(), InputSize,
-                                                      FromCharTypePtr<wchar_t>(Decoded.data()), WideSize);
-            if (Converted == 0)
+            const int converted = MultiByteToWideChar(CP_UTF8, 0,
+                                                      file_contents.data(), input_size,
+                                                      FromCharTypePtr<wchar_t>(decoded.data()), wide_size);
+            if (converted == 0)
             {
                 THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::read_all] UTF-8 decoding failed: {}",
                                                       to_string(SysError(GetLastError())).c_str()))
             }
 
-            if (Converted != WideSize)
+            if (converted != wide_size)
             {
                 THROW_INTERNAL_FILE_ERROR("[WinFile::read_all] UTF-8 conversion returned an unexpected length")
             }
 
-            return Decoded;
+            return decoded;
         }
     }
 
@@ -622,10 +630,10 @@ namespace RC::File
         // not automatically resize if the underlying file changes.
         if (m_memory_map)
         {
-            auto* MappingState = reinterpret_cast<WinFileMappingState*>(m_memory_map);
-            if (MappingState->View)
+            auto* mapping_state = reinterpret_cast<WinFileMappingState*>(m_memory_map);
+            if (mapping_state->view)
             {
-                return std::span(MappingState->View, MappingState->Size);
+                return std::span(mapping_state->view, mapping_state->size);
             }
         }
 
@@ -660,8 +668,8 @@ namespace RC::File
         // rather than overwriting and leaking its handle.
         if (!m_map_handle)
         {
-            LARGE_INTEGER FileSize{};
-            if (!GetFileSizeEx(get_file(), &FileSize))
+            LARGE_INTEGER file_size{};
+            if (!GetFileSizeEx(get_file(), &file_size))
             {
                 THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::memory_map] GetFileSizeEx failed: {}",
                                           to_string(SysError(GetLastError())).c_str()))
@@ -669,8 +677,8 @@ namespace RC::File
 
             // Allocate metadata before acquiring the Windows mapping handle.
             // Allocation failure must not leave native resources stranded.
-            auto MappingState = std::make_unique<WinFileMappingState>();
-            MappingState->Size = static_cast<size_t>(FileSize.QuadPart);
+            auto mapping_state = std::make_unique<WinFileMappingState>();
+            mapping_state->size = static_cast<size_t>(file_size.QuadPart);
 
             m_map_handle = CreateFileMapping(get_raw_handle(), nullptr, handle_desired_access, 0, 0, nullptr);
             if (!m_map_handle)
@@ -679,18 +687,18 @@ namespace RC::File
                                           to_string(SysError(GetLastError())).c_str()))
             }
 
-            m_memory_map = reinterpret_cast<uint8_t*>(MappingState.release());
+            m_memory_map = reinterpret_cast<uint8_t*>(mapping_state.release());
         }
 
-        auto* MappingState = reinterpret_cast<WinFileMappingState*>(m_memory_map);
-        MappingState->View = static_cast<uint8_t*>(MapViewOfFile(m_map_handle, mapping_desired_access, 0, 0, 0));
-        if (!MappingState->View)
+        auto* mapping_state = reinterpret_cast<WinFileMappingState*>(m_memory_map);
+        mapping_state->view = static_cast<uint8_t*>(MapViewOfFile(m_map_handle, mapping_desired_access, 0, 0, 0));
+        if (!mapping_state->view)
         {
             THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::memory_map] Tried to memory map file but 'MapViewOfFile' returned {}",
                                       to_string(SysError(GetLastError())).c_str()))
         }
 
-        return std::span(MappingState->View, MappingState->Size);
+        return std::span(mapping_state->view, mapping_state->size);
     }
 
     auto WinFile::open_file(const std::filesystem::path& file_name_and_path, const OpenProperties& open_properties) -> WinFile

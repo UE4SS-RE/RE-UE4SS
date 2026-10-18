@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <format>
 #include <optional>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -22,24 +23,26 @@ namespace RC::File
       private:
         struct IdentifyingProperties
         {
-            std::uint64_t Device{};
-            std::uint64_t Inode{};
-            std::int64_t ModificationTimeSeconds{};
-            std::int64_t ModificationTimeNanoseconds{};
-            std::int64_t FileSize{};
+            std::uint64_t device{};
+            std::uint64_t inode{};
+            std::int64_t modification_time_seconds{};
+            std::int64_t modification_time_nanoseconds{};
+            std::int64_t file_size{};
         };
 
+        static_assert(std::has_unique_object_representations_v<IdentifyingProperties>);
+
       private:
-        int FileDescriptor{-1};
+        int m_file_descriptor{-1};
         uint8_t* m_memory_map{};
-        size_t MapSize{};
+        size_t m_map_size{};
         OpenProperties m_open_properties{};
         std::filesystem::path m_file_path_and_name{};
         std::filesystem::path m_serialization_file_path_and_name{};
-        std::vector<std::uint8_t> CacheBytes{};
-        std::optional<IdentifyingProperties> CachedProperties{};
-        size_t NextRecordIndex{};
-        alignas(std::uint64_t) std::array<std::byte, sizeof(std::uint64_t)> ReturnStorage{};
+        std::vector<std::uint8_t> m_cache_bytes{};
+        std::optional<IdentifyingProperties> m_cached_properties{};
+        size_t m_next_record_index{};
+        alignas(std::uint64_t) std::array<std::byte, sizeof(std::uint64_t)> m_return_storage{};
         bool m_is_file_open{};
 
       public:
@@ -48,9 +51,9 @@ namespace RC::File
         // Transfer the complete resource state without copying ownership
         // of the descriptor or performing potentially throwing allocations.
         // This also makes returning an opened LinuxFile safe without NRVO.
-        LinuxFile(LinuxFile&& Other) noexcept
+        LinuxFile(LinuxFile&& other) noexcept
         {
-            swap(*this, Other);
+            swap(*this, other);
         }
 
         ~LinuxFile() override = default;
@@ -61,36 +64,36 @@ namespace RC::File
         //
         // HandleTemplate uses this to transfer ownership without temporarily
         // duplicating native handles or performing potentially throwing copies.
-        friend auto swap(LinuxFile& Lhs, LinuxFile& Rhs) noexcept -> void
+        friend auto swap(LinuxFile& lhs, LinuxFile& rhs) noexcept -> void
         {
             using std::swap;
 
-            swap(Lhs.FileDescriptor, Rhs.FileDescriptor);
-            swap(Lhs.m_memory_map, Rhs.m_memory_map);
-            swap(Lhs.MapSize, Rhs.MapSize);
-            swap(Lhs.m_open_properties, Rhs.m_open_properties);
-            Lhs.m_file_path_and_name.swap(Rhs.m_file_path_and_name);
-            Lhs.m_serialization_file_path_and_name.swap(Rhs.m_serialization_file_path_and_name);
-            swap(Lhs.CacheBytes, Rhs.CacheBytes);
-            swap(Lhs.CachedProperties, Rhs.CachedProperties);
-            swap(Lhs.NextRecordIndex, Rhs.NextRecordIndex);
-            swap(Lhs.ReturnStorage, Rhs.ReturnStorage);
-            swap(Lhs.m_is_file_open, Rhs.m_is_file_open);
+            swap(lhs.m_file_descriptor, rhs.m_file_descriptor);
+            swap(lhs.m_memory_map, rhs.m_memory_map);
+            swap(lhs.m_map_size, rhs.m_map_size);
+            swap(lhs.m_open_properties, rhs.m_open_properties);
+            lhs.m_file_path_and_name.swap(rhs.m_file_path_and_name);
+            lhs.m_serialization_file_path_and_name.swap(rhs.m_serialization_file_path_and_name);
+            swap(lhs.m_cache_bytes, rhs.m_cache_bytes);
+            swap(lhs.m_cached_properties, rhs.m_cached_properties);
+            swap(lhs.m_next_record_index, rhs.m_next_record_index);
+            swap(lhs.m_return_storage, rhs.m_return_storage);
+            swap(lhs.m_is_file_open, rhs.m_is_file_open);
         }
 
       private:
-        auto static CreateAllDirectories(const std::filesystem::path& file_name_and_path) -> void;
+        auto static create_all_directories(const std::filesystem::path& file_name_and_path) -> void;
 
       private:
-        auto ResetSerializationState() noexcept -> void;
-        auto LoadSerializationCache() -> bool;
-        auto CloseFile() -> void;
+        auto reset_serialization_state() noexcept -> void;
+        auto load_serialization_cache() -> bool;
+        auto close_file() -> void;
 
       public:
         [[nodiscard]] auto is_file_open() const -> bool;
 
       public:
-        RC_FILE_API auto set_file(int NewFileDescriptor) -> void;
+        RC_FILE_API auto set_file(int new_file_descriptor) -> void;
         RC_FILE_API auto set_is_file_open(bool new_is_open) -> void;
         RC_FILE_API auto get_file() -> int;
         RC_FILE_API auto serialization_file_exists() -> bool;
