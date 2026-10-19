@@ -18,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include <Helpers/String.hpp>
 #include <fmt/core.h>
 
 namespace RC::File
@@ -92,8 +91,8 @@ namespace RC::File
         };
     } // namespace
 
-    // Helpers::to_u16string widens bytes without decoding UTF-8.
-    // Decode leniently, replacing malformed sequences with U+FFFD to match Windows.
+    // Decode leniently, matching Windows' UTF-8 replacement behaviour.
+    // An invalid second continuation byte is consumed before emitting U+FFFD.
     static auto utf8_to_u16_string(const std::string& input) -> std::u16string
     {
         std::u16string decoded;
@@ -109,24 +108,26 @@ namespace RC::File
             }
 
             size_t remaining{};
-            std::uint32_t minimum{};
+            std::uint8_t lower = 0x80;
+            std::uint8_t upper = 0xBF;
             if (code_point >= 0xC2 && code_point <= 0xDF)
             {
                 code_point &= 0x1F;
                 remaining = 1;
-                minimum = 0x80;
             }
             else if (code_point >= 0xE0 && code_point <= 0xEF)
             {
+                lower = code_point == 0xE0 ? 0xA0 : 0x80;
+                upper = code_point == 0xED ? 0x9F : 0xBF;
                 code_point &= 0x0F;
                 remaining = 2;
-                minimum = 0x800;
             }
             else if (code_point >= 0xF0 && code_point <= 0xF4)
             {
+                lower = code_point == 0xF0 ? 0x90 : 0x80;
+                upper = code_point == 0xF4 ? 0x8F : 0xBF;
                 code_point &= 0x07;
                 remaining = 3;
-                minimum = 0x10000;
             }
             else
             {
@@ -134,14 +135,23 @@ namespace RC::File
                 continue;
             }
 
+            bool invalid_second_byte = false;
             while (remaining > 0 && index < input.size() && (static_cast<std::uint8_t>(input[index]) & 0xC0) == 0x80)
             {
-                code_point = (code_point << 6) | (static_cast<std::uint8_t>(input[index++]) & 0x3F);
+                const auto byte = static_cast<std::uint8_t>(input[index++]);
+                if (byte < lower || byte > upper)
+                {
+                    invalid_second_byte = true;
+                    break;
+                }
+
+                code_point = (code_point << 6) | (byte & 0x3F);
                 --remaining;
+                lower = 0x80;
+                upper = 0xBF;
             }
 
-            // Require shortest-form encodings of Unicode scalar values, excluding surrogates.
-            if (remaining != 0 || code_point < minimum || code_point > 0x10FFFF || (code_point >= 0xD800 && code_point <= 0xDFFF))
+            if (invalid_second_byte || remaining != 0)
             {
                 decoded.push_back(u'\uFFFD');
             }
