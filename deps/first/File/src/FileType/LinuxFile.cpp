@@ -234,7 +234,6 @@ namespace RC::File
         m_cache_bytes.clear();
         m_cached_properties.reset();
         m_next_record_index = 0;
-        m_return_storage.fill(std::byte{0});
     }
 
     auto LinuxFile::load_serialization_cache() -> bool
@@ -289,15 +288,14 @@ namespace RC::File
         return true;
     }
 
-    template <typename DataType>
-    auto write_to_file(LinuxFile& file, const DataType* data, size_t num_bytes_to_write) -> void
+    static auto write_to_file(LinuxFile& file, const void* data, size_t num_bytes_to_write) -> void
     {
         if (!file.is_file_open())
         {
             THROW_INTERNAL_FILE_ERROR("[LinuxFile::write_to_file] Tried writing to file but the file is not open")
         }
 
-        const auto* bytes = reinterpret_cast<const uint8_t*>(data);
+        const auto* bytes = static_cast<const uint8_t*>(data);
         size_t total_written{};
         while (total_written < num_bytes_to_write)
         {
@@ -315,8 +313,7 @@ namespace RC::File
             // the loop would retry indefinitely.
             if (written == 0)
             {
-                THROW_INTERNAL_FILE_ERROR(
-                    "[LinuxFile::write_to_file] Write made no progress")
+                THROW_INTERNAL_FILE_ERROR("[LinuxFile::write_to_file] Write made no progress")
             }
 
             total_written += static_cast<size_t>(written);
@@ -338,10 +335,10 @@ namespace RC::File
             THROW_INTERNAL_FILE_ERROR(fmt::format("[LinuxFile::serialize_identifying_properties] fstat failed: {}", errno_string()))
         }
         const IdentifyingProperties properties{static_cast<std::uint64_t>(file_info.st_dev),
-                                              static_cast<std::uint64_t>(file_info.st_ino),
-                                              static_cast<std::int64_t>(file_info.st_mtim.tv_sec),
-                                              static_cast<std::int64_t>(file_info.st_mtim.tv_nsec),
-                                              static_cast<std::int64_t>(file_info.st_size)};
+                                               static_cast<std::uint64_t>(file_info.st_ino),
+                                               static_cast<std::int64_t>(file_info.st_mtim.tv_sec),
+                                               static_cast<std::int64_t>(file_info.st_mtim.tv_nsec),
+                                               static_cast<std::int64_t>(file_info.st_size)};
         reset_serialization_state();
         auto output = open(m_serialization_file_path_and_name, OpenFor::Writing, OverwriteExistingFile::Yes);
         write_to_file(output.get_underlying_type(), &properties, sizeof(properties));
@@ -424,13 +421,26 @@ namespace RC::File
         {
             serialize_identifying_properties();
         }
-        const auto previous_cursor = m_next_record_index;
-        // Discard loaded bytes before writing, including on a partial-write failure.
-        reset_serialization_state();
+        // Set the loaded cache aside, so a failure anywhere below leaves it unloaded
+        // and the next read reloads it. The cursor is kept either way.
+        auto cache_bytes = std::exchange(m_cache_bytes, {});
+        const auto cached_properties = std::exchange(m_cached_properties, std::nullopt);
         auto output = open(m_serialization_file_path_and_name, OpenFor::Appending);
         write_to_file(output.get_underlying_type(), value, sizeof(std::uint64_t));
+        struct stat file_info{};
+        const bool size_known = ::fstat(output.get_underlying_type().get_file(), &file_info) == 0;
         output.close();
-        m_next_record_index = previous_cursor;
+
+        // Extend the loaded cache rather than rereading the whole file on the next read.
+        // If the file isn't exactly the loaded bytes plus this record, something else
+        // has written to it, so leave the cache unloaded.
+        if (cached_properties && size_known && static_cast<size_t>(file_info.st_size) == cache_bytes.size() + sizeof(std::uint64_t))
+        {
+            const auto* bytes = static_cast<const std::uint8_t*>(value);
+            cache_bytes.insert(cache_bytes.end(), bytes, bytes + sizeof(std::uint64_t));
+            m_cache_bytes = std::move(cache_bytes);
+            m_cached_properties = cached_properties;
+        }
     }
 
     auto LinuxFile::get_serialized_item(size_t data_size, bool is_internal_item) -> void*
@@ -668,8 +678,7 @@ namespace RC::File
             //
             // Do not change the permissions of ordinary file opens
             // merely to accommodate memory mapping.
-            THROW_INTERNAL_FILE_ERROR(
-                "[LinuxFile::memory_map] Writable mapping requires OpenFor::ReadWrite")
+            THROW_INTERNAL_FILE_ERROR("[LinuxFile::memory_map] Writable mapping requires OpenFor::ReadWrite")
 
         case OpenFor::ReadWrite:
             prot = PROT_READ | PROT_WRITE;
@@ -680,8 +689,7 @@ namespace RC::File
             break;
 
         default:
-            THROW_INTERNAL_FILE_ERROR(
-                "[LinuxFile::memory_map] Invalid file access mode")
+            THROW_INTERNAL_FILE_ERROR("[LinuxFile::memory_map] Invalid file access mode")
         }
 
         struct stat file_info{};
@@ -773,8 +781,7 @@ namespace RC::File
             const int stat_error = errno;
             ::close(file.get_file());
             file.set_file(-1);
-            THROW_INTERNAL_FILE_ERROR(
-                fmt::format("[LinuxFile::open_file] fstat failed: {}", errno_string(stat_error)))
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[LinuxFile::open_file] fstat failed: {}", errno_string(stat_error)))
         }
 
         // Linux allows opening directories as files (you can open them with a
@@ -784,8 +791,7 @@ namespace RC::File
         {
             ::close(file.get_file());
             file.set_file(-1);
-            THROW_INTERNAL_FILE_ERROR(
-                "[LinuxFile::open_file] Tried to open a directory as a file.")
+            THROW_INTERNAL_FILE_ERROR("[LinuxFile::open_file] Tried to open a directory as a file.")
         }
 
         file.set_is_file_open(true);

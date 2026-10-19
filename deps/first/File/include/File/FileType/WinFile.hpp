@@ -39,6 +39,8 @@ namespace RC::File
         std::filesystem::path m_serialization_file_path_and_name{};
         IdentifyingProperties m_identifying_properties{};
         constexpr static inline size_t cache_size = 0x500;
+        // The last bytes of m_cache record how many were loaded. A new member would change WinFile's layout.
+        constexpr static inline size_t cache_data_size = cache_size - sizeof(unsigned long);
         unsigned char m_cache[cache_size]{};
         size_t m_offset_to_next_serialized_item{};
         bool m_has_cache_in_memory{};
@@ -74,6 +76,7 @@ namespace RC::File
 
       private:
         auto close_file() -> void;
+        auto reset_serialization_state() noexcept -> void;
 
       public:
         [[nodiscard]] auto is_file_open() const -> bool;
