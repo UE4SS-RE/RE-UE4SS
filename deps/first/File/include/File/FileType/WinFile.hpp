@@ -33,6 +33,11 @@ namespace RC::File
       private:
         HANDLE m_file{};
         HANDLE m_map_handle{};
+        // Points to an owned WinFileMappingState, not the mapped view.
+        // The uint8_t* type is retained to preserve the Windows ABI.
+        // Legacy copy-and-invalidate ownership transfers are supported,
+        // but two live copies must not own the same mapping state.
+        // Closing both would access freed memory and double-delete the state.
         uint8_t* m_memory_map{};
         OpenProperties m_open_properties{};
         std::filesystem::path m_file_path_and_name{};

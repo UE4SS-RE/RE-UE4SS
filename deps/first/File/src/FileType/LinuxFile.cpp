@@ -777,12 +777,13 @@ namespace RC::File
 
         if (file.get_file() < 0)
         {
+            const int open_error = errno;
             std::string_view open_type = open_properties.open_for == OpenFor::Writing || open_properties.open_for == OpenFor::Appending ? "writing" : "reading";
 
             THROW_INTERNAL_FILE_ERROR(fmt::format("[LinuxFile::open_file] Tried opening file for {} but encountered an error. Path & File: {} | error: {}\n",
                                                   open_type,
                                                   file_name_and_path.string(),
-                                                  errno_string()))
+                                                  errno_string(open_error)))
         }
 
         struct stat file_info{};

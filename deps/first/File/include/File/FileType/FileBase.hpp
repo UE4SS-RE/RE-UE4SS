@@ -34,7 +34,9 @@ namespace RC::File
         */
 
         // Returns the native handle: a HANDLE on Windows, the descriptor value on Linux
-        // (so descriptor 0 is a null pointer). Do not use unless you know what you're doing
+        // (so descriptor 0 is a null pointer). A closed handle is nullptr on Windows and
+        // (void*)-1 on Linux; use is_valid() to test for an open file, not a null check.
+        // Do not use unless you know what you're doing
         virtual auto get_raw_handle() noexcept -> void* = 0;
 
         // Returns the full path to the file
