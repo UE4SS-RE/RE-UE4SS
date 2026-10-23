@@ -789,6 +789,11 @@ namespace RC::LuaMadeSimple
     RC_LMS_API auto throw_error(lua_State*, const std::string&) -> void;
     [[nodiscard]] RC_LMS_API auto new_state() -> Lua&;
 
+    // Removes a thread made with Lua::new_thread from the map of Lua instances and destroys its Lua object.
+    // Call it before the thread's state is closed, so that a new thread allocated at the same address later
+    // gets its own Lua object. Every reference to the Lua object is invalid afterwards.
+    RC_LMS_API auto forget_thread(const Lua& thread) -> void;
+
     // Push the error handler function onto the stack and return its stack index
     // Use this with lua_pcall to capture callstack before it unwinds
     RC_LMS_API auto push_pcall_error_handler(lua_State* L) -> int;

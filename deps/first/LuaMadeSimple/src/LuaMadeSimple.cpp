@@ -1090,6 +1090,11 @@ namespace RC::LuaMadeSimple
         return *lua_instances.emplace(new_lua_state, std::make_unique<Lua>(new_lua_state)).first->second;
     }
 
+    auto forget_thread(const Lua& thread) -> void
+    {
+        lua_instances.erase(thread.get_lua_state());
+    }
+
     auto RC_LMS_API push_pcall_error_handler(lua_State* L) -> int
     {
         return push_error_handler(L);
