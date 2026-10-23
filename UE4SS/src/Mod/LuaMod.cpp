@@ -724,6 +724,15 @@ namespace RC
     {
     }
 
+    // Held by the game-thread hooks while they take queued actions and run them, and by LuaMod::uninstall
+    // while it tears a mod down. A batch is moved out of the queues before it runs, so uninstall cannot
+    // erase it; this lock is what keeps uninstall from closing a Lua state under a batch still running on it.
+    // It is separate from m_thread_actions_mutex because a batch can run for a long time and must not block
+    // the threads that only queue work, such as loading threads in the StaticConstructObject hook.
+    // Lock order: this lock, then m_thread_actions_mutex. Key-bind callbacks take both, in that order,
+    // because they can reach uninstall (RestartMod) while holding m_thread_actions_mutex.
+    static std::recursive_mutex s_game_thread_execution_mutex{};
+
     static bool is_first_mod_to_start = true;
     template <typename PropertyType>
     auto add_property_type_table(const LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua::Table& property_types_table, std::string_view property_type_name) -> void
@@ -1651,6 +1660,7 @@ Overloads:
                 Input::Key key_to_register = static_cast<Input::Key>(key_from_lua);
 
                 const auto lua_keybind_callback_lambda = [](const LuaMadeSimple::Lua& lua, const int callback_register_index) -> void {
+                    std::lock_guard<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex};
                     std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                     try
                     {
@@ -4095,6 +4105,14 @@ Overloads:
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
     {
+        // Only tried, not waited for: this hook can run inside script_hook or a NotifyOnNewObject callback,
+        // which hold m_thread_actions_mutex, and waiting there would reverse the lock order. ProcessEvent
+        // runs constantly, so actions skipped now run on a later call.
+        std::unique_lock<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex, std::try_to_lock};
+        if (!execution_guard.owns_lock())
+        {
+            return;
+        }
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             LuaMod::m_is_processing_actions = true;
@@ -4132,6 +4150,7 @@ Overloads:
                                  [[maybe_unused]] float DeltaSeconds,
                                  [[maybe_unused]] bool bIdle) -> void
     {
+        std::lock_guard<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex};
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             LuaMod::m_is_processing_actions = true;
@@ -6137,6 +6156,12 @@ Overloads:
             m_async_thread.request_stop();
             m_async_thread.join();
         }
+
+        // Wait for any batch of game-thread actions the game thread has already taken, and keep it from
+        // taking another until the Lua state is closed. Taken after the join and before
+        // m_thread_actions_mutex, like the hooks take it, so neither thread can hold one lock while waiting
+        // for the other.
+        std::lock_guard<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex};
 
         // Now acquire mutex to safely modify shared data structures
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
