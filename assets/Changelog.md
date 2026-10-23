@@ -460,6 +460,10 @@ Fixed proxy injection incorrectly running UE4SS initialization inside the loader
 
 Fixed a crash in `FUObjectArray::AllocateSerialNumber` when assigning an object without a serial number to an `FWeakObjectPtr` on UE 5.3+ (reported on UE 5.4.3). Soft pointer copies now use the runtime `ObjectID` offset, including in Kismet object/class reference conversions and Lua soft-property access. ([UE4SS #1433](https://github.com/UE4SS-RE/RE-UE4SS/issues/1433))
 
+Fixed a deadlock when a Lua `RegisterHook` or `NotifyOnNewObject` callback calls `RestartCurrentMod` (or anything else that queues work for the event loop) while the event loop is uninstalling a mod. Queued events now run outside the event queue lock. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
+Fixed the GUI freezing while mods are being reinstalled with the Lua Debugger tab open. The tab now shows a short note for those frames instead of waiting, and still shows the pause controls when Lua is paused at a breakpoint. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
 Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan 
@@ -581,6 +585,8 @@ Fixed the `RegisterCustomProperty` sometimes not working because of an unknown p
 Fixed a memory leak when calling a UFunction with an 'Out' parameter from Lua: every call left a registry reference to the 'Out' table behind, so the table and everything in it were never garbage collected. ([UE4SS #1446](https://github.com/UE4SS-RE/RE-UE4SS/issues/1446))
 
 Fixed a crash when calling UFunctions with params taking >512 bytes. ([UE4SS #1462](https://github.com/UE4SS-RE/RE-UE4SS/issues/1462))
+
+Fixed a freeze or crash when a Lua mod is restarted or uninstalled while the game thread is running one of its actions from `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, `LoopInGameThreadWithDelay` or a similar function. The game thread moves a batch of actions out of the queue before it runs them, so uninstall could not see that batch and closed the mod's Lua state under it. Uninstall now waits for a running batch first. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
