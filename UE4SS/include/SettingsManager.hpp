@@ -93,6 +93,7 @@ namespace RC
             GUI::GfxBackend GraphicsAPI{GUI::GfxBackend::GLFW3_OpenGL3};
             GUI::RenderMode RenderMode{GUI::RenderMode::ExternalThread};
             Input::Key ToggleGUIKey{Input::Key::O};
+            bool ExternalLuaReplEnabled{false};
         } Debug;
 
         struct SectionCrashDump
