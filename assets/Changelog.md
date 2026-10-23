@@ -151,6 +151,8 @@ Added individual mod restart/uninstall/start functionality to Lua Debugger ([UE4
 - Restart/Start button in Script Editor tab for quick mod iteration
 - New file creation dialog with optional auto-require in main.lua
 
+Added an opt-in external Lua REPL: with `ExternalLuaReplEnabled = 1` in `[Debug]`, a program outside the game can run Lua in a started Lua mod by writing request files to the `LuaRepl` folder, and read back the return values, print output or error, like the Lua Debugger's REPL without the GUI. Requests run on the game thread, one per frame, with a time limit, and never overlap a restart or uninstall of their mod. There is no network access. See the "External Lua REPL" page of the documentation. ([UE4SS #1471](https://github.com/UE4SS-RE/RE-UE4SS/issues/1471))
+
 ### UHT Dumper
 
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
@@ -675,6 +677,13 @@ RenderMode = ExternalThread
 ; Valid values (case-insensitive): Anything from Mods/Keybinds/Scripts/main.lua
 ; Default: O
 ToggleGuiKey = O
+
+; Whether external tools may run Lua in started Lua mods, like the Lua Debugger's REPL but without the GUI.
+; Tools write request files to the 'LuaRepl' folder next to UE4SS.log and read the answers from there.
+; Anything that can write to that folder can run Lua in the game. There is no network access.
+; See docs/feature-overview/external-lua-repl.md.
+; Default: 0
+ExternalLuaReplEnabled = 0
 
 [Hooks]
 HookLoadMap = 1
