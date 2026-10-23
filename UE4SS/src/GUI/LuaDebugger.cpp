@@ -1644,9 +1644,17 @@ namespace RC::GUI
 
     auto LuaDebugger::render() -> void
     {
-        // We want to let the queue finish processing to ensure that we have a full mod list before querying the mod list.
-        while (UE4SSProgram::get_program().are_mods_being_touched())
+        // The rest of the tab reads the mod list, so it waits until mods are no longer being reinstalled. It skips
+        // this frame instead of blocking the GUI thread: a reinstall can itself be waiting for Lua that is paused at
+        // a breakpoint, and only the pause controls can let that Lua finish.
+        if (UE4SSProgram::get_program().are_mods_being_touched())
         {
+            if (m_is_paused.load())
+            {
+                render_debug_controls();
+            }
+            ImGui::TextDisabled("Mods are being reloaded...");
+            return;
         }
 
         render_controls();
