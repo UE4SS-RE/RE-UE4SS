@@ -1,4 +1,5 @@
 #include <format>
+#include <utility>
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <Helpers/Casting.hpp>
@@ -36,9 +37,19 @@ namespace RC::LuaLibrary
         Yes,
         No,
     };
+
+    static thread_local PrintCapture* t_print_capture{};
+
+    auto set_print_capture(PrintCapture* capture) -> PrintCapture*
+    {
+        return std::exchange(t_print_capture, capture);
+    }
+
     static auto print_impl(const LuaMadeSimple::Lua& lua, AutoNewLine auto_new_line)
     {
         auto* output_device = get_outputdevice_ref(lua);
+        const bool capture_text = t_print_capture != nullptr;
+        std::string captured_text{};
 
         StringType formatted_string = STR("[Lua] ");
         StringType outdevice_string;
@@ -52,10 +63,27 @@ namespace RC::LuaLibrary
         int32_t stack_size = lua.get_stack_size();
         for (int32_t i = 1; i <= stack_size; i++)
         {
+            bool is_captured = false;
             try
             {
                 // luaL_tolstring provides tostring()-ish conversion for any value
-                const char* raw_string = luaL_tolstring(lua.get_lua_state(), i, nullptr);
+                size_t raw_string_length{};
+                const char* raw_string = luaL_tolstring(lua.get_lua_state(), i, &raw_string_length);
+
+                // Taken before the conversion for the log, which throws on text that is not valid UTF-8.
+                if (capture_text)
+                {
+                    if (i > 1) captured_text.append("\t");
+                    if (raw_string)
+                    {
+                        captured_text.append(raw_string, raw_string_length);
+                    }
+                    else
+                    {
+                        captured_text.append("nil");
+                    }
+                    is_captured = true;
+                }
 
                 if (raw_string)
                 {
@@ -97,6 +125,11 @@ namespace RC::LuaLibrary
 
                 formatted_string.append(error_msg);
                 if (output_device) outdevice_string.append(error_msg);
+                if (capture_text && !is_captured)
+                {
+                    if (i > 1) captured_text.append("\t");
+                    captured_text.append(fmt::format("Error converting value: {}", e.what()));
+                }
             }
 
             // Remove the stack item produced by luaL_tolstring
@@ -113,6 +146,12 @@ namespace RC::LuaLibrary
         if (output_device)
         {
             output_device->Log(FromCharTypePtr<TCHAR>(outdevice_string.c_str()));
+        }
+
+        // Looked up again instead of keeping the pointer from before the Lua calls above.
+        if (capture_text && t_print_capture)
+        {
+            t_print_capture->on_print(captured_text);
         }
 
         return 0;
