@@ -462,6 +462,8 @@ Fixed a crash in `FUObjectArray::AllocateSerialNumber` when assigning an object 
 
 Fixed a deadlock when a Lua `RegisterHook` or `NotifyOnNewObject` callback calls `RestartCurrentMod` (or anything else that queues work for the event loop) while the event loop is uninstalling a mod. Queued events now run outside the event queue lock. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
 
+Fixed the GUI freezing while mods are being reinstalled with the Lua Debugger tab open. The tab now shows a short note for those frames instead of waiting, and still shows the pause controls when Lua is paused at a breakpoint. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
 Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan 
