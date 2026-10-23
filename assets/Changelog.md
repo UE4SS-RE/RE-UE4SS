@@ -588,6 +588,8 @@ Fixed a crash when calling UFunctions with params taking >512 bytes. ([UE4SS #14
 
 Fixed a freeze or crash when a Lua mod is restarted or uninstalled while the game thread is running one of its actions from `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, `LoopInGameThreadWithDelay` or a similar function. The game thread moves a batch of actions out of the queue before it runs them, so uninstall could not see that batch and closed the mod's Lua state under it. Uninstall now waits for a running batch first. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
 
+Fixed a freeze when a Lua mod is restarted or uninstalled while another thread is running Lua. Closing a mod's Lua state deleted the lock that every Lua state in the process shares, while still holding it. That is undefined behaviour; the observed result was a thread waiting on that lock forever. Closing a state now releases the lock instead. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
