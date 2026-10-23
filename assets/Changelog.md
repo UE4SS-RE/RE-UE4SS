@@ -151,6 +151,8 @@ Added individual mod restart/uninstall/start functionality to Lua Debugger ([UE4
 - Restart/Start button in Script Editor tab for quick mod iteration
 - New file creation dialog with optional auto-require in main.lua
 
+Added an opt-in external Lua REPL: with `ExternalLuaReplEnabled = 1` in `[Debug]`, a program outside the game can run Lua in a started Lua mod by writing request files to the `LuaRepl` folder, and read back the return values, print output or error, like the Lua Debugger's REPL without the GUI. Requests run on the game thread, one per frame, with a time limit, and never overlap a restart or uninstall of their mod. There is no network access. See the "External Lua REPL" page of the documentation. ([UE4SS #1471](https://github.com/UE4SS-RE/RE-UE4SS/issues/1471))
+
 ### UHT Dumper
 
 Added support for generating `FUtf8String` and `FAnsiString` properties in UHT-compatible headers ([UE4SS #1015](https://github.com/UE4SS-RE/RE-UE4SS/pull/1015))
@@ -460,6 +462,10 @@ Fixed proxy injection incorrectly running UE4SS initialization inside the loader
 
 Fixed a crash in `FUObjectArray::AllocateSerialNumber` when assigning an object without a serial number to an `FWeakObjectPtr` on UE 5.3+ (reported on UE 5.4.3). Soft pointer copies now use the runtime `ObjectID` offset, including in Kismet object/class reference conversions and Lua soft-property access. ([UE4SS #1433](https://github.com/UE4SS-RE/RE-UE4SS/issues/1433))
 
+Fixed a deadlock when a Lua `RegisterHook` or `NotifyOnNewObject` callback calls `RestartCurrentMod` (or anything else that queues work for the event loop) while the event loop is uninstalling a mod. Queued events now run outside the event queue lock. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
+Fixed the GUI freezing while mods are being reinstalled with the Lua Debugger tab open. The tab now shows a short note for those frames instead of waiting, and still shows the pause controls when Lua is paused at a breakpoint. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
 Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan 
@@ -582,6 +588,10 @@ Fixed a memory leak when calling a UFunction with an 'Out' parameter from Lua: e
 
 Fixed a crash when calling UFunctions with params taking >512 bytes. ([UE4SS #1462](https://github.com/UE4SS-RE/RE-UE4SS/issues/1462))
 
+Fixed a freeze or crash when a Lua mod is restarted or uninstalled while the game thread is running one of its actions from `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, `LoopInGameThreadWithDelay` or a similar function. The game thread moves a batch of actions out of the queue before it runs them, so uninstall could not see that batch and closed the mod's Lua state under it. Uninstall now waits for a running batch first. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
+Fixed a freeze when a Lua mod is restarted or uninstalled while another thread is running Lua. Closing a mod's Lua state deleted the lock that every Lua state in the process shares, while still holding it. That is undefined behaviour; the observed result was a thread waiting on that lock forever. Closing a state now releases the lock instead. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
@@ -667,6 +677,13 @@ RenderMode = ExternalThread
 ; Valid values (case-insensitive): Anything from Mods/Keybinds/Scripts/main.lua
 ; Default: O
 ToggleGuiKey = O
+
+; Whether external tools may run Lua in started Lua mods, like the Lua Debugger's REPL but without the GUI.
+; Tools write request files to the 'LuaRepl' folder next to UE4SS.log and read the answers from there.
+; Anything that can write to that folder can run Lua in the game. There is no network access.
+; See docs/feature-overview/external-lua-repl.md.
+; Default: 0
+ExternalLuaReplEnabled = 0
 
 [Hooks]
 HookLoadMap = 1

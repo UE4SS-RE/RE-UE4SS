@@ -39,6 +39,8 @@ namespace RC
         LuaMadeSimple::Lua* m_hook_lua = nullptr;
         LuaMadeSimple::Lua* m_main_lua{};
         LuaMadeSimple::Lua* m_async_lua{};
+        // The thread ExternalLuaRepl runs requests on. Only created while [Debug] ExternalLuaReplEnabled is set.
+        LuaMadeSimple::Lua* m_repl_lua{};
 
       public:
         enum class ActionType
@@ -252,6 +254,10 @@ namespace RC
         auto static on_program_start() -> void;
 
         auto static global_uninstall() -> void;
+
+        // Held while the game thread runs a batch of Lua actions, and by uninstall while it tears a mod down.
+        // Lua run on the game thread from outside a batch takes it the same way to keep the mod's state alive.
+        static auto game_thread_execution_mutex() -> std::recursive_mutex&;
 
         // Async update
         // Used when the main update function would block other mods from executing their scripts
