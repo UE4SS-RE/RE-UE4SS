@@ -599,6 +599,8 @@ Fixed 'File::Handle' unable to be moved if used in conjunction with memory_map. 
 
 Fixed `Key::NUM_ZERO` being incorrectly mapped to `Key::NUM_NINE`. ([UE4SS #716](https://github.com/UE4SS-RE/RE-UE4SS/pull/716)) 
 
+Fixed C++ mods that call the Lua C API linking their own copy of Lua. UE4SS.dll did not export the Lua API, so such a mod (raw `lua_*` calls, a binding library, or LuaMadeSimple and LuaType header templates) got a private copy of LuaRaw with its own Lua lock: its Lua calls were not serialised against UE4SS's threads, and a Lua error raised through it left that lock held. UE4SS.dll now exports the Lua C API and C++ mods import it. Rebuild a C++ mod against this version to use it; a mod that embeds a different Lua runtime must not compile against UE4SS's Lua headers for it. ([UE4SS #1476](https://github.com/UE4SS-RE/RE-UE4SS/issues/1476))
+
 ### BPModLoader 
 Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398)) 
 
