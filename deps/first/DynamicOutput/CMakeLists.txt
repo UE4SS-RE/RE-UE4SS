@@ -30,9 +30,16 @@ target_compile_definitions(${TARGET} PRIVATE
         $<$<NOT:$<BOOL:${UE4SS_${TARGET}_BUILD_SHARED}>>:
             RC_${MODULE_NAME}_BUILD_STATIC>)
 
+if (NOT ${UE4SS_${TARGET}_BUILD_SHARED})
+    target_compile_definitions(${TARGET} PRIVATE
+            RC_FILE_BUILD_STATIC
+            RC_CALL_STACK_DEBUG_BUILD_STATIC
+    )
+endif ()
+
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(${TARGET} PUBLIC File)
+target_link_libraries(${TARGET} PUBLIC File CallStackDebug)
 
 # Make headers visible in the IDE
 # Uses make_headers_visible() from cmake/modules/IDEVisibility.cmake

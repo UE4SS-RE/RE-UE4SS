@@ -37,6 +37,7 @@ target_compile_definitions(${TARGET} PRIVATE
 if (NOT ${UE4SS_${TARGET}_BUILD_SHARED})
     target_compile_definitions(${TARGET} PRIVATE
             RC_DYNAMIC_OUTPUT_BUILD_STATIC
+            RC_CALL_STACK_DEBUG_BUILD_STATIC
     )
 endif ()
 
