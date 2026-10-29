@@ -110,6 +110,20 @@ if(MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
 endif()
 
 # Ensure all UE4SS related symbols are exported, including first-party dependencies that are statically linked into UE4SS.
+if(MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:ASMHelper>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:File>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:DynamicOutput>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:SinglePassSigScanner>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:Unreal>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:Input>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:LuaMadeSimple>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:ParserBase>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:IniParser>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:JSON>")
+    target_link_options(UE4SS PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:Helpers>")
+    # TODO: Same thing for clang/gcc using '--whole-archive' when not disguised as MSVC ?
+endif()
 target_compile_definitions(UE4SS PRIVATE
     RC_UE4SS_EXPORTS
     RC_ASM_HELPER_EXPORTS
