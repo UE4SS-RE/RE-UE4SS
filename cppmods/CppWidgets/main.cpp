@@ -6,6 +6,8 @@
 #include <UE4SSProgram.hpp>
 #include <Unreal/Hooks.hpp>
 #include <Unreal/UMG/Components/Widget.hpp>
+#include <Unreal/UMG/Blueprint/WidgetTree.hpp>
+#include <Unreal/UMG/Blueprint/UserWidget.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
 
@@ -48,30 +50,6 @@ struct FSlateColor
 {
     ::FLinearColor SpecifiedColor;
     ESlateColorStylingMode ColorUseRule;
-};
-
-class UWidgetTree : public UObject
-{
-  public:
-    RC_INTERNAL_DEFINE_BP_PROPERTY_PRIVATE(UWidget*, RootWidget)
-};
-
-class UUserWidget : public UWidget
-{
-  public:
-    RC_INTERNAL_DEFINE_BP_PROPERTY_PRIVATE(UWidgetTree*, WidgetTree)
-
-  public:
-    void AddToViewport(int32 ZOrder = 0)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.UserWidget:AddToViewport")
-
-        UE_COPY_PROPERTY(ZOrder, int32)
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
 };
 
 class UPanelSlot : public UVisual
