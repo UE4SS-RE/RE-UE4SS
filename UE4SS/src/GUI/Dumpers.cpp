@@ -665,6 +665,7 @@ namespace RC::GUI::Dumpers
         }*/
 
         static bool s_include_blueprint_types{true};
+        static bool s_allow_unresolved_enums{false};
         static bool s_skip_property_values{false};
         static bool s_load_all_assets_first{false};
 
@@ -683,7 +684,7 @@ namespace RC::GUI::Dumpers
         {
             TRY([&] {
                 run_dump([] {
-                    OutTheShade::generate_usmap(s_include_blueprint_types);
+                    OutTheShade::generate_usmap(s_include_blueprint_types, s_allow_unresolved_enums);
                 });
             });
         }
@@ -699,6 +700,13 @@ namespace RC::GUI::Dumpers
         ImGui::SameLine();
         ImGui::BeginGroup();
         ImGui::Checkbox("Include Blueprint-generated types", &s_include_blueprint_types);
+        ImGui::Checkbox("Unresolved enums as integers (.usmap, lossy)", &s_allow_unresolved_enums);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Preserves property indices and integer storage when an enum reference is missing.\n"
+                              "Enum identity and symbolic names are lost. Each substitution is logged.\n"
+                              "Does not modify game objects. Disabled by default.");
+        }
         ImGui::Checkbox("Skip property values (.jmap, smaller output)", &s_skip_property_values);
         ImGui::Checkbox("Load all assets first", &s_load_all_assets_first);
         if (ImGui::IsItemHovered())
