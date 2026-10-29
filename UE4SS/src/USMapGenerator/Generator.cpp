@@ -3,6 +3,7 @@
 // writer.h is missing includes and I'd like to keep it unchanged so I'll include the missing files here instead.
 #include <Unreal/Common.hpp>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -222,7 +223,7 @@ namespace RC::OutTheShade
         }
     };
 
-    auto generate_usmap(bool include_blueprint_types) -> void
+    auto generate_usmap(bool include_blueprint_types, bool allow_unresolved_enums) -> void
     {
         Output::send(STR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper "
                          "Commit SHA 4da8c66\n"));
@@ -238,7 +239,51 @@ namespace RC::OutTheShade
         std::vector<UEnum*> Enums;
         std::vector<UStruct*> Structs; // TODO: a better way than making this completely dynamic
 
+        UStruct* CurrentStruct = nullptr;
+        size_t UnresolvedEnumCount = 0;
+        auto RejectProperty = [&](FProperty* Property, const char* Reason) {
+            throw std::runtime_error{"Mappings generation aborted: " + to_string(CurrentStruct->GetPathName()) + ":" +
+                                     to_string(Property->GetFName().ToString()) + " - " + Reason +
+                                     ". No mappings file was written by this attempt."};
+        };
+
         std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type) {
+            if (Type == EPropertyType::EnumProperty && Prop->GetClass().HasAnyCastFlags(CASTCLASS_FEnumProperty))
+            {
+                auto EnumProp = static_cast<FEnumProperty*>(Prop);
+                if (!EnumProp->GetEnum() && allow_unresolved_enums)
+                {
+                    auto Inner = EnumProp->GetUnderlyingProp();
+                    if (!Inner || Inner == Prop)
+                    {
+                        RejectProperty(Prop, "unresolved enum has no usable underlying numeric property");
+                    }
+                    auto InnerType = GetPropertyType(Inner);
+                    switch (InnerType)
+                    {
+                    case EPropertyType::ByteProperty:
+                    case EPropertyType::Int8Property:
+                    case EPropertyType::Int16Property:
+                    case EPropertyType::IntProperty:
+                    case EPropertyType::Int64Property:
+                    case EPropertyType::UInt16Property:
+                    case EPropertyType::UInt32Property:
+                    case EPropertyType::UInt64Property:
+                        break;
+                    default:
+                        RejectProperty(Prop, "unresolved enum underlying type is not a plain integer");
+                    }
+                    if (Prop->GetElementSize() != Inner->GetElementSize())
+                    {
+                        RejectProperty(Prop, "unresolved enum and underlying integer sizes differ");
+                    }
+                    Output::send<LogLevel::Warning>(STR("[USMAP] Lossy enum substitution: {}:{} -> integer type {} ({} bytes); enum names unavailable.\n"),
+                        CurrentStruct->GetPathName(), Prop->GetFName().ToString(), static_cast<unsigned>(InnerType), Inner->GetElementSize());
+                    ++UnresolvedEnumCount;
+                    Buffer.Write(InnerType);
+                    return;
+                }
+            }
             Buffer.Write(Type);
 
             switch (Type)
@@ -248,10 +293,24 @@ namespace RC::OutTheShade
                 if (Prop->GetClass().HasAnyCastFlags(CASTCLASS_FEnumProperty))
                 {
                     auto EnumProp = static_cast<FEnumProperty*>(Prop);
+                    auto Enum = EnumProp->GetEnum();
                     auto Inner = EnumProp->GetUnderlyingProp();
+                    if (!Enum)
+                    {
+                        RejectProperty(Prop, "FEnumProperty has a null Enum reference");
+                    }
+                    if (!Inner)
+                    {
+                        RejectProperty(Prop, "FEnumProperty has a null UnderlyingProp reference");
+                    }
                     auto InnerType = GetPropertyType(Inner);
                     WriteProperty(Inner, InnerType);
-                    Buffer.Write(NameMap[EnumProp->GetEnum()->GetNamePrivate()]);
+                    auto Name = NameMap.find(Enum->GetNamePrivate());
+                    if (Name == NameMap.end())
+                    {
+                        RejectProperty(Prop, "enum name is absent from the serialized name table");
+                    }
+                    Buffer.Write(Name->second);
                 }
                 // For ByteProperty with Enum
                 else if (Prop->GetClass().HasAnyCastFlags(CASTCLASS_FByteProperty))
@@ -413,6 +472,7 @@ namespace RC::OutTheShade
 
         for (auto Struct : Structs)
         {
+            CurrentStruct = Struct;
             Buffer.Write(NameMap[Struct->GetNamePrivate()]);
             Buffer.Write<int32_t>(Struct->GetSuperStruct() ? NameMap[Struct->GetSuperStruct()->GetNamePrivate()] : static_cast<int32_t>(0xffffffff));
 
@@ -551,6 +611,10 @@ namespace RC::OutTheShade
         sanitize_for_filename(game_name);
 
         std::string usmap_filename_ascii = game_name + "-" + engine_version + "-" + commit_sha + ".usmap";
+        if (UnresolvedEnumCount != 0)
+        {
+            usmap_filename_ascii = game_name + "-" + engine_version + "-" + commit_sha + "-lossy-enums.usmap";
+        }
         StringType usmap_filename = ensure_str(usmap_filename_ascii);
         auto filename = UE4SSProgram::get_program().get_working_directory() + STR("//") + usmap_filename;
         auto FileOutput = FileWriter(filename.c_str());
@@ -566,6 +630,10 @@ namespace RC::OutTheShade
         FileOutput.Write(UsmapData.data(), UsmapData.size());
 
         Output::send(STR("Mappings Generation Completed Successfully!\n"));
+        if (UnresolvedEnumCount != 0)
+        {
+            Output::send<LogLevel::Warning>(STR("[USMAP] Lossy output: {} unresolved enum occurrences written as integers; indices and array dimensions retained.\n"), UnresolvedEnumCount);
+        }
         Output::send(STR("Output file: {}\n"), usmap_filename);
     }
 } // namespace RC::OutTheShade
