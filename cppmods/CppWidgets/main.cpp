@@ -8,17 +8,13 @@
 #include <Unreal/UMG/Components/Widget.hpp>
 #include <Unreal/UMG/Blueprint/WidgetTree.hpp>
 #include <Unreal/UMG/Blueprint/UserWidget.hpp>
+#include <Unreal/UMG/Components/PanelSlot.hpp>
+#include <Unreal/Slate/Widgets/Layout/Anchors.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
 
 using namespace RC;
 using namespace RC::Unreal;
-
-struct FAnchors
-{
-    FVector2D Minimum{};
-    FVector2D Maximum{};
-};
 
 struct FLinearColor
 {
@@ -52,10 +48,6 @@ struct FSlateColor
     ESlateColorStylingMode ColorUseRule;
 };
 
-class UPanelSlot : public UVisual
-{
-};
-
 class UCanvasPanelSlot : public UPanelSlot
 {
   public:
@@ -75,8 +67,8 @@ class UCanvasPanelSlot : public UPanelSlot
         UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.CanvasPanelSlot:SetAnchors")
 
         UE_COPY_STRUCT_PROPERTY_BEGIN(InAnchors)
-        UE_COPY_STRUCT_INNER_PROPERTY(InAnchors, Minimum, FVector2D, InAnchors.Minimum)
-        UE_COPY_STRUCT_INNER_PROPERTY(InAnchors, Maximum, FVector2D, InAnchors.Maximum)
+        UE_COPY_STRUCT_INNER_PROPERTY(InAnchors, Minimum, FVector2D, InAnchors.GetMinimum())
+        UE_COPY_STRUCT_INNER_PROPERTY(InAnchors, Maximum, FVector2D, InAnchors.GetMaximum())
 
         UE_CALL_FUNCTION()
 
@@ -454,7 +446,7 @@ bool CreateTextWidgetMiddleScreen(CppWidgetsMod* mod)
         return false;
     }
     Text->SetText(FText(STR("Test")));
-    Text->SetColorAndOpacity({1.f, 1.0f, 1.0f, 1.0f});
+    Text->SetColorAndOpacity({{1.f, 1.0f, 1.0f, 1.0f}});
     Border->SetContent(Text);
 
     const auto Slot = Canvas->AddChildToCanvas(Border);
@@ -465,7 +457,7 @@ bool CreateTextWidgetMiddleScreen(CppWidgetsMod* mod)
     }
 
     Slot->SetAutoSize(true);
-    Slot->SetAnchors({{0.5f, 0.5f}, {0.5f, 0.5f}});
+    Slot->SetAnchors({0.5f, 0.5f, 0.5f, 0.5f});
     Slot->SetAlignment({1.f, 0.f});
     Slot->SetPosition({-10.f, 10.f});
 
