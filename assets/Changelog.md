@@ -96,6 +96,8 @@ Added custom game configurations for StarRupture ([UE4SS #1150](https://github.c
 
 Added custom game configuration for The Talos Principle 2 ([UE4SS #1458](https://github.com/UE4SS-RE/RE-UE4SS/pull/1458))
 
+Added custom game configuration for Phantom Blade Zero ([UE4SS #????](https://github.com/UE4SS-RE/RE-UE4SS/pull/????))
+
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
 
