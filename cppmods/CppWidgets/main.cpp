@@ -5,24 +5,12 @@
 #include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/Hooks.hpp>
-#include <Unreal/Widget.hpp>
+#include <Unreal/UMG/Components/Widget.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
 
 using namespace RC;
 using namespace RC::Unreal;
-
-#define UE_COPY_VECTOR2D(FromName, ToName) \
-if (Version::IsBelow(5, 0)) \
-{ \
-UE_COPY_STRUCT_INNER_PROPERTY(ToName, X, float, FromName.X()) \
-UE_COPY_STRUCT_INNER_PROPERTY(ToName, Y, float, FromName.Y()) \
-} \
-else \
-{ \
-UE_COPY_STRUCT_INNER_PROPERTY(ToName, X, double, FromName.X()) \
-UE_COPY_STRUCT_INNER_PROPERTY(ToName, Y, double, FromName.Y()) \
-}
 
 struct FAnchors
 {
