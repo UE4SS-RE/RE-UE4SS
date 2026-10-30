@@ -355,6 +355,12 @@ Added registration functions for C++ mod events. ([UE4SS #1431](https://github.c
 - They are intended to replace the virtual functions for ABI reasons, but the virtual functions will also be maintained for now.
 - No new virtual functions will be added to CppUserModBase, and no existing virtual functions will be removed.
 
+Added directory getter functions ([Unreal 1990823](https://github.com/Re-UE4SS/UEPseudo/commit/1990823), [Unreal aed71f1](https://github.com/Re-UE4SS/UEPseudo/commit/aed71f1), [Unreal 96376b8](https://github.com/Re-UE4SS/UEPseudo/commit/96376b8))
+- `UObjectGlobals::GetGameExeDirectory`
+- `UObjectGlobals::GetProjectContentDirectory`
+- `UObjectGlobals::GetGameName`
+- `UObjectGlobals::RootDir`
+
 ### BPModLoader 
 
 ### Experimental 
@@ -583,6 +589,10 @@ Fixed the `RegisterCustomProperty` sometimes not working because of an unknown p
 Fixed a memory leak when calling a UFunction with an 'Out' parameter from Lua: every call left a registry reference to the 'Out' table behind, so the table and everything in it were never garbage collected. ([UE4SS #1446](https://github.com/UE4SS-RE/RE-UE4SS/issues/1446))
 
 Fixed a crash when calling UFunctions with params taking >512 bytes. ([UE4SS #1462](https://github.com/UE4SS-RE/RE-UE4SS/issues/1462))
+ 
+Fixed `IterateGameDirectories` not working on some games with special directory structures. ([UE4SS bbeecc8](https://github.com/UE4SS-RE/RE-UE4SS/commit/bbeecc8))
+
+Fixed `CallFunction` in `UObject` not working. ([UE4SS 20abc5b7](https://github.com/UE4SS-RE/RE-UE4SS/commit/20abc5b7))
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
