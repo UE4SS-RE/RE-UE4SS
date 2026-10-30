@@ -2653,7 +2653,7 @@ Overloads:
 #1: IterateGameDirectories())"};
 
             std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-            auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+            static const auto game_content_dir = Unreal::UObjectGlobals::GetProjectContentDirectory();
             if (!std::filesystem::exists(game_content_dir))
             {
                 Output::send<LogLevel::Warning>(STR("IterateGameDirectories: Could not locate the root directory because the directory structure is unknown "
@@ -2662,8 +2662,8 @@ Overloads:
                 return 1;
             }
 
-            auto game_name = game_executable_directory.parent_path().parent_path().filename();
-            auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
+            const auto game_name = Unreal::UObjectGlobals::GetGameName();
+            const auto game_root_directory = Unreal::UObjectGlobals::RootDir();
 
             // A C function only gets LUA_MINSTACK (20) free slots and each level below holds two of them until
             // fuse_pair() runs, so a deep tree pushes past the end of the stack. api_incr_top's check is compiled
@@ -2846,35 +2846,23 @@ Overloads:
                                                 // Path doesn't exist, try to reconstruct it
                                                 if (path_str.find("LogicMods") != std::string::npos)
                                                 {
-                                                    // Get the game executable directory
-                                                    std::filesystem::path game_exec_dir = UE4SSProgram::get_program().get_game_executable_directory();
+                                                    auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
 
-                                                    // Navigate to content directory
-                                                    std::filesystem::path content_dir = game_exec_dir;
-                                                    content_dir = content_dir.parent_path(); // Up to Binaries
-                                                    content_dir = content_dir.parent_path(); // Up to Game
-                                                    content_dir /= "Content";
-
-                                                    if (std::filesystem::exists(content_dir))
+                                                    // Check if it exists or try to create it
+                                                    if (!std::filesystem::exists(logic_mods_dir))
                                                     {
-                                                        auto logic_mods_dir = content_dir / "Paks/LogicMods";
-
-                                                        // Check if it exists or try to create it
-                                                        if (!std::filesystem::exists(logic_mods_dir))
+                                                        std::error_code dir_ec;
+                                                        auto paks_dir = game_content_dir / "Paks";
+                                                        if (!std::filesystem::exists(paks_dir))
                                                         {
-                                                            std::error_code dir_ec;
-                                                            auto paks_dir = content_dir / "Paks";
-                                                            if (!std::filesystem::exists(paks_dir))
-                                                            {
-                                                                std::filesystem::create_directory(paks_dir, dir_ec);
-                                                            }
-                                                            std::filesystem::create_directory(logic_mods_dir, dir_ec);
+                                                            std::filesystem::create_directory(paks_dir, dir_ec);
                                                         }
+                                                        std::filesystem::create_directory(logic_mods_dir, dir_ec);
+                                                    }
 
-                                                        if (std::filesystem::exists(logic_mods_dir))
-                                                        {
-                                                            path_wstr = logic_mods_dir.wstring();
-                                                        }
+                                                    if (std::filesystem::exists(logic_mods_dir))
+                                                    {
+                                                        path_wstr = logic_mods_dir.wstring();
                                                     }
                                                 }
                                             }
@@ -2988,7 +2976,17 @@ Overloads:
             try
             {
                 std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-                auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+                static const auto game_content_dir = [game_executable_directory]() -> std::filesystem::path {
+                    static auto function_exists = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/Engine.KismetSystemLibrary:GetProjectContentDirectory"));
+                    if (function_exists)
+                    {
+                        return *Unreal::UKismetSystemLibrary::GetProjectContentDirectory();
+                    }
+                    else
+                    {
+                        return game_executable_directory.parent_path().parent_path() / "Content";
+                    }
+                }();
                 if (!std::filesystem::exists(game_content_dir))
                 {
                     lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
