@@ -102,7 +102,9 @@ namespace RC::LuaType
         }
         virtual auto derives_from_function() -> bool
         {
-            return false;
+            // Note: This function is a duplicate of 'derives_from_ufunction'.
+            // We must keep this duplicated function, or it's an ABI and API break.
+            return derives_from_ufunction();
         }
         virtual auto derives_from_object() -> bool
         {

@@ -115,7 +115,7 @@ namespace RC::LuaType
         if (lua.is_userdata())
         {
             auto& lua_object2 = lua.get_userdata<LuaType::UE4SSBaseObject>(1, true);
-            if (!is_first_userdata_function && lua_object2.derives_from_function())
+            if (!is_first_userdata_function && lua_object2.derives_from_ufunction())
             {
                 func = lua.get_userdata<LuaType::UFunction>(1).get_remote_cpp_object();
             }
