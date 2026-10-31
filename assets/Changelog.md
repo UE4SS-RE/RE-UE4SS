@@ -468,6 +468,8 @@ Fixed a crash in `FUObjectArray::AllocateSerialNumber` when assigning an object 
 
 Fixed a deadlock when a Lua `RegisterHook` or `NotifyOnNewObject` callback calls `RestartCurrentMod` (or anything else that queues work for the event loop) while the event loop is uninstalling a mod. Queued events now run outside the event queue lock. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
 
+Fixed the GUI freezing while mods are being reinstalled with the Lua Debugger tab open. The tab now shows a short note for those frames instead of waiting, and still shows the pause controls when Lua is paused at a breakpoint. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
 Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan 
@@ -594,6 +596,10 @@ Fixed `IterateGameDirectories` not working on some games with special directory 
 
 Fixed `CallFunction` in `UObject` not working. ([UE4SS 20abc5b7](https://github.com/UE4SS-RE/RE-UE4SS/commit/20abc5b7))
 
+Fixed a freeze or crash when a Lua mod is restarted or uninstalled while the game thread is running one of its actions from `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, `LoopInGameThreadWithDelay` or a similar function. The game thread moves a batch of actions out of the queue before it runs them, so uninstall could not see that batch and closed the mod's Lua state under it. Uninstall now waits for a running batch first. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
+Fixed a freeze when a Lua mod is restarted or uninstalled while another thread is running Lua. Closing a mod's Lua state deleted the lock that every Lua state in the process shares, while still holding it. That is undefined behaviour; the observed result was a thread waiting on that lock forever. Closing a state now releases the lock instead. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 
 
@@ -602,6 +608,8 @@ Fixed the `std::span` returned by `FileHandle::memory_map` being improperly size
 Fixed 'File::Handle' unable to be moved if used in conjunction with memory_map. ([UE4SS #544](https://github.com/UE4SS-RE/RE-UE4SS/pull/544)) 
 
 Fixed `Key::NUM_ZERO` being incorrectly mapped to `Key::NUM_NINE`. ([UE4SS #716](https://github.com/UE4SS-RE/RE-UE4SS/pull/716)) 
+
+Fixed C++ mods that call the Lua C API linking their own copy of Lua. UE4SS.dll did not export the Lua API, so such a mod (raw `lua_*` calls, a binding library, or LuaMadeSimple and LuaType header templates) got a private copy of LuaRaw with its own Lua lock: its Lua calls were not serialised against UE4SS's threads, and a Lua error raised through it left that lock held. UE4SS.dll now exports the Lua C API and C++ mods import it. Rebuild a C++ mod against this version to use it; a mod that embeds a different Lua runtime must not compile against UE4SS's Lua headers for it. ([UE4SS #1476](https://github.com/UE4SS-RE/RE-UE4SS/issues/1476))
 
 ### BPModLoader 
 Fixed "bad conversion" errors ([UE4SS #398](https://github.com/UE4SS-RE/RE-UE4SS/pull/398)) 
