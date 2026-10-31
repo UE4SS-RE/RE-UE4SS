@@ -223,7 +223,7 @@ namespace RC::OutTheShade
         }
     };
 
-    auto generate_usmap(bool include_blueprint_types, bool allow_unresolved_enums) -> void
+    auto generate_usmap(bool include_blueprint_types) -> void
     {
         Output::send(STR("Mappings Generator by OutTheShade\nAttempting to dump mappings...\nPort of https://github.com/OutTheShade/UnrealMappingsDumper "
                          "Commit SHA 4da8c66\n"));
@@ -250,7 +250,7 @@ namespace RC::OutTheShade
             if (Type == EPropertyType::EnumProperty && Prop->GetClass().HasAnyCastFlags(CASTCLASS_FEnumProperty))
             {
                 auto EnumProp = static_cast<FEnumProperty*>(Prop);
-                if (!EnumProp->GetEnum() && allow_unresolved_enums)
+                if (!EnumProp->GetEnum())
                 {
                     auto Inner = EnumProp->GetUnderlyingProp();
                     if (!Inner || Inner == Prop)
