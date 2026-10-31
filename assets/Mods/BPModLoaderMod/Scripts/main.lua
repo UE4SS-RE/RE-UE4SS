@@ -298,4 +298,4 @@ ExecuteInGameThread(function()
     if ExistingActor:IsValid() then
         LoadMods(ExistingActor:GetWorld())
     end
-end)
+end, EGameThreadMethod.ProcessEvent)
