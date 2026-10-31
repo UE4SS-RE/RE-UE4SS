@@ -61,6 +61,7 @@
 #include <Unreal/UnrealVersion.hpp>
 #include <UnrealCustom/CustomProperty.hpp>
 #include <UE4SSRuntime.hpp>
+#include <ExternalLuaRepl.hpp>
 #include <Unreal/UnrealInitializer.hpp>
 
 #if PLATFORM_WINDOWS
@@ -724,6 +725,20 @@ namespace RC
     {
     }
 
+    // Held by the game-thread hooks while they take queued actions and run them, and by LuaMod::uninstall
+    // while it tears a mod down. A batch is moved out of the queues before it runs, so uninstall cannot
+    // erase it; this lock is what keeps uninstall from closing a Lua state under a batch still running on it.
+    // It is separate from m_thread_actions_mutex because a batch can run for a long time and must not block
+    // the threads that only queue work, such as loading threads in the StaticConstructObject hook.
+    // Lock order: this lock, then m_thread_actions_mutex. Key-bind callbacks take both, in that order,
+    // because they can reach uninstall (RestartMod) while holding m_thread_actions_mutex.
+    static std::recursive_mutex s_game_thread_execution_mutex{};
+
+    auto LuaMod::game_thread_execution_mutex() -> std::recursive_mutex&
+    {
+        return s_game_thread_execution_mutex;
+    }
+
     static bool is_first_mod_to_start = true;
     template <typename PropertyType>
     auto add_property_type_table(const LuaMadeSimple::Lua& lua, LuaMadeSimple::Lua::Table& property_types_table, std::string_view property_type_name) -> void
@@ -784,6 +799,20 @@ namespace RC
     {
         ensure_hook_thread_exists(mod);
         return mod->m_hook_lua;
+    }
+
+    // The Lua thread a key bind's callback runs on: the thread that registered it, except ExternalLuaRepl's request
+    // thread. Key-bind callbacks run later on the event-loop thread, those of RegisterKeyBindAsync without any lock,
+    // so they would share the stack that requests use on the game thread. They get the mod's main thread instead,
+    // as when the key bind is registered from main.lua.
+    auto static key_bind_callback_lua(const LuaMadeSimple::Lua& lua) -> const LuaMadeSimple::Lua*
+    {
+        auto* mod = get_mod_ref(lua);
+        if (mod && mod->m_repl_lua == &lua && mod->m_main_lua)
+        {
+            return mod->m_main_lua;
+        }
+        return &lua;
     }
 
     // Returns hook state with registry reference (for persistent hooks that need cleanup)
@@ -862,6 +891,20 @@ namespace RC
                 return 0;
             });
             //*/
+        }
+    }
+
+    // Registry key that anchors a mod's ExternalLuaRepl thread; only its address is used.
+    static const char s_repl_thread_registry_key{};
+
+    auto static make_repl_state(LuaMod* mod, const LuaMadeSimple::Lua& lua) -> void
+    {
+        if (!mod->m_repl_lua)
+        {
+            // Done before the async thread starts and before main.lua runs, so no other thread uses this state yet.
+            // lua_rawsetp anchors the thread in a single API call; luaL_ref would edit the registry's free list in several.
+            mod->m_repl_lua = &lua.new_thread();
+            lua_rawsetp(lua.get_lua_state(), LUA_REGISTRYINDEX, &s_repl_thread_registry_key);
         }
     }
     auto static register_all_property_types(const LuaMadeSimple::Lua& lua) -> void
@@ -1518,6 +1561,7 @@ Overloads:
 #2: RegisterKeyBindAsync(integer key, table modifier_key_integers))"};
 
                 Mod* mod = get_mod_ref(lua);
+                const LuaMadeSimple::Lua* callback_lua = key_bind_callback_lua(lua);
 
                 if (!lua.is_integer())
                 {
@@ -1560,10 +1604,11 @@ Overloads:
                     // Using a 'custom_data' of 1 to signify that this keydown event was created by a mod
                     mod->m_program.register_keydown_event(
                             key_to_register,
-                            [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                                lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                            [callback_lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                                lua_keybind_callback_lambda(*callback_lua, lua_callback_registry_index);
                             },
-                            1, mod);
+                            1,
+                            mod);
                 }
                 else if (lua.is_table())
                 {
@@ -1605,19 +1650,21 @@ Overloads:
                         mod->m_program.register_keydown_event(
                                 key_to_register,
                                 modifier_keys,
-                                [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                                    lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                                [callback_lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                                    lua_keybind_callback_lambda(*callback_lua, lua_callback_registry_index);
                                 },
-                                1, mod);
+                                1,
+                                mod);
                     }
                     else
                     {
                         mod->m_program.register_keydown_event(
                                 key_to_register,
-                                [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                                    lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                                [callback_lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                                    lua_keybind_callback_lambda(*callback_lua, lua_callback_registry_index);
                                 },
-                                1, mod);
+                                1,
+                                mod);
                     }
                 }
                 else
@@ -1636,6 +1683,7 @@ Overloads:
 #2: RegisterKeyBind(integer key, table modifier_key_integers))"};
 
                 Mod* mod = get_mod_ref(lua);
+                const LuaMadeSimple::Lua* callback_lua = key_bind_callback_lua(lua);
 
                 if (!lua.is_integer())
                 {
@@ -1651,6 +1699,7 @@ Overloads:
                 Input::Key key_to_register = static_cast<Input::Key>(key_from_lua);
 
                 const auto lua_keybind_callback_lambda = [](const LuaMadeSimple::Lua& lua, const int callback_register_index) -> void {
+                    std::lock_guard<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex};
                     std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                     try
                     {
@@ -1679,10 +1728,11 @@ Overloads:
                     // Using a 'custom_data' of 1 to signify that this keydown event was created by a mod
                     mod->m_program.register_keydown_event(
                             key_to_register,
-                            [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                                lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                            [callback_lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                                lua_keybind_callback_lambda(*callback_lua, lua_callback_registry_index);
                             },
-                            1, mod);
+                            1,
+                            mod);
                 }
                 else if (lua.is_table())
                 {
@@ -1722,19 +1772,21 @@ Overloads:
                         mod->m_program.register_keydown_event(
                                 key_to_register,
                                 modifier_keys,
-                                [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                                    lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                                [callback_lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                                    lua_keybind_callback_lambda(*callback_lua, lua_callback_registry_index);
                                 },
-                                1, mod);
+                                1,
+                                mod);
                     }
                     else
                     {
                         mod->m_program.register_keydown_event(
                                 key_to_register,
-                                [&lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
-                                    lua_keybind_callback_lambda(lua, lua_callback_registry_index);
+                                [callback_lua, lua_callback_registry_index, &lua_keybind_callback_lambda]() {
+                                    lua_keybind_callback_lambda(*callback_lua, lua_callback_registry_index);
                                 },
-                                1, mod);
+                                1,
+                                mod);
                     }
                 }
                 else
@@ -4093,6 +4145,14 @@ Overloads:
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
     {
+        // Only tried, not waited for: this hook can run inside script_hook or a NotifyOnNewObject callback,
+        // which hold m_thread_actions_mutex, and waiting there would reverse the lock order. ProcessEvent
+        // runs constantly, so actions skipped now run on a later call.
+        std::unique_lock<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex, std::try_to_lock};
+        if (!execution_guard.owns_lock())
+        {
+            return;
+        }
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             LuaMod::m_is_processing_actions = true;
@@ -4130,6 +4190,7 @@ Overloads:
                                  [[maybe_unused]] float DeltaSeconds,
                                  [[maybe_unused]] bool bIdle) -> void
     {
+        std::lock_guard<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex};
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             LuaMod::m_is_processing_actions = true;
@@ -6038,6 +6099,10 @@ Overloads:
             make_main_state(this, lua());
             setup_lua_global_functions_main_state_only();
             make_async_state(this, lua());
+            if (ExternalLuaRepl::is_enabled())
+            {
+                make_repl_state(this, lua());
+            }
             start_async_thread();
 
             m_is_started = true;
@@ -6063,6 +6128,9 @@ Overloads:
                         STR("Main script 'main.lua' not found in scripts directory: {} -- Ensure your script file uses the correct casing.\n"),
                         ensure_str(m_scripts_path));
             }
+
+            // Also when main.lua failed: the mod is started, and inspecting it is what a broken main.lua needs.
+            ExternalLuaRepl::add_mod(*this);
         }
         catch (const std::exception& e)
         {
@@ -6136,8 +6204,18 @@ Overloads:
             m_async_thread.join();
         }
 
+        // Wait for any batch of game-thread actions the game thread has already taken, and keep it from
+        // taking another until the Lua state is closed. Taken after the join and before
+        // m_thread_actions_mutex, like the hooks take it, so neither thread can hold one lock while waiting
+        // for the other.
+        std::lock_guard<std::recursive_mutex> execution_guard{s_game_thread_execution_mutex};
+
         // Now acquire mutex to safely modify shared data structures
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+
+        // ExternalLuaRepl requests hold the execution lock while they run, so none is running now, and none can find
+        // this mod from here on.
+        ExternalLuaRepl::remove_mod(*this);
 
         fire_on_lua_stop_for_cpp_mods();
         fire_on_lua_stop_for_self();
@@ -6263,6 +6341,14 @@ Overloads:
         if (m_main_lua && m_main_lua->get_lua_state())
         {
             lua_resetthread(m_main_lua->get_lua_state());
+        }
+
+        if (m_repl_lua)
+        {
+            // After everything above that dereferences a mod's Lua objects, and before lua_close, so that a thread
+            // allocated at the same address later gets its own Lua object.
+            LuaMadeSimple::forget_thread(*m_repl_lua);
+            m_repl_lua = nullptr;
         }
 
         lua_close(lua().get_lua_state());
