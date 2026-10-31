@@ -241,10 +241,9 @@ namespace RC::OutTheShade
 
         UStruct* CurrentStruct = nullptr;
         size_t UnresolvedEnumCount = 0;
-        auto RejectProperty = [&](FProperty* Property, const char* Reason) {
+        auto RejectProperty = [&](FProperty* Property, const std::string& Reason) {
             throw std::runtime_error{"Mappings generation aborted: " + to_string(CurrentStruct->GetPathName()) + ":" +
-                                     to_string(Property->GetFName().ToString()) + " - " + Reason +
-                                     ". No mappings file was written by this attempt."};
+                                     to_string(Property->GetFName().ToString()) + " - " + Reason + ". No mappings file was written by this attempt."};
         };
 
         std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type) {
@@ -271,14 +270,19 @@ namespace RC::OutTheShade
                     case EPropertyType::UInt64Property:
                         break;
                     default:
-                        RejectProperty(Prop, "unresolved enum underlying type is not a plain integer");
+                        RejectProperty(Prop,
+                                       fmt::format("unresolved enum underlying type is not a plain integer, type: {}", to_string(Inner->GetClass().GetName())));
                     }
                     if (Prop->GetElementSize() != Inner->GetElementSize())
                     {
-                        RejectProperty(Prop, "unresolved enum and underlying integer sizes differ");
+                        RejectProperty(Prop,
+                                       fmt::format("unresolved enum and underlying integer sizes differ, {} != {}", Prop->GetElementSize(), Inner->GetElementSize()));
                     }
                     Output::send<LogLevel::Warning>(STR("[USMAP] Lossy enum substitution: {}:{} -> integer type {} ({} bytes); enum names unavailable.\n"),
-                        CurrentStruct->GetPathName(), Prop->GetFName().ToString(), static_cast<unsigned>(InnerType), Inner->GetElementSize());
+                                                    CurrentStruct->GetPathName(),
+                                                    Prop->GetFName().ToString(),
+                                                    Inner->GetClass().GetName(),
+                                                    Inner->GetElementSize());
                     ++UnresolvedEnumCount;
                     Buffer.Write(InnerType);
                     return;
