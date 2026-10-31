@@ -615,10 +615,6 @@ namespace RC::OutTheShade
         sanitize_for_filename(game_name);
 
         std::string usmap_filename_ascii = game_name + "-" + engine_version + "-" + commit_sha + ".usmap";
-        if (UnresolvedEnumCount != 0)
-        {
-            usmap_filename_ascii = game_name + "-" + engine_version + "-" + commit_sha + "-lossy-enums.usmap";
-        }
         StringType usmap_filename = ensure_str(usmap_filename_ascii);
         auto filename = UE4SSProgram::get_program().get_working_directory() + STR("//") + usmap_filename;
         auto FileOutput = FileWriter(filename.c_str());
