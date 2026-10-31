@@ -652,6 +652,54 @@ namespace RC::GUI
         return add_watch(LiveView::WatchIdentifier{function, nullptr}, function);
     }
 
+    static auto save_watches_to_disk() -> void;
+
+    // Removes a single watch, cleaning up all associated data structures.
+    // Must NOT be called while iterating s_watches or while holding s_watch_lock.
+    static auto remove_watch(LiveView::Watch& watch) -> void
+    {
+        bool was_persistent = watch.load_on_startup;
+
+        {
+            std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
+
+            // Unhook function watches before removal
+            if (watch.container->IsA<UFunction>() && watch.function_is_hooked)
+            {
+                toggle_function_watch(watch, false);
+            }
+
+            // Erase from s_watch_map
+            LiveView::s_watch_map.erase({watch.container, watch.property});
+
+            // Erase from s_watch_containers
+            auto container_it = LiveView::s_watch_containers.find(watch.container);
+            if (container_it != LiveView::s_watch_containers.end())
+            {
+                auto& vec = container_it->second;
+                vec.erase(std::remove(vec.begin(), vec.end(), &watch), vec.end());
+                if (vec.empty())
+                {
+                    LiveView::s_watch_containers.erase(container_it);
+                }
+            }
+
+            // Erase from s_watches (destroys the Watch via unique_ptr)
+            LiveView::s_watches.erase(std::remove_if(LiveView::s_watches.begin(),
+                                                      LiveView::s_watches.end(),
+                                                      [&](const auto& ptr) {
+                                                          return ptr.get() == &watch;
+                                                      }),
+                                       LiveView::s_watches.end());
+        }
+
+        // Update disk outside the lock since save_watches_to_disk acquires it
+        if (was_persistent)
+        {
+            save_watches_to_disk();
+        }
+    }
+
     static auto serialize_watch_to_json_object(const LiveView::Watch& watch) -> glz::generic
     {
         glz::generic json_object = glz::generic::object_t{};
@@ -3464,6 +3512,7 @@ namespace RC::GUI
             ImGui::TableSetupColumn("Save", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFrameHeight());
             ImGui::TableHeadersRow();
 
+            Watch* watch_to_remove = nullptr;
             {
                 std::lock_guard<decltype(LiveView::Watch::s_watch_lock)> lock{LiveView::Watch::s_watch_lock};
                 for (auto& watch_ptr : s_watches)
@@ -3501,6 +3550,22 @@ namespace RC::GUI
 
                     ImGui::TableNextColumn();
                     ImGui::Text("%S.%S", watch.object_name.c_str(), watch.property_name.c_str());
+
+                    // Per-row right-click context menu
+                    if (ImGui::BeginPopupContextItem(
+                                to_string(fmt::format(STR("##watch-row-ctx-{}"), watch.hash)).c_str()))
+                    {
+                        if (ImGui::MenuItem("Remove Watch"))
+                        {
+                            watch_to_remove = &watch;
+                        }
+                        if (ImGui::MenuItem("Clear History"))
+                        {
+                            watch.history.clear();
+                        }
+                        ImGui::EndPopup();
+                    }
+
                     if (watch.show_history)
                     {
                         ImGui::PushFont(UE4SSProgram::get_program().get_debugging_ui().get_texteditor_font());
@@ -3537,6 +3602,12 @@ namespace RC::GUI
                         ImGui::EndTooltip();
                     }
                 }
+            }
+
+            // Deferred removal outside the lock to avoid deadlock with save_watches_to_disk
+            if (watch_to_remove)
+            {
+                remove_watch(*watch_to_remove);
             }
 
             ImGui::EndTable();
