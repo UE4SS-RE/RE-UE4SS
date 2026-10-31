@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <format>
+#include <utility>
 
 #include <File/Common.hpp>
 #include <File/FileType/FileBase.hpp>
@@ -32,12 +33,19 @@ namespace RC::File
       private:
         HANDLE m_file{};
         HANDLE m_map_handle{};
+        // Points to an owned WinFileMappingState, not the mapped view.
+        // The uint8_t* type is retained to preserve the Windows ABI.
+        // Legacy copy-and-invalidate ownership transfers are supported,
+        // but two live copies must not own the same mapping state.
+        // Closing both would access freed memory and double-delete the state.
         uint8_t* m_memory_map{};
         OpenProperties m_open_properties{};
         std::filesystem::path m_file_path_and_name{};
         std::filesystem::path m_serialization_file_path_and_name{};
         IdentifyingProperties m_identifying_properties{};
         constexpr static inline size_t cache_size = 0x500;
+        // The last bytes of m_cache record how many were loaded. A new member would change WinFile's layout.
+        constexpr static inline size_t cache_data_size = cache_size - sizeof(unsigned long);
         unsigned char m_cache[cache_size]{};
         size_t m_offset_to_next_serialized_item{};
         bool m_has_cache_in_memory{};
@@ -47,11 +55,33 @@ namespace RC::File
       public:
         ~WinFile() override = default;
 
+        // Exchange the complete file state, including file and mapping
+        // ownership. Paths, open properties and serialization state must
+        // follow their associated native handles during ownership transfers.
+        friend auto swap(WinFile& lhs, WinFile& rhs) noexcept -> void
+        {
+            using std::swap;
+
+            swap(lhs.m_file, rhs.m_file);
+            swap(lhs.m_map_handle, rhs.m_map_handle);
+            swap(lhs.m_memory_map, rhs.m_memory_map);
+            swap(lhs.m_open_properties, rhs.m_open_properties);
+            lhs.m_file_path_and_name.swap(rhs.m_file_path_and_name);
+            lhs.m_serialization_file_path_and_name.swap(rhs.m_serialization_file_path_and_name);
+            swap(lhs.m_identifying_properties, rhs.m_identifying_properties);
+            swap(lhs.m_cache, rhs.m_cache);
+            swap(lhs.m_offset_to_next_serialized_item, rhs.m_offset_to_next_serialized_item);
+            swap(lhs.m_has_cache_in_memory, rhs.m_has_cache_in_memory);
+            swap(lhs.m_has_cached_identifying_properties, rhs.m_has_cached_identifying_properties);
+            swap(lhs.m_is_file_open, rhs.m_is_file_open);
+        }
+
       private:
         auto static create_all_directories(const std::filesystem::path& file_name_and_path) -> void;
 
       private:
         auto close_file() -> void;
+        auto reset_serialization_state() noexcept -> void;
 
       public:
         [[nodiscard]] auto is_file_open() const -> bool;
