@@ -362,6 +362,7 @@ Added directory getter functions ([Unreal 1990823](https://github.com/Re-UE4SS/U
 - `UObjectGlobals::RootDir`
 
 ### BPModLoader 
+BREAKING: default INSERT keybind to manually reload the ModActors was changed to les obtrusive ALT+INSERT
 
 ### Experimental 
 
