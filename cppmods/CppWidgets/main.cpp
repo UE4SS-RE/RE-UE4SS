@@ -14,19 +14,12 @@
 #include <Unreal/UMG/Components/PanelWidget.hpp>
 #include <Unreal/UMG/Components/ContentWidget.hpp>
 #include <Unreal/Slate/Widgets/Layout/Anchors.hpp>
+#include <Unreal/Core/Math/Color.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
 
 using namespace RC;
 using namespace RC::Unreal;
-
-struct FLinearColor
-{
-    float R;
-    float G;
-    float B;
-    float A;
-};
 
 struct FMargin
 {
@@ -36,7 +29,7 @@ struct FMargin
     float Bottom;
 };
 
-enum ESlateColorStylingMode
+enum ESlateColorStylingMode : uint8
 {
     UseColor_Specified = 0,
     UseColor_ColorTable = 1,
@@ -60,10 +53,10 @@ class UBorder : public UContentWidget
         UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.Border:SetBrushColor")
 
         UE_COPY_STRUCT_PROPERTY_BEGIN(InBrushColor)
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, R, float, InBrushColor.R)
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, G, float, InBrushColor.G)
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, B, float, InBrushColor.B)
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, A, float, InBrushColor.A)
+        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, R, float, InBrushColor.GetR())
+        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, G, float, InBrushColor.GetG())
+        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, B, float, InBrushColor.GetB())
+        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, A, float, InBrushColor.GetA())
 
         UE_CALL_FUNCTION()
 
@@ -128,13 +121,13 @@ class UTextBlock : public UTextLayoutWidget
         }
         const auto SpecifiedColor = static_cast<FStructProperty*>(SpecifiedColorProperty)->GetStruct();
         const auto R = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("R"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(R) = InColorAndOpacity.SpecifiedColor.R;
+        *std::bit_cast<float*>(R) = InColorAndOpacity.SpecifiedColor.GetR();
         const auto G = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("G"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(G) = InColorAndOpacity.SpecifiedColor.G;
+        *std::bit_cast<float*>(G) = InColorAndOpacity.SpecifiedColor.GetG();
         const auto B = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("B"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(B) = InColorAndOpacity.SpecifiedColor.B;
+        *std::bit_cast<float*>(B) = InColorAndOpacity.SpecifiedColor.GetB();
         const auto A = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("A"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(A) = InColorAndOpacity.SpecifiedColor.A;
+        *std::bit_cast<float*>(A) = InColorAndOpacity.SpecifiedColor.GetA();
         // clang-format on
 
         // ESlateColorStylingMode
