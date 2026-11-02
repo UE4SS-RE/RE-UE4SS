@@ -14,20 +14,13 @@
 #include <Unreal/UMG/Components/PanelWidget.hpp>
 #include <Unreal/UMG/Components/ContentWidget.hpp>
 #include <Unreal/Slate/Widgets/Layout/Anchors.hpp>
+#include <Unreal/SlateCore/Layout/Margin.hpp>
 #include <Unreal/Core/Math/Color.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
 
 using namespace RC;
 using namespace RC::Unreal;
-
-struct FMargin
-{
-    float Left;
-    float Top;
-    float Right;
-    float Bottom;
-};
 
 enum ESlateColorStylingMode : uint8
 {
@@ -63,15 +56,15 @@ class UBorder : public UContentWidget
         UE_END_VOID_FUNCTION()
     }
 
-    void SetPadding(::FMargin InPadding)
+    void SetPadding(FMargin InPadding)
     {
         UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.Border:SetPadding")
 
         UE_COPY_STRUCT_PROPERTY_BEGIN(InPadding)
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Left, float, InPadding.Left)
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Top, float, InPadding.Top)
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Right, float, InPadding.Right)
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Bottom, float, InPadding.Bottom)
+        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Left, float, InPadding.GetLeft())
+        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Top, float, InPadding.GetTop())
+        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Right, float, InPadding.GetRight())
+        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Bottom, float, InPadding.GetBottom())
 
         UE_CALL_FUNCTION()
 
