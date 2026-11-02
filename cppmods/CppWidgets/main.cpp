@@ -5,11 +5,14 @@
 #include <Mod/CppUserModBase.hpp>
 #include <UE4SSProgram.hpp>
 #include <Unreal/Hooks.hpp>
+#include <Unreal/CanvasPanel.hpp>
 #include <Unreal/UMG/Components/Widget.hpp>
 #include <Unreal/UMG/Blueprint/WidgetTree.hpp>
 #include <Unreal/UMG/Blueprint/UserWidget.hpp>
 #include <Unreal/UMG/Components/PanelSlot.hpp>
 #include <Unreal/UMG/Components/CanvasPanelSlot.hpp>
+#include <Unreal/UMG/Components/PanelWidget.hpp>
+#include <Unreal/UMG/Components/ContentWidget.hpp>
 #include <Unreal/Slate/Widgets/Layout/Anchors.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
@@ -47,43 +50,6 @@ struct FSlateColor
 {
     ::FLinearColor SpecifiedColor;
     ESlateColorStylingMode ColorUseRule;
-};
-
-class UPanelWidget : public UWidget
-{
-};
-
-class UCanvasPanel : public UPanelWidget
-{
-  public:
-    RC_INTERNAL_DEFINE_BP_PROPERTY_PRIVATE(UWidgetTree*, WidgetTree)
-
-  public:
-    UCanvasPanelSlot* AddChildToCanvas(UWidget* Content)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.CanvasPanel:AddChildToCanvas")
-
-        UE_COPY_PROPERTY(Content, UWidget*)
-
-        UE_CALL_FUNCTION()
-
-        UE_RETURN_PROPERTY(UCanvasPanelSlot*)
-    }
-};
-
-class UContentWidget : public UCanvasPanel
-{
-  public:
-    UPanelSlot* SetContent(UWidget* Content)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.ContentWidget:SetContent")
-
-        UE_COPY_PROPERTY(Content, UWidget*)
-
-        UE_CALL_FUNCTION()
-
-        UE_RETURN_PROPERTY(UPanelSlot*)
-    }
 };
 
 class UBorder : public UContentWidget
