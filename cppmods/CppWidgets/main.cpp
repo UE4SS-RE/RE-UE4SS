@@ -46,10 +46,10 @@ class UTextBlock : public UTextLayoutWidget
 
         UE_COPY_STRUCT_PROPERTY_BEGIN(InColorAndOpacity)
         UE_COPY_INNER_STRUCT_PROPERTY_BEGIN(SpecifiedColor, InColorAndOpacity)
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, R, float, InColorAndOpacity.GetSpecifiedColor().GetR(), ARGS(InColorAndOpacityProperty))
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, G, float, InColorAndOpacity.GetSpecifiedColor().GetG(), ARGS(InColorAndOpacityProperty))
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, B, float, InColorAndOpacity.GetSpecifiedColor().GetB(), ARGS(InColorAndOpacityProperty))
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, A, float, InColorAndOpacity.GetSpecifiedColor().GetA(), ARGS(InColorAndOpacityProperty))
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, R, float, InColorAndOpacity.GetSpecifiedColor().GetR(), ARGS(InColorAndOpacity))
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, G, float, InColorAndOpacity.GetSpecifiedColor().GetG(), ARGS(InColorAndOpacity))
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, B, float, InColorAndOpacity.GetSpecifiedColor().GetB(), ARGS(InColorAndOpacity))
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, A, float, InColorAndOpacity.GetSpecifiedColor().GetA(), ARGS(InColorAndOpacity))
         UE_COPY_STRUCT_INNER_ENUM(InColorAndOpacity, ColorUseRule, float, InColorAndOpacity.GetColorUseRule())
 
         UE_CALL_FUNCTION()
