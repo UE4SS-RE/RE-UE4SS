@@ -9,6 +9,7 @@
 #include <Unreal/UMG/Blueprint/WidgetTree.hpp>
 #include <Unreal/UMG/Blueprint/UserWidget.hpp>
 #include <Unreal/UMG/Components/PanelSlot.hpp>
+#include <Unreal/UMG/Components/CanvasPanelSlot.hpp>
 #include <Unreal/Slate/Widgets/Layout/Anchors.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
@@ -46,58 +47,6 @@ struct FSlateColor
 {
     ::FLinearColor SpecifiedColor;
     ESlateColorStylingMode ColorUseRule;
-};
-
-class UCanvasPanelSlot : public UPanelSlot
-{
-  public:
-    void SetAutoSize(bool InbAutoSize)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.CanvasPanelSlot:SetAutoSize")
-
-        UE_COPY_PROPERTY(InbAutoSize, bool)
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
-
-    void SetAnchors(FAnchors InAnchors)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.CanvasPanelSlot:SetAnchors")
-
-        UE_COPY_STRUCT_PROPERTY_BEGIN(InAnchors)
-        UE_COPY_STRUCT_INNER_PROPERTY(InAnchors, Minimum, FVector2D, InAnchors.GetMinimum())
-        UE_COPY_STRUCT_INNER_PROPERTY(InAnchors, Maximum, FVector2D, InAnchors.GetMaximum())
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
-
-    void SetAlignment(FVector2D InAlignment)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.CanvasPanelSlot:SetAlignment")
-
-        UE_COPY_STRUCT_PROPERTY_BEGIN(InAlignment)
-        UE_COPY_VECTOR2D(InAlignment, InAlignment)
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
-
-    void SetPosition(FVector2D InPosition)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.CanvasPanelSlot:SetPosition")
-
-        UE_COPY_STRUCT_PROPERTY_BEGIN(InPosition)
-        UE_COPY_VECTOR2D(InPosition, InPosition)
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
 };
 
 class UPanelWidget : public UWidget
