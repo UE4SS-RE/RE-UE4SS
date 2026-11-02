@@ -13,68 +13,18 @@
 #include <Unreal/UMG/Components/CanvasPanelSlot.hpp>
 #include <Unreal/UMG/Components/PanelWidget.hpp>
 #include <Unreal/UMG/Components/ContentWidget.hpp>
+#include <Unreal/UMG/Components/Border.hpp>
+#include <Unreal/UMG/Components/TextWidgetTypes.hpp>
 #include <Unreal/Slate/Widgets/Layout/Anchors.hpp>
 #include <Unreal/SlateCore/Layout/Margin.hpp>
+#include <Unreal/SlateCore/Styling/SlateColor.hpp>
 #include <Unreal/Core/Math/Color.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
+#include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtualBaseVC.hpp>
 
 using namespace RC;
 using namespace RC::Unreal;
-
-enum ESlateColorStylingMode : uint8
-{
-    UseColor_Specified = 0,
-    UseColor_ColorTable = 1,
-    UseColor_Foreground = 2,
-    UseColor_Foreground_Subdued = 3,
-    UseColor_UseStyle = 4,
-    UseColor_MAX
-};
-
-struct FSlateColor
-{
-    ::FLinearColor SpecifiedColor;
-    ESlateColorStylingMode ColorUseRule;
-};
-
-class UBorder : public UContentWidget
-{
-  public:
-    void SetBrushColor(::FLinearColor InBrushColor)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.Border:SetBrushColor")
-
-        UE_COPY_STRUCT_PROPERTY_BEGIN(InBrushColor)
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, R, float, InBrushColor.GetR())
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, G, float, InBrushColor.GetG())
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, B, float, InBrushColor.GetB())
-        UE_COPY_STRUCT_INNER_PROPERTY(InBrushColor, A, float, InBrushColor.GetA())
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
-
-    void SetPadding(FMargin InPadding)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.Border:SetPadding")
-
-        UE_COPY_STRUCT_PROPERTY_BEGIN(InPadding)
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Left, float, InPadding.GetLeft())
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Top, float, InPadding.GetTop())
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Right, float, InPadding.GetRight())
-        UE_COPY_STRUCT_INNER_PROPERTY(InPadding, Bottom, float, InPadding.GetBottom())
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
-};
-
-class UTextLayoutWidget : public UWidget
-{
-};
 
 class UTextBlock : public UTextLayoutWidget
 {
@@ -94,43 +44,13 @@ class UTextBlock : public UTextLayoutWidget
     {
         UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.TextBlock:SetColorAndOpacity")
 
-        // TODO: Make BPMacros.hpp be able to handle nested structs.
-        //UE_COPY_STRUCT_PROPERTY_BEGIN(InColorAndOpacity)
-        //UE_COPY_STRUCT_INNER_PROPERTY(InColorAndOpacity, SpecifiedColor, float, InColorAndOpacity.SpecifiedColor)
-
-        auto InColorAndOpacityProperty = Function->FindProperty(FName(L"InColorAndOpacity", FNAME_Find));
-        if (!InColorAndOpacityProperty)
-        {
-            throw std::runtime_error{"Property not found: '""InColorAndOpacity""'"};
-        }
-        const auto SlateColor = static_cast<FStructProperty*>(InColorAndOpacityProperty)->GetStruct();
-
-        // FLinearColor
-        // clang-format off
-        const auto SpecifiedColorProperty = SlateColor->FindProperty(FName(STR("SpecifiedColor"), FNAME_Find));
-        if (!SpecifiedColorProperty)
-        {
-            throw std::runtime_error{"Property not found: '""SpecifiedColor""'"};
-        }
-        const auto SpecifiedColor = static_cast<FStructProperty*>(SpecifiedColorProperty)->GetStruct();
-        const auto R = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("R"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(R) = InColorAndOpacity.SpecifiedColor.GetR();
-        const auto G = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("G"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(G) = InColorAndOpacity.SpecifiedColor.GetG();
-        const auto B = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("B"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(B) = InColorAndOpacity.SpecifiedColor.GetB();
-        const auto A = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + SpecifiedColor->FindProperty(FName(STR("A"), FNAME_Find))->GetOffset_Internal();
-        *std::bit_cast<float*>(A) = InColorAndOpacity.SpecifiedColor.GetA();
-        // clang-format on
-
-        // ESlateColorStylingMode
-        const auto ColorUseRuleProperty = SlateColor->FindProperty(FName(STR("ColorUseRule"), FNAME_Find));
-        if (!ColorUseRuleProperty)
-        {
-            throw std::runtime_error{"Property not found: '""SlateColorStylingMode""'"};
-        }
-        const auto Value = ParamData + InColorAndOpacityProperty->GetOffset_Internal() + ColorUseRuleProperty->GetOffset_Internal();
-        *std::bit_cast<ESlateColorStylingMode*>(Value) = InColorAndOpacity.ColorUseRule;
+        UE_COPY_STRUCT_PROPERTY_BEGIN(InColorAndOpacity)
+        UE_COPY_INNER_STRUCT_PROPERTY_BEGIN(SpecifiedColor, InColorAndOpacity)
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, R, float, InColorAndOpacity.GetSpecifiedColor().GetR(), ARGS(InColorAndOpacityProperty))
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, G, float, InColorAndOpacity.GetSpecifiedColor().GetG(), ARGS(InColorAndOpacityProperty))
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, B, float, InColorAndOpacity.GetSpecifiedColor().GetB(), ARGS(InColorAndOpacityProperty))
+        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, A, float, InColorAndOpacity.GetSpecifiedColor().GetA(), ARGS(InColorAndOpacityProperty))
+        UE_COPY_STRUCT_INNER_ENUM(InColorAndOpacity, ColorUseRule, float, InColorAndOpacity.GetColorUseRule())
 
         UE_CALL_FUNCTION()
 
@@ -347,7 +267,7 @@ bool CreateTextWidgetMiddleScreen(CppWidgetsMod* mod)
         return false;
     }
     Text->SetText(FText(STR("Test")));
-    Text->SetColorAndOpacity({{1.f, 1.0f, 1.0f, 1.0f}});
+    Text->SetColorAndOpacity({{1.f, 1.0f, 0.0f, 1.0f}});
     Border->SetContent(Text);
 
     const auto Slot = Canvas->AddChildToCanvas(Border);
