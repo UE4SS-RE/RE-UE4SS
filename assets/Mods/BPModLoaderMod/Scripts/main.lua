@@ -239,7 +239,7 @@ local function CacheAssetRegistry()
     if AssetRegistryHelpers and AssetRegistry then return end
 
     AssetRegistryHelpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers")
-    if not AssetRegistryHelpers:IsValid() then Log("AssetRegistryHelpers is not valid\n") end
+    if not AssetRegistryHelpers:IsValid() then error("AssetRegistryHelpers is not valid\n") end
 
     if AssetRegistryHelpers then
         AssetRegistry = AssetRegistryHelpers:GetAssetRegistry()
