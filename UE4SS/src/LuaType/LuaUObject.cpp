@@ -917,7 +917,7 @@ namespace RC::LuaType
                     }
 
                     params.lua.insert_value(-2);
-                    array->AddZeroed(1, inner->GetSize(), inner->GetMinAlignment());
+                    Unreal::FScriptArrayHelper::CreateHelperFormInnerProperty(inner, array).AddValue();
                     const PusherParams pusher_params{.operation = Operation::Set,
                                                      .lua = params.lua,
                                                      .base = static_cast<Unreal::UObject*>(array->GetData()), // Base is the start of the params struct
@@ -974,7 +974,7 @@ namespace RC::LuaType
                 int32_t num_elements = source_array->Num();
                 if (num_elements > 0)
                 {
-                    dest_array->AddZeroed(num_elements, inner->GetSize(), inner->GetMinAlignment());
+                    Unreal::FScriptArrayHelper::CreateHelperFormInnerProperty(inner, dest_array).AddValues(num_elements);
                     
                     for (int32_t i = 0; i < num_elements; i++)
                     {

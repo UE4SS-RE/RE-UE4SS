@@ -246,6 +246,7 @@ namespace RC::LuaType
             // We've verified with the above if-statement that we're not out-of-bounds for an int32.
             int32_t count = array_index == 0 || num == 0 ? 1 : static_cast<int32_t>(array_index - num + 1);
             lua_object.get_remote_cpp_object()->AddZeroed(count, lua_object.m_inner_property->GetElementSize(), Unreal::DEFAULT_ALIGNMENT);
+            Unreal::FScriptArrayHelper::CreateHelperFormInnerProperty(lua_object.m_inner_property, lua_object.get_remote_cpp_object()).AddValues(count);
         }
 
         handle_unreal_property_value(operation, lua, lua_object.get_remote_cpp_object(), array_index, lua_object);
