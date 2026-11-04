@@ -162,6 +162,15 @@ target_link_libraries(UE4SS PUBLIC
 )
 
 # ---------------------------------------------------------------------------
+# Metadata Generation
+# ---------------------------------------------------------------------------
+
+if(WIN32)
+    configure_file(version.rc.in ${PROJECT_BINARY_DIR}/version.rc)
+    target_sources(UE4SS PRIVATE ${PROJECT_BINARY_DIR}/version.rc)
+endif()
+
+# ---------------------------------------------------------------------------
 # Output Configuration
 # ---------------------------------------------------------------------------
 
