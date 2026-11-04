@@ -27,7 +27,7 @@ BEGIN
             VALUE "InternalName", FILENAME
             VALUE "LegalCopyright", ""
             VALUE "OriginalFilename", FILENAME
-            VALUE "ProductName", "UE4SS"
+            VALUE "ProductName", "RE-UE4SS"
             VALUE "ProductVersion", UE4SS_LIB_BUILD_GITSHA
         END
     END
