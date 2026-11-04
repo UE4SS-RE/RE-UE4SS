@@ -1,5 +1,13 @@
 # TArray
 
+`TArray` is Unreal Engine's array implementation.  
+The interface described below differs in several ways.
+
+The first and most important difference is that it's 1-indexed to match a Lua programmers expectation of a table-like structure.
+
+The second difference is that it's backed by `FScriptArray` instead of `TArray<T>` because Lua doesn't have a template system.  
+The subtype `T` is resolved automatically at runtime whenever necessary.
+
 ## Inheritance
 [RemoteObject](./remoteobject.md)
 
