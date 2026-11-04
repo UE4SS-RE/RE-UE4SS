@@ -494,6 +494,8 @@ Fixed PalServer crashing when debug console is enabled in `UE4SS-settings.ini` (
 
 Fixed PalServer console having broken text when running under Proton/Wine ([UE4SS #1160](https://github.com/UE4SS-RE/RE-UE4SS/pull/1160)) - Okaetsu
 
+Fixed crash after zero-constructing elements that are not zero-constructible. ([UE4SS 5c8583b1](https://github.com/UE4SS-RE/RE-UE4SS/commit/5c8583b1))
+
 ### Live View 
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
 
