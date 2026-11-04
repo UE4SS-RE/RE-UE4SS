@@ -797,10 +797,10 @@
 #define lua_unlock(L) LuaUnlock(L)
 #define luai_userstateopen(L) LuaLockInitial(L)
 /*
-** The lock in luauser.c is one critical section shared by every Lua state in
-** the process. lua_close takes it and then frees the state without a matching
-** lua_unlock, so closing a state has to release it. Deleting it instead would
-** destroy a lock that other states' threads may be waiting on or holding.
+** All our lua states use a single critical section, and luai_userstateclose is called every time a lua state is closed.
+** This means we must avoid deleting the critical section here.
+** Instead, just unlock it so that it's free for the next user.
+** Do note that we never explicitly delete this critical section, we probably should though.
 */
 #define luai_userstateclose(L) LuaUnlock(L)
 #define luai_userstatethread(L,L1) LuaLockInitial(L1)
