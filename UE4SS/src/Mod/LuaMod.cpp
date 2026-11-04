@@ -4094,9 +4094,9 @@ Overloads:
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
     {
-        // Only tried, not waited for: this hook can run inside script_hook or a NotifyOnNewObject callback,
-        // which hold m_thread_actions_mutex, and waiting there would reverse the lock order. ProcessEvent
-        // runs constantly, so actions skipped now run on a later call.
+        // Only tried, not waited for: this hook can run inside script_hook or a NotifyOnNewObject callback, which hold m_thread_actions_mutex, and waiting
+        // there would reverse the lock order.
+        // ProcessEvent runs constantly, so actions skipped now run on a later call.
         std::unique_lock<std::recursive_mutex> execution_guard{LuaMod::m_game_thread_execution_mutex, std::try_to_lock};
         if (!execution_guard.owns_lock())
         {
@@ -6146,10 +6146,8 @@ Overloads:
             m_async_thread.join();
         }
 
-        // Wait for any batch of game-thread actions the game thread has already taken, and keep it from
-        // taking another until the Lua state is closed. Taken after the join and before
-        // m_thread_actions_mutex, like the hooks take it, so neither thread can hold one lock while waiting
-        // for the other.
+        // Wait for any batch of game-thread actions the game thread has already taken, and keep it from taking another until the Lua state is closed.
+        // Taken after the join and before m_thread_actions_mutex, like the hooks take it, so neither thread can hold one lock while waiting for the other.
         std::lock_guard<std::recursive_mutex> execution_guard{LuaMod::m_game_thread_execution_mutex};
 
         // Now acquire mutex to safely modify shared data structures
