@@ -15,7 +15,7 @@
     var ZH_DIR = 'zh-CN/';
 
     var LANGUAGES = [
-        { code: 'zh-CN', label: '中文' },
+        { code: 'zh-CN', label: '简体中文' },
         { code: 'en', label: 'English' }
     ];
 
