@@ -133,7 +133,7 @@ def export_version(ref, name, docs_path='docs', language=None, title=None, fallb
     copy_transform(readme_src, os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
 
     # insert banner
-    if name == 'dev':
+    if name != 'release':
         readme_path = os.path.join(src_dir, 'README.md')
         with open(readme_path, 'r') as file:
             lines = file.readlines()
