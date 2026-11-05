@@ -14,3 +14,75 @@
     margin-left: 0.5em;
     margin-top: 0.6em;
 }
+
+/* Language selector dropdown */
+.lang-switch {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.lang-switch summary {
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 0.8em;
+    font-size: 0.85em;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--fg);
+    cursor: pointer;
+    list-style: none;
+}
+
+.lang-switch summary::-webkit-details-marker {
+    display: none;
+}
+
+.lang-switch summary:hover,
+.lang-switch details[open] > summary {
+    background-color: var(--theme-hover);
+}
+
+.lang-switch .lang-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 20;
+    min-width: 8em;
+    margin: 0;
+    padding: 0.25em 0;
+    list-style: none;
+    background-color: var(--bg);
+    border: 1px solid var(--table-border-color, #ccc);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.lang-switch .lang-menu a {
+    display: block;
+    padding: 0.35em 0.9em;
+    color: var(--fg);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.lang-switch .lang-menu a:hover {
+    background-color: var(--theme-hover);
+}
+
+.lang-switch .lang-menu a[aria-current="page"] {
+    font-weight: 700;
+    color: var(--links);
+}
+
+.lang-switch-fallback {
+    position: fixed;
+    top: 0.6em;
+    right: 1em;
+    height: auto;
+    z-index: 1000;
+    background-color: var(--bg);
+    border-radius: 4px;
+}
