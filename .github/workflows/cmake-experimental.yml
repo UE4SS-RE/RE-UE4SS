@@ -252,7 +252,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           prerelease: true
-          tag_name: experimental
+          tag_name: experimental2
           body_path: release/release_notes.md
           files: |
             release/UE4SS_v*.zip
