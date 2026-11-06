@@ -820,6 +820,11 @@ namespace RC::JMapGenerator
 
         auto JMapDumper::path_of(UObject* object) -> const std::string&
         {
+            // Referenced Blueprint classes can be stale even when the property itself is still present.
+            if (!is_live_object(object))
+            {
+                throw std::runtime_error{"invalid UObject reference " + hex_address(reinterpret_cast<uint64_t>(object))};
+            }
             if (auto it = m_path_cache.find(object); it != m_path_cache.end())
             {
                 return it->second;
@@ -833,7 +838,7 @@ namespace RC::JMapGenerator
                 // jmap separator convention: '.' after packages, ':' after everything else
                 const std::string& outer_path = path_of(outer);
                 UClass* outer_class = outer->GetClassPrivate();
-                bool outer_is_package = outer_class && (outer_class->GetClassCastFlags() & CASTCLASS_UPackage) != 0;
+                bool outer_is_package = is_live_object(outer_class) && (outer_class->GetClassCastFlags() & CASTCLASS_UPackage) != 0;
                 path.reserve(outer_path.size() + 1 + name.size());
                 path.append(outer_path);
                 path.push_back(outer_is_package ? '.' : ':');
@@ -862,7 +867,7 @@ namespace RC::JMapGenerator
                 return false;
             }
             FUObjectItem* item = FUObjectArray::IndexToObject(index);
-            return item && item->GetUObject() == object;
+            return item && item->GetUObject() == object && !item->IsUnreachable() && !item->IsPendingKill();
         }
 
         auto JMapDumper::enum_names_of(UEnum* uenum) -> const std::vector<std::pair<std::string, int64_t>>&
@@ -1170,12 +1175,24 @@ namespace RC::JMapGenerator
                 {
                     return std::string{"None"};
                 }
+                if (!is_live_object(object))
+                {
+                    warn("invalid type reference " + hex_address(reinterpret_cast<uint64_t>(object)) + " in property " +
+                         to_utf8_string(property->GetFullName()) + "; writing None");
+                    return std::string{"None"};
+                }
                 return path_of(object);
             };
 
             auto object_path_or_null = [&](UObject* object) -> JsonValue {
                 if (!object)
                 {
+                    return nullptr;
+                }
+                if (!is_live_object(object))
+                {
+                    warn("invalid type reference " + hex_address(reinterpret_cast<uint64_t>(object)) + " in property " +
+                         to_utf8_string(property->GetFullName()) + "; writing null");
                     return nullptr;
                 }
                 return path_of(object);
