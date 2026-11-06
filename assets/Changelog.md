@@ -132,6 +132,8 @@ Added highlights for properties matching the `Has property` and `Has property of
 
 Added a `Dump as JSON` button for individual objects, located next to the `Find functions` button ([UE4SS #1112](https://github.com/UE4SS-RE/RE-UE4SS/pull/1112))
 
+Added right-click context menu to rows in the LiveView Watches table to remove watches and clear history. ([UE4SS #1469](https://github.com/UE4SS-RE/RE-UE4SS/pull/1469))
+
 ### Lua Debugger
 
 Added new Lua Debugger GUI tab with debugging tools for Lua mod development  ([UE4SS #1099](https://github.com/UE4SS-RE/RE-UE4SS/pull/1099))
