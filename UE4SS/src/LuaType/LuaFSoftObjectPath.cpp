@@ -59,7 +59,8 @@ namespace RC::LuaType
 
         table.add_pair("GetSubPathString", [](const LuaMadeSimple::Lua& lua) -> int {
             auto& lua_object = lua.get_userdata<FSoftObjectPath>();
-            FString::construct(lua, &lua_object.get_local_cpp_object().GetSubPathString());
+            auto sub_path = lua_object.get_local_cpp_object().GetSubPathString();
+            FString::construct(lua, &sub_path);
             return 1;
         });
 
