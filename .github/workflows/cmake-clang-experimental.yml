@@ -1,0 +1,239 @@
+name: Make Experimental Release (Clang)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "UE4SS/src/**"
+      - "UE4SS/include/**"
+      - "UE4SS/generated_src/**"
+      - "UE4SS/generated_include/**"
+      - "deps/**"
+      - "UE4SS/proxy_generator/**"
+      - "assets/**"
+      - "CMakeLists.txt"
+      - "cmake/**"
+      - "cppmods/**"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: experimental-release-clang
+  cancel-in-progress: true
+
+jobs:
+  # Determine what changed to decide what to build
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build-ue4ss: ${{ steps.check.outputs.build-ue4ss }}
+      build-cppmods: ${{ steps.check.outputs.build-cppmods }}
+      assets-only: ${{ steps.check.outputs.assets-only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need previous commit for diff
+
+      - name: Check what changed
+        id: check
+        run: |
+          # For workflow_dispatch, always build everything
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get changed files compared to previous commit
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null || echo "")
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No changed files detected - full build"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check for UE4SS code changes (including workflow changes which should trigger full build)
+          UE4SS_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(UE4SS/|deps/|CMakeLists\.txt|cmake/|\.github/workflows/)" || true)
+
+          # Check for C++ mod changes
+          CPPMOD_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^cppmods/" || true)
+
+          # Check for asset-only changes (no code changes)
+          CODE_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(UE4SS/|deps/|CMakeLists\.txt|cmake/|cppmods/)" || true)
+
+          if [ -n "$UE4SS_CHANGES" ]; then
+            echo "UE4SS code changes detected"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT  # C++ mods depend on UE4SS
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+          elif [ -n "$CPPMOD_CHANGES" ]; then
+            echo "C++ mod changes detected (no UE4SS changes)"
+            echo "build-ue4ss=true" >> $GITHUB_OUTPUT  # Need UE4SS to build mods
+            echo "build-cppmods=true" >> $GITHUB_OUTPUT
+            echo "assets-only=false" >> $GITHUB_OUTPUT
+          else
+            # No UE4SS or C++ mod changes - must be asset-only
+            echo "Only asset changes detected - reusing last build"
+            echo "build-ue4ss=false" >> $GITHUB_OUTPUT
+            echo "build-cppmods=false" >> $GITHUB_OUTPUT
+            echo "assets-only=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Build UE4SS if code changed
+  build:
+    needs: check-changes
+    if: needs.check-changes.outputs.assets-only != 'true'
+    uses: ./.github/workflows/cmake_build_ue4ss.yml
+    secrets: inherit
+    with:
+      build-mode: "Game__Shipping__Win64"
+      commit-sha: ${{ github.sha }}
+      should-upload-artifact: true
+      artifact-retention-days: 1
+      use-clang: true
+      build-ue4ss: ${{ needs.check-changes.outputs.build-ue4ss == 'true' }}
+      build-cppmods: ${{ needs.check-changes.outputs.build-cppmods == 'true' }}
+
+  # Download from last release if only assets changed
+  download-existing:
+    needs: check-changes
+    if: needs.check-changes.outputs.assets-only == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download UE4SS from latest experimental release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p build_output
+
+          # Download the dev zip from experimental-latest release
+          echo "Downloading from experimental-latest release..."
+          gh release download experimental-latest \
+            --repo ${{ github.repository }} \
+            --pattern "zDEV-UE4SS_*.zip" \
+            --dir ./temp_download || {
+              echo "Failed to download from release"
+              exit 1
+            }
+
+          # Extract the zip to get UE4SS.dll, dwmapi.dll, and mod DLLs
+          cd temp_download
+          unzip -o zDEV-UE4SS_*.zip
+
+          # Copy required files to build_output
+          # UE4SS.dll is inside ue4ss folder
+          cp ue4ss/UE4SS.dll ../build_output/ || exit 1
+          cp ue4ss/UE4SS.pdb ../build_output/ 2>/dev/null || true
+
+          # dwmapi.dll is at root of extracted content
+          cp dwmapi.dll ../build_output/ || exit 1
+
+          # Copy C++ mod DLLs (they're in Mods/<ModName>/dlls/main.dll)
+          for mod_dir in ue4ss/Mods/*/dlls; do
+            if [ -f "$mod_dir/main.dll" ]; then
+              mod_name=$(basename $(dirname "$mod_dir"))
+              cp "$mod_dir/main.dll" "../build_output/${mod_name}.dll"
+              if [ -f "$mod_dir/main.pdb" ]; then
+                cp "$mod_dir/main.pdb" "../build_output/${mod_name}.pdb"
+              fi
+              echo "Extracted $mod_name mod"
+            fi
+          done
+
+          echo "Downloaded artifacts:"
+          ls -la ../build_output/
+
+      - name: Upload reused artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: CMAKE-Game__Shipping__Win64
+          path: build_output/
+          retention-days: 1
+          overwrite: true
+
+  make-release:
+    needs: [check-changes, build, download-existing]
+    # Run if either build or download-existing succeeded
+    if: always() && (needs.build.result == 'success' || needs.download-existing.result == 'success')
+    permissions:
+      contents: write  # Required for creating releases
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          token: ${{ secrets.UEPSEUDO_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: CMAKE-Game__Shipping__Win64
+          path: build_output/
+
+      - name: Verify downloaded files
+        shell: pwsh
+        run: |
+          Write-Host "Contents of build_output:"
+          Get-ChildItem -Path "build_output" -Recurse | ForEach-Object { Write-Host $_.FullName }
+
+          $requiredFiles = @("UE4SS.dll", "dwmapi.dll")
+          foreach ($file in $requiredFiles) {
+            $filePath = Get-ChildItem -Path "build_output" -Recurse -Filter $file -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $filePath) {
+              Write-Error "$file not found in downloaded artifacts!"
+              exit 1
+            }
+          }
+
+      - name: Package
+        run: python tools/buildscripts/release.py package -e -c
+
+      # Avoiding making archival release for Clang versions to cut down on number of assets.
+      #- name: Make Archival Experimental Release
+      #  uses: softprops/action-gh-release@v1
+      #  with:
+      #    prerelease: true
+      #    tag_name: experimental
+      #    body_path: release/release_notes.md
+      #    files: |
+      #      release/UE4SS_v*_Clang.zip
+
+      - name: Delete old release assets
+        uses: mknejp/delete-release-assets@v1
+        with:
+          token: ${{ github.token }}
+          tag: experimental-latest
+          fail-if-no-release: false
+          fail-if-no-assets: false
+          assets: '*_Clang*'
+
+      - name: Make Permanent Latest Release
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          tag_name: experimental-latest
+          body_path: release/release_notes.md
+          files: |
+            release/UE4SS_v*_Clang.zip
