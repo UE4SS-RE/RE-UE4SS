@@ -39,6 +39,8 @@ namespace RC
         LuaMadeSimple::Lua* m_hook_lua = nullptr;
         LuaMadeSimple::Lua* m_main_lua{};
         LuaMadeSimple::Lua* m_async_lua{};
+        // The thread ExternalLuaRepl runs requests on. Only created while [Debug] ExternalLuaReplEnabled is set.
+        LuaMadeSimple::Lua* m_repl_lua{};
 
       public:
         enum class ActionType
