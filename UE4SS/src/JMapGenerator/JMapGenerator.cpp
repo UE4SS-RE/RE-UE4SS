@@ -18,6 +18,7 @@
 
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <File/Macros.hpp>
+#include <GameThread.hpp>
 #include <Helpers/String.hpp>
 #include <JMapGenerator/JMapGenerator.hpp>
 #include <UE4SSProgram.hpp>
@@ -2268,7 +2269,9 @@ namespace RC::JMapGenerator
 
     auto generate_jmap(bool include_blueprint_types, bool skip_property_values) -> void
     {
-        JMapDumper dumper{include_blueprint_types, skip_property_values};
-        dumper.dump();
+        execute_on_game_thread_and_wait([=] {
+            JMapDumper dumper{allow_blueprint_types(include_blueprint_types), skip_property_values};
+            dumper.dump();
+        });
     }
 } // namespace RC::JMapGenerator

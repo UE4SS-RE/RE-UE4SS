@@ -8,6 +8,7 @@
 #include <File/File.hpp>
 #include <File/Macros.hpp>
 #include <GUI/Dumpers.hpp>
+#include <GameThread.hpp>
 #include <JMapGenerator/JMapGenerator.hpp>
 #include <USMapGenerator/Generator.hpp>
 #include <FlagsStringifier.hpp>
@@ -498,13 +499,13 @@ namespace RC::GUI::Dumpers
             return;
         }
 
-        Output::send(STR("Loading all assets...\n"));
-        double asset_loading_duration{};
+        // Off the game thread LoadAllAssets waits for an EngineTick callback, which may never come.
+        if (!Unreal::IsInGameThreadRaw())
         {
-            ScopedTimer loading_timer{&asset_loading_duration};
-            UAssetRegistry::LoadAllAssets();
+            Output::send<LogLevel::Warning>(STR("Loading all assets needs the EngineTick hook, dumping without force-loading assets.\n"));
+            dump();
+            return;
         }
-        Output::send(STR("Loading all assets took {} seconds\n"), asset_loading_duration);
 
         // Anything that force-loads assets leaves the game in a state it was never meant to be in;
         // the game is likely to crash if play continues past this point.
@@ -516,6 +517,14 @@ namespace RC::GUI::Dumpers
                 UAssetRegistry::FreeAllForcefullyLoadedAssets();
             }
         } release_guard{};
+
+        Output::send(STR("Loading all assets...\n"));
+        double asset_loading_duration{};
+        {
+            ScopedTimer loading_timer{&asset_loading_duration};
+            UAssetRegistry::LoadAllAssets();
+        }
+        Output::send(STR("Loading all assets took {} seconds\n"), asset_loading_duration);
 
         dump();
     }
@@ -668,22 +677,24 @@ namespace RC::GUI::Dumpers
         static bool s_skip_property_values{false};
         static bool s_load_all_assets_first{false};
 
-        auto run_dump = [](auto&& dump) {
-            if (s_load_all_assets_first)
-            {
-                run_with_all_assets_loaded(dump);
-            }
-            else
-            {
-                dump();
-            }
+        auto run_dump = [](auto dump) {
+            execute_on_game_thread_and_wait([dump = std::move(dump), load_assets = s_load_all_assets_first] {
+                if (load_assets)
+                {
+                    run_with_all_assets_loaded(dump);
+                }
+                else
+                {
+                    dump();
+                }
+            });
         };
 
         if (ImGui::Button("Generate .usmap file\nUnrealMappingsDumper by OutTheShade"))
         {
             TRY([&] {
                 run_dump([] {
-                    OutTheShade::generate_usmap(s_include_blueprint_types);
+                    OutTheShade::generate_usmap(allow_blueprint_types(s_include_blueprint_types));
                 });
             });
         }

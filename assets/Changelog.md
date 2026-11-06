@@ -109,6 +109,8 @@ Added `[f: <address_or_module_offset>` section to UE4SS_ObjectDump.txt [UE4SS #8
 
 Added option `EnableAutoReloadingLuaMods` in the `General` section of UE4SS-settings.ini [UE4SS #1004](https://github.com/UE4SS-RE/RE-UE4SS/pull/1004) 
 
+Added option `SecondsToWaitForGameThread` in the `General` section of UE4SS-settings.ini, which sets how long a dump waits to reach the game thread before falling back
+
 Added line in the [docs](https://docs.ue4ss.com/dev/guides/fixing-compatibility-problems.html) to add `FText::FromString(FString&)` as an alternative to `FText::FText(FString&)` for UE5 games - ([UE4SS #1078](https://github.com/UE4SS-RE/RE-UE4SS/pull/1078))
 
 Added `FUObjectItem`, `FUObjectArray`, and `TUObjectArray` to MemberVariableLayout.ini ([UE4SS #????](https://github.com/UE4SS-RE/RE-UE4SS/pull/????))

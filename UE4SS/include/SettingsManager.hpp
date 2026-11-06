@@ -37,6 +37,7 @@ namespace RC
             bool InvalidateCacheIfDLLDiffers{true};
             bool EnableDebugKeyBindings{false};
             int64_t SecondsToScanBeforeGivingUp{120};
+            int64_t SecondsToWaitForGameThread{60};
             bool UseUObjectArrayCache{true};
             bool ForceGUObjectArrayForIteration{false}; // Force slow GUObjectArray iteration even if hash tables are available
             StringType InputSource{STR("Default")};

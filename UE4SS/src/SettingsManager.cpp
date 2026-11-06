@@ -85,6 +85,7 @@ namespace RC
         REGISTER_BOOL_SETTING(General.UseCache, section_general, UseCache)
         REGISTER_BOOL_SETTING(General.InvalidateCacheIfDLLDiffers, section_general, InvalidateCacheIfDLLDiffers)
         REGISTER_BOOL_SETTING(General.EnableDebugKeyBindings, section_general, EnableDebugKeyBindings)
+        REGISTER_INT64_SETTING(General.SecondsToWaitForGameThread, section_general, SecondsToWaitForGameThread)
         REGISTER_INT64_SETTING(General.SecondsToScanBeforeGivingUp, section_general, SecondsToScanBeforeGivingUp)
         if (General.SecondsToScanBeforeGivingUp == 30)
         {
