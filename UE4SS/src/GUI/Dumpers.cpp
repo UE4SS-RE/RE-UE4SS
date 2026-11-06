@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <ctime>
 #include <format>
 #include <string>
+#include <stdexcept>
 #include <utility>
 
 #include <Constructs/Views/EnumerateView.hpp>
@@ -625,6 +627,20 @@ namespace RC::GUI::Dumpers
 
             add_or_replace_sdk_backend(backends, item.path().stem().string(), sdk_backend_from_ascii(settings_ascii));
         }
+    }
+
+    auto call_generate_bp_sdk() -> void
+    {
+        SDKGeneratorBackends backends{};
+        load_sdk_generator_backends(backends);
+        auto backend = std::find_if(backends.begin(), backends.end(), [](const auto& entry) { return entry.first == "UE4SS"; });
+        if (backend == backends.end())
+        {
+            throw std::runtime_error{"The UE4SS SDK backend could not be loaded"};
+        }
+        execute_on_game_thread_and_wait([settings = backend->second]() mutable {
+            UEGenerator::generate_sdk(std::filesystem::path{UE4SSProgram::get_program().get_working_directory()} / "UE4SS_SDK", settings);
+        });
     }
 
     auto render() -> void

@@ -20,5 +20,6 @@ namespace RC::GUI::Dumpers
     auto call_generate_static_mesh_file() -> void;
     auto call_generate_all_actor_file() -> void;
     auto call_generate_object_as_json(UObject*) -> void;
+    auto call_generate_bp_sdk() -> void;
 
 } // namespace RC::GUI::Dumpers

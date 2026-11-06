@@ -1861,6 +1861,11 @@ Overloads:
                 return 0;
             });
 
+            lua.register_function("GenerateBPSDK", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
+                GUI::Dumpers::call_generate_bp_sdk();
+                return 0;
+            });
+
             lua.register_function("GenerateLuaTypes", []([[maybe_unused]] const LuaMadeSimple::Lua& lua) -> int {
                 const Mod* mod = get_mod_ref(lua);
                 if (!mod)

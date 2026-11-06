@@ -295,6 +295,9 @@ function DumpAllObjects() end
 ---Generates CXX Headers / CXXHeaderDump
 function GenerateSDK() end
 
+---Generates the BP SDK in /UE4SS_SDK using the UE4SS backend and the game thread.
+function GenerateBPSDK() end
+
 ---Generates lua types in /Mods/shared/types
 function GenerateLuaTypes() end
 
