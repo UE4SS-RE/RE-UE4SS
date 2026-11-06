@@ -55,7 +55,7 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 
 **BREAKING:** `FSoftObjectPath` no longer exposes the `AssetPathName` and `SubPathString` member variables. The struct layout now adapts at runtime to the running engine (5.1+ replaced the FName with an FTopLevelAssetPath), which fixes silent memory corruption when accessing soft object paths on 5.1+ games. C++ mods must migrate:
 - `path.AssetPathName` -> `path.GetAssetPathName()` (on 5.1+ this returns the combined `/Package/Path.Asset` name; use `path.GetAssetPath()` for the package/asset name pair)
-- `path.SubPathString` -> `path.GetSubPathString()` (non-const overload available for assignment)
+- `path.SubPathString` -> `path.GetSubPathString()` for reads (returns a copy), `path.SetSubPathString(value)` for writes
 - Lua mods are unaffected; the Lua API is unchanged
 
 **BREAKING:** `FSoftObjectPtr` (and its `TPersistentObjectPtr<FSoftObjectPath>` base) no longer exposes the `ObjectID` and `TagAtLastTest` member variables. Soft object and class pointers now resolve their layout at runtime, accounting for UE 5.3 removing `TagAtLastTest`. C++ mods must migrate:
@@ -606,6 +606,9 @@ Uninstall now waits for a running batch first.
 Fixed a freeze when a Lua mod is restarted or uninstalled while another thread is running Lua. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))  
 Closing a mod's Lua state deleted the lock that every Lua state in the process shares while still holding it.  
 That is undefined behavior; the observed result was a thread waiting on that lock forever. Closing a state now releases the lock instead.
+
+Fixed a crash and garbled output on UE 5.6+ when copying a soft object path or calling `GetSubPathString`. ([UE4SS #1486](https://github.com/UE4SS-RE/RE-UE4SS/issues/1486))  
+UE 5.6 stores the sub path as UTF-8, but it was read as a UTF-16 `FString`, which ran past the end of the buffer.
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 

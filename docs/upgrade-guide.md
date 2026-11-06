@@ -218,8 +218,8 @@ Path.SubPathString = NewSubPath;
 ```cpp
 FSoftObjectPath Path = ...;
 FName AssetName = Path.GetAssetPathName();
-FString& SubPath = Path.GetSubPathString();
-Path.GetSubPathString() = NewSubPath;
+FString SubPath = Path.GetSubPathString();
+Path.SetSubPathString(NewSubPath);
 
 // New: package/asset name pair, works on every engine version
 FTopLevelAssetPath AssetPath = Path.GetAssetPath();
@@ -228,12 +228,13 @@ FTopLevelAssetPath AssetPath = Path.GetAssetPath();
 **Migration Steps:**
 
 1. Replace `Path.AssetPathName` with `Path.GetAssetPathName()`.
-2. Replace `Path.SubPathString` with `Path.GetSubPathString()`. A non-const overload exists, so reads, writes, and passing by reference all work.
+2. Replace reads of `Path.SubPathString` with `Path.GetSubPathString()` and writes with `Path.SetSubPathString()`. `GetSubPathString()` returns a copy, so changing the returned string does not change the path.
 3. If you need the package and asset names separately, prefer `GetAssetPath()`, which returns an `FTopLevelAssetPath` in every engine version (synthesized by splitting the path on pre-5.1).
 
 **Important Notes:**
 - On 5.1+ engines there is no single-FName representation in memory, so `GetAssetPathName()` creates the combined `/Package/Path.Asset` FName on demand (with `FNAME_Add`).
 - Writing the asset path goes through `SetPath()` or `operator=(const FString&)`, unchanged from before.
+- UE 5.6 stores the sub path as UTF-8. `GetSubPathString()` and `SetSubPathString()` convert to and from `FString` on every engine version, which is why the getter cannot return a reference.
 - `TArray<FSoftObjectPath>` now strides by the runtime size (`FSoftObjectPath::StaticSize()`), fixing element access on 5.1+ and case-preserving builds.
 - The Lua API (`GetAssetPathName()`, `GetSubPathString()`) is unchanged; Lua mods are unaffected.
 
