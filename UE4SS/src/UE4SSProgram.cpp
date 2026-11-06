@@ -10,6 +10,7 @@
 #include <cwctype>
 #include <format>
 #include <fstream>
+#include <future>
 #include <limits>
 #include <unordered_set>
 #include <fmt/chrono.h>
@@ -892,30 +893,43 @@ namespace RC
         // Continuous scanning, and finish initializing after the game thread is unlocked.
         Unreal::UnrealInitializer::Initialize(config);
 
-        output_all_member_offsets(IsCoalesced::Yes);
-
         if (settings_manager.General.ForceGUObjectArrayForIteration)
         {
             Output::send<LogLevel::Warning>(STR("[HashTables] Iteration forced to GUObjectArray by settings\n"));
         }
         else if (Unreal::FUObjectHashTables::IsConfigured())
         {
-            // The game thread edits the tables without locking, so the walk has to happen on it
+            // The game thread edits the tables without locking, so the walk has to happen on it.
+            // Finish validation and cache retirement before mod initialization and the event loop.
             if (UE4SSRuntime::IsEngineTickAvailable())
             {
-                Unreal::Hook::RegisterEngineTickPostCallback(
-                        [](auto&, ...) {
-                            static bool Done = false;
-                            if (!Done)
+                auto completion = std::make_shared<std::promise<void>>();
+                auto result = completion->get_future();
+                Output::send(STR("[HashTables] Waiting for game-thread self test\n"));
+                const auto callback_id = Unreal::Hook::RegisterEngineTickPostCallback(
+                        [completion](auto&, ...) {
+                            try
                             {
-                                Done = true;
                                 if (Unreal::FUObjectHashTables::RunSelfTest())
                                 {
                                     Unreal::UnrealInitializer::RetireUObjectArrayCache();
                                 }
+                                completion->set_value();
+                            }
+                            catch (...)
+                            {
+                                completion->set_exception(std::current_exception());
                             }
                         },
-                        {false, false, STR("UE4SS"), STR("HashTableSelfTest")});
+                        {true, false, STR("UE4SS"), STR("HashTableSelfTest")});
+                if (callback_id != Unreal::Hook::ERROR_ID)
+                {
+                    result.get();
+                }
+                else
+                {
+                    Output::send<LogLevel::Warning>(STR("[HashTables] Could not register self test, object lookups use GUObjectArray\n"));
+                }
             }
             else if (Unreal::FUObjectHashTables::RunSelfTest())
             {
@@ -926,6 +940,8 @@ namespace RC
         {
             Output::send<LogLevel::Warning>(STR("[HashTables] FUObjectHashTables unavailable, object lookups use GUObjectArray\n"));
         }
+
+        output_all_member_offsets(IsCoalesced::Yes);
 
         bool can_create_custom_events{true};
         if (!UObject::ProcessLocalScriptFunctionInternal.is_ready() && Unreal::Version::IsAtLeast(4, 22))
