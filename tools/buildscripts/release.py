@@ -95,7 +95,7 @@ class ReleaseHandler:
 
         # needs to be run inside staging as we don't want to modify the original
         # only run this if we are not doing an experimental release, as we don't want the date to be set in experimental releases
-        if not self.is_experimental: self.modify_changelog() 
+        if not self.is_experimental: self.modify_changelog()
 
     def modify_settings(self, settings_to_modify):
         config_path = os.path.join(self.ue4ss_dir, 'UE4SS-settings.ini')
@@ -136,7 +136,7 @@ class ReleaseHandler:
                 mod_dir = os.path.join(self.ue4ss_dir, 'Mods', mod_name, 'dlls')
                 os.makedirs(mod_dir, exist_ok=True)
                 shutil.copy(dll_path, os.path.join(mod_dir, 'main.dll'))
-                if self.is_dev_release: 
+                if self.is_dev_release:
                     pdb_path = dll_path.replace('.dll', '.pdb')
                     if os.path.exists(pdb_path):
                         shutil.copy(pdb_path, os.path.join(mod_dir, 'main.pdb'))
@@ -220,12 +220,22 @@ class ReleaseHandler:
         changelog_path = os.path.join(self.ue4ss_dir, 'Changelog.md')
         if os.path.exists(changelog_path): ready_changelog_for_release(changelog_path)
 
-    def package_release(self):
+    def package_release(self, changelog_path):
         try:
             version = subprocess.check_output(['git', 'describe', '--tags', '--exclude', '*experimental*']).decode('utf-8').strip()
         except subprocess.CalledProcessError:
             print('Error: git describe failed. Make sure the release has been tagged.')
             sys.exit(1)
+        # Check if version from changelog hints towards a major version change, and if so, abandon the git describe output.
+        if not self.is_experimental and os.path.exists(changelog_path):
+            version_from_changelog = parse_changelog(changelog_path)[0]['tag']
+            print(f'Version from git: {version}')
+            print(f'Version from changelog: {version_from_changelog}')
+            changelog_major = int(version_from_changelog.removeprefix('v').split('.')[0])
+            current_major = int(version.removeprefix('v').split('.')[0])
+            if changelog_major > current_major:
+                print(f'Replacing version with changelog version')
+                version = version_from_changelog
         main_zip_name = f'zDEV-UE4SS_{version}' if self.is_dev_release else f'UE4SS_{version}'
         output = os.path.join(self.release_output, main_zip_name)
         shutil.make_archive(output, 'zip', self.staging_dir)
@@ -254,11 +264,11 @@ class Packager:
         release_handler = ReleaseHandler(is_dev_release=False, is_experimental=self.args.e, release_output=self.release_output)
 
         dev_handler.make_staging_dirs()
-        dev_handler.package_release()
+        dev_handler.package_release(self.args.changelog_path)
         dev_handler.cleanup()
 
         release_handler.make_staging_dirs()
-        release_handler.package_release()
+        release_handler.package_release(self.args.changelog_path)
         release_handler.cleanup()
 
         shutil.make_archive(os.path.join(self.release_output, 'zCustomGameConfigs'), 'zip', 'assets/CustomGameConfigs')
