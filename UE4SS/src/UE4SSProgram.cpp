@@ -262,10 +262,7 @@ namespace RC
                          UE4SS_LIB_VERSION_MINOR,
                          UE4SS_LIB_VERSION_HOTFIX,
                          fmt::format(STR("{}"), UE4SS_LIB_VERSION_PRERELEASE == 0 ? STR("") : fmt::format(STR(" PreRelease #{}"), UE4SS_LIB_VERSION_PRERELEASE)),
-                         fmt::format(STR("{}"),
-                                     UE4SS_LIB_BETA_STARTED == 0
-                                             ? STR("")
-                                             : (UE4SS_LIB_IS_BETA == 0 ? STR(" Beta #?") : fmt::format(STR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
+                         fmt::format(STR("{}"), UE4SS_LIB_BETA_STARTED == 0 ? STR("") : STR(" Experimental")),
                          ensure_str(UE4SS_LIB_BUILD_GITSHA));
             bool use_local_time = true;
 #ifdef _WIN32
