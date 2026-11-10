@@ -29,6 +29,10 @@ If your game is in the custom config list, extract the contents from the relevan
 
 If you are planning on doing mod development using UE4SS, you can do the same as above but download the zDEV version instead.
 
+> [!NOTE]
+> One of our maintainers, Narknon, is developing a modding friendly sandbox adventure game in UE 5.8.
+> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/) or following [Noro Softworks](https://linktr.ee/norosoftworks).
+
 ### Command Line Options
 
 If RE-UE4SS is installed via proxy DLL, the following command line options are available:
