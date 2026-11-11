@@ -60,7 +60,38 @@ explicit FName(const CharType* StrName, EFindName FindType = FNAME_Add, void* Fu
 - This can have performance implications if you're frequently creating FNames with strings that may not exist
 - When working with Unreal Engine internals, be cautious as creating new names unintentionally could lead to unexpected behavior
 
+#### FName Default Alignment Change
 
+**What Changed:**  
+The default alignment for `FName` has changed from `8` to `4`.  
+This change was done in October 2024, so it's not likely to affect many people, but you should be aware of it.
+
+**Before (v3.x):**
+```cpp
+// We only define WITH_CASE_PRESERVING_NAME when using a CasePreserving target, i.e. CasePreserving__Shipping__Win64
+// As a result, in v3.x, FName alignment was 8 for most builds.
+#ifdef WITH_CASE_PRESERVING_NAME
+    struct alignas(4) RC_UE_API FName
+#else
+    struct alignas(8) RC_UE_API FName
+#endif
+```
+
+**After (v4.x):**
+```cpp
+// We only define FNAME_ALIGN8 when using a LessEqual421 target, i.e. LessEqual421__Shipping__Win64
+// This means FName alignment is now 4 for most builds. 
+#ifndef FNAME_ALIGN8
+    class alignas(4) RC_UE_API FName
+#else
+    class alignas(8) RC_UE_API FName
+#endif
+```
+
+**Migration Steps:**
+
+If you rely on the alignment of FName being 8, you will need to build UE4SS from source and define `FNAME_ALIGN8`.  
+If your game usees UE version 4.21 or earlier, you can build UE4SS using one of the LessEqual421 targets instead.
 
 #### TObjectPtr Implementation Change
 **What Changed:**  
