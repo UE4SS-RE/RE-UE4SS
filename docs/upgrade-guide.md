@@ -547,6 +547,29 @@ enum EFieldIterationFlags : uint8
 - The old `ForEachProperty()` methods are **deprecated** and may be removed in the future
 - Use `TFieldIterator`/`TFieldRange` for better performance and when matching Epic's patterns
 
+#### FTransform default constructor now aligns with how UE does it.
+
+**What Changed:**  
+We previously zero'd out FTransform in the default constructor.  
+We no longer do that, and instead try to match the expected behavior from UE.
+
+**Before (v3.x):**
+```cpp
+FTransform() = default;
+```
+
+**After (v4.x):**
+```cpp
+FTransform()
+    : FTransform(FQuat(0, 0, 0, 1), FVector(0, 0, 0), FVector(1, 1, 1))
+{
+}
+```
+
+**Migration Steps:**
+
+If you rely on a default constructor FTransform to be zero'd, you need to change to explicit construction.
+
 ### Deprecations
 
 #### ExecuteAsync and LoopAsync
