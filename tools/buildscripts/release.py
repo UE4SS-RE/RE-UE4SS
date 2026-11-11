@@ -89,7 +89,8 @@ class ReleaseHandler:
 
         self.copy_cpp_mods(cpp_mods_paths)
         self.modify_mods_txt() # can only run this after copy mods just in case we are missing mod dlls
-        self.modify_mods_json()
+        # Reconsider this when/if we start using mods.json.
+        #self.modify_mods_json()
         self.copy_executables(dwmapi_dll_path, ue4ss_dll_path, ue4ss_pdb_path)
         self.copy_docs()
 
