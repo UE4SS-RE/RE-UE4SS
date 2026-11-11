@@ -595,6 +595,35 @@ Now, the first entry in the second parameter table is the name of the command.
 // [4] 3
 ```
 
+#### Changes to `AActor.GetWorld` and `AActor.GetLevel` return values
+
+**What Changed:**  
+Previously, GetWorld and GetLevel returned nil if the world or actor couldn't be found.  
+Now, these functions always return an object that's testable via a call to IsValid.  
+This means that relying on a `nil` will no longer work.
+
+**Migration Steps:**
+
+If you call GetWorld or GetActor, make sure to call IsValid on them.  
+Code that still checks nil is fine as long as it also calls IsValid.
+
+```lua
+-- Old
+local World = LiveActor:GetWorld()
+if World then
+   -- World may be invalid still because IsValid was not call.
+   print(string.format("GameState: %s\n", World.GameState:GetFullName()))
+end
+
+-- New
+local World = LiveActor:GetWorld()
+-- World is already guaranteed to be non-nil, so we only need to check validity.
+if World:IsValid() then
+   -- World is guaranteed to be valid.
+   print(string.format("GameState: %s\n", World.GameState:GetFullName()))
+end
+```
+
 ### Deprecations
 
 #### ExecuteAsync and LoopAsync
