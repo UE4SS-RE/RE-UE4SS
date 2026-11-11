@@ -210,7 +210,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          token: ${{ secrets.UEPSEUDO_PAT }}
+          ssh-key: ${{ secrets.UEPSEUDO_PAT }}
 
       - name: Setup Python
         uses: actions/setup-python@v4

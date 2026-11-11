@@ -39,7 +39,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          token: ${{ secrets.UEPSEUDO_PAT }}
+          ssh-key: ${{ secrets.UEPSEUDO_PAT }}
           # Note: We don't need submodules for this job - only reading ProjectConfig.cmake
 
       - name: Extract CMake Build Modes
