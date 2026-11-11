@@ -547,7 +547,7 @@ enum EFieldIterationFlags : uint8
 - The old `ForEachProperty()` methods are **deprecated** and may be removed in the future
 - Use `TFieldIterator`/`TFieldRange` for better performance and when matching Epic's patterns
 
-#### FTransform default constructor now aligns with how UE does it.
+#### FTransform default constructor change
 
 **What Changed:**  
 We previously zero'd out FTransform in the default constructor.  
@@ -569,6 +569,31 @@ FTransform()
 **Migration Steps:**
 
 If you rely on a default constructor FTransform to be zero'd, you need to change to explicit construction.
+
+#### Changes to `RegisterProcessConsoleExecPreHook`/`RegisterProcessConsoleExecPostHook` callback parameters
+
+**What Changed:**  
+Previously, the second parameter would contain a table of all command arguments, but not the command itself.  
+Now, the first entry in the second parameter table is the name of the command.
+
+**Before (v3.x):**
+```cpp
+// Entered into console: test 1 2 3
+// Contents of the second param Lua table:
+// [1] 1
+// [2] 2
+// [3] 3
+```
+
+**After (v4.x):**
+```cpp
+// Entered into console: test 1 2 3
+// Contents of the second param Lua table:
+// [1] test
+// [2] 1
+// [3] 2
+// [4] 3
+```
 
 ### Deprecations
 
