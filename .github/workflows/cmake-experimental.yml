@@ -28,7 +28,7 @@ concurrency:
 jobs:
   # Determine what changed to decide what to build
   check-changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       build-ue4ss: ${{ steps.check.outputs.build-ue4ss }}
       build-cppmods: ${{ steps.check.outputs.build-cppmods }}
@@ -141,7 +141,7 @@ jobs:
   download-existing:
     needs: check-changes
     if: needs.check-changes.outputs.assets-only == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7

@@ -32,7 +32,7 @@ jobs:
   # We also need to determine which modes should upload artifacts.
   calculate-matrix:
     name: Calculate job matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       # JSON array with the following schema:
       # [
@@ -107,7 +107,7 @@ jobs:
   report-artifacts:
     if: ${{ always() && contains(needs.calculate-matrix.result, 'success') }}
     needs: [calculate-matrix, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "Report Artifacts"
         uses: bitonality/PRtifact@v0.1.0
