@@ -64,6 +64,8 @@ jobs:
           submodules: recursive
           fetch-depth: 0
           token: ${{ secrets.UEPSEUDO_PAT }}
+          # Without this the push below goes out as the PAT, not GITHUB_TOKEN.
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v4
