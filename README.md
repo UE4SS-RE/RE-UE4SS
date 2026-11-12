@@ -31,7 +31,7 @@ If you are planning on doing mod development using UE4SS, you can do the same as
 
 > [!NOTE]
 > One of our maintainers, Narknon, is developing a modding friendly sandbox adventure game in UE 5.8.
-> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/) or following [Noro Softworks](https://linktr.ee/norosoftworks).
+> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/?utm_source=ue4ss&utm_medium=github&utm_campaign=readme) or following [Noro Softworks](https://linktr.ee/norosoftworks).
 
 ### Command Line Options
 

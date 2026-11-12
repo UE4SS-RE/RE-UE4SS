@@ -6,7 +6,7 @@ TBD
 
 > [!NOTE]
 > One of our maintainers, Narknon, is developing a modding friendly sandbox adventure game in UE 5.8.
-> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/) or following [Noro Softworks](https://linktr.ee/norosoftworks).
+> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/?utm_source=ue4ss&utm_medium=github&utm_campaign=release_notes) or following [Noro Softworks](https://linktr.ee/norosoftworks).
 
 ## New
 
@@ -79,7 +79,7 @@ TBD
 
 > [!NOTE]
 > One of our maintainers, Narknon, is developing a modding friendly sandbox adventure game in UE 5.8.
-> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/) or following [Noro Softworks](https://linktr.ee/norosoftworks).
+> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/?utm_source=ue4ss&utm_medium=github&utm_campaign=release_notes) or following [Noro Softworks](https://linktr.ee/norosoftworks).
 
 ## New
 
