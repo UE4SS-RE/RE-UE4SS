@@ -4,8 +4,8 @@ This document provides detailed guidance for upgrading between versions of RE-UE
 
 ## Version 3.x to 4.x
 
-> **Released:** [TBD]  
-> **PR:** [Link to PR when available]
+> **Released:** 2026-11-12  
+> **Diff:** https://github.com/UE4SS-RE/RE-UE4SS/compare/v3.0.1...v4.0.0
 
 ### Breaking Changes
 
