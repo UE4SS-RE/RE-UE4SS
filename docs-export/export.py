@@ -85,9 +85,6 @@ def export_version(ref, name):
     summary_path = os.path.join(src_dir, 'SUMMARY.md')
     deduplicate_summary(summary_path)
 
-    # copy README.md to <version>/src/
-    # rewrite absolute URLs to relative mdBook URLs
-    copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
     readme_spec = f'{ref}:README.md'
     readme_out_path = os.path.join(src_dir, 'README.md')
 
@@ -105,9 +102,9 @@ def export_version(ref, name):
     
     # insert banner depending on version
     if name == "release":
-        lines.insert(2, f'\n> [!CAUTION]\n> This is the stable release version of the UE4SS docs, which reflects state at release tag [{ref}](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/{ref}), which is recommended for developing mods on. If you prefer to build against the experimental version (which is the main branch of the repository), you should reference the [dev documentation](../dev) instead.\n\n')
+        lines.insert(2, f'\n> [!WARNING]\n> This is the stable release version of the UE4SS docs, which reflects state at release tag [{ref}](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/{ref}), which is recommended for developing mods on. If you prefer to build against the experimental version (which is the main branch of the repository), you should reference the [dev documentation](../dev) instead.\n\n')
     elif name == "dev":
-        lines.insert(2, f'\n> [!CAUTION]\n> This is the dev version of the UE4SS docs, which reflects the experimental version (which is the main branch of the repository). The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n\n')
+        lines.insert(2, f'\n> [!WARNING]\n> This is the dev version of the UE4SS docs, which reflects the experimental version (which is the main branch of the repository). The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n\n')
     else:
         lines.insert(2, f'\n> [!CAUTION]\n> This is an old version of the UE4SS docs, which reflects the release tag of [{ref}](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/{ref}). The API and features may have changed in a newer version, so you may want to consider updating. The stable version of the UE4SS docs can be found [here](../release).\n\n')
 
