@@ -5,6 +5,7 @@ title = "UE4SS Documentation"
 
 [output.html]
 additional-css = ["css/custom.css"]
+additional-js = ["js/lang-switch.js"]
 
 [output.html.fold]
 enable = true

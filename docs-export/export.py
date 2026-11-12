@@ -60,24 +60,62 @@ def deduplicate_summary(summary_path):
     with open(summary_path, 'w', encoding='utf-8') as f:
         f.writelines(new_lines)
 
-def export_version(ref, name):
-    docs_spec = f'{ref}:docs'
+def apply_book_settings(content, language, title):
+    if language:
+        content = re.sub(r'^language = ".*"$', f'language = "{language}"', content, flags=re.MULTILINE)
+    if title:
+        content = re.sub(r'^title = ".*"$', f'title = "{title}"', content, flags=re.MULTILINE)
+    return content
+
+
+def merge_untranslated(src_dir, fallback_dir):
+    """Copy files that are missing from a translation over from the English docs.
+
+    A translation only ships the pages that have been translated so far, but its
+    SUMMARY.md may still reference every page. Filling the gaps with the source
+    language keeps the book buildable while the translation is in progress.
+    """
+    for root, _, files in os.walk(fallback_dir):
+        rel_dir = os.path.relpath(root, fallback_dir)
+        dst_dir = src_dir if rel_dir == '.' else os.path.join(src_dir, rel_dir)
+        os.makedirs(dst_dir, exist_ok=True)
+        for file_name in files:
+            dst_file = os.path.join(dst_dir, file_name)
+            if not os.path.exists(dst_file):
+                shutil.copy2(os.path.join(root, file_name), dst_file)
+
+
+def export_version(ref, name, docs_path='docs', language=None, title=None, fallback_path=None):
+    docs_spec = f'{ref}:{docs_path}'
 
     # old tags do not have a 'docs' directory so check and fail if it does not exist
     try:
         subprocess.check_output(['git', 'show', docs_spec], stderr=subprocess.DEVNULL)
+        from_git = True
     except subprocess.CalledProcessError:
-        return False
+        # A source directory that only exists in the working tree (for example a
+        # translation that has not been committed yet) can still be exported so
+        # that it can be previewed locally.
+        if not os.path.isdir(docs_path):
+            return False
+        from_git = False
 
     version_out_dir = os.path.join(versions_out_dir, name)
     os.mkdir(version_out_dir)
 
-    # export docs/ via 'git archive' to <version>/src/
+    # export the docs directory via 'git archive' to <version>/src/
     src_dir = os.path.join(version_out_dir, 'src')
     os.mkdir(src_dir)
-    ps = subprocess.Popen(('git', 'archive', docs_spec), stdout=subprocess.PIPE)
-    subprocess.check_output(('tar', 'xvf', '-', '-C', src_dir), stdin=ps.stdout)
-    ps.wait()
+    if from_git:
+        ps = subprocess.Popen(('git', 'archive', docs_spec), stdout=subprocess.PIPE)
+        subprocess.check_output(('tar', 'xf', '-', '-C', src_dir), stdin=ps.stdout)
+        ps.wait()
+    else:
+        shutil.copytree(docs_path, src_dir, dirs_exist_ok=True)
+
+    # fill in the pages that have not been translated yet
+    if fallback_path is not None:
+        merge_untranslated(src_dir, fallback_path)
 
     # Deduplicate SUMMARY.md for old versions with duplicate paths
     # mdBook v0.5+ enforces unique paths, but old release tags may have duplicates
@@ -87,7 +125,12 @@ def export_version(ref, name):
 
     # copy README.md to <version>/src/
     # rewrite absolute URLs to relative mdBook URLs
-    copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
+    # translated docs may ship their own README.md which takes precedence
+    readme_src = 'README.md'
+    translated_readme = os.path.join(docs_path, 'README.md')
+    if docs_path != 'docs' and os.path.exists(translated_readme):
+        readme_src = translated_readme
+    copy_transform(readme_src, os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
 
     # insert banner
     if name != 'release':
@@ -99,8 +142,9 @@ def export_version(ref, name):
             file.writelines(lines)
 
     # copy template files
-    shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)
+    copy_transform(os.path.join('docs-export', 'book.toml'), os.path.join(version_out_dir, 'book.toml'), lambda content: apply_book_settings(content, language, title))
     shutil.copytree(os.path.join('docs-export', 'css'), os.path.join(version_out_dir, 'css'))
+    shutil.copytree(os.path.join('docs-export', 'js'), os.path.join(version_out_dir, 'js'))
 
     # github alerts pre-processor template files, if they are not found for whatever reason, just ignore
     try:
@@ -112,6 +156,10 @@ def export_version(ref, name):
     return True
 
 export_version('main', 'dev')
+
+# Chinese translation, exported as a sibling of the release book so that the
+# language switch button can link between the two books.
+export_version('main', 'zh-CN', docs_path='docs-zh-CN', language='zh-CN', title='UE4SS 文档', fallback_path='docs')
 
 found_release = False
 if tags:
