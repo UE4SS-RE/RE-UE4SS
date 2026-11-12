@@ -7,8 +7,8 @@ message("Configuring UE4SS")
 add_subdirectory("proxy_generator")
 
 # Release settings
-option(UE4SS_LIB_BETA_IS_STARTED "Have beta releases started for the current major version" ON)
-option(UE4SS_LIB_IS_BETA "Is this a beta release" ON)
+option(UE4SS_LIB_BETA_IS_STARTED "Have beta releases started for the current major version" OFF)
+option(UE4SS_LIB_IS_BETA "Is this a beta release" OFF)
 
 # Define generated directories
 set(UE4SS_GENERATED_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/generated_include")
@@ -85,8 +85,11 @@ target_compile_definitions(UE4SS PUBLIC
     UE4SS_LIB_VERSION_MINOR=${UE4SS_LIB_VERSION_MINOR}
     UE4SS_LIB_VERSION_HOTFIX=${UE4SS_LIB_VERSION_HOTFIX}
     UE4SS_LIB_VERSION_PRERELEASE=${UE4SS_LIB_VERSION_PRERELEASE}
-    UE4SS_LIB_VERSION_BETA=${UE4SS_LIB_VERSION_BETA}
-    UE4SS_LIB_BETA_STARTED=$<BOOL:${UE4SS_LIB_BETA_IS_STARTED}>
+    # TODO: Fix this! For some reason even with the release action, these aren ever set to 0.
+    #UE4SS_LIB_VERSION_BETA=${UE4SS_LIB_VERSION_BETA}
+    #UE4SS_LIB_BETA_STARTED=$<BOOL:${UE4SS_LIB_BETA_IS_STARTED}>
+    UE4SS_LIB_VERSION_BETA=0
+    UE4SS_LIB_BETA_STARTED=0
     UE4SS_LIB_IS_BETA=$<BOOL:${UE4SS_LIB_IS_BETA}>
     UE4SS_LIB_BUILD_GITSHA="${UE4SS_LIB_BUILD_GITSHA}"
     UE4SS_CONFIGURATION="$<CONFIG>"
