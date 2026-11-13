@@ -19,8 +19,8 @@ namespace RC::File
         // Returns whether the underlying file handle is valid
         virtual auto is_valid() noexcept -> bool = 0;
 
-        // Invalidate the underlying file type.
-        // This is used in move constructors to stop destruction of the underlying file.
+        // Gives up ownership of the native resources without closing them.
+        // Moves transfer ownership by swapping, not through this.
         virtual auto invalidate_file() noexcept -> void = 0;
 
         // Closes & deletes the currently opened file
@@ -33,7 +33,10 @@ namespace RC::File
         auto static delete_file(const std::filesystem::path& file_path_and_name) -> void;
         */
 
-        // Returns a pointer to the raw handle, do not use unless you know what you're doing
+        // Returns the native handle: a HANDLE on Windows, the descriptor value on Linux
+        // (so descriptor 0 is a null pointer). A closed handle is nullptr on Windows and
+        // (void*)-1 on Linux; use is_valid() to test for an open file, not a null check.
+        // Do not use unless you know what you're doing
         virtual auto get_raw_handle() noexcept -> void* = 0;
 
         // Returns the full path to the file
