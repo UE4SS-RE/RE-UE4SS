@@ -13,6 +13,7 @@
 - [Live Property Viewer and Editor](./feature-overview/live-view.md)
 - [Dumpers](./feature-overview/dumpers.md)
 - [SDK Generator](./feature-overview/sdk-generator.md)
+- [External Lua REPL](./feature-overview/external-lua-repl.md)
 
 ## APIs
 

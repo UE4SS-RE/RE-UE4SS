@@ -16,6 +16,7 @@
 #include <Profiler/Profiler.hpp>
 #include <DynamicOutput/DynamicOutput.hpp>
 #include <ExceptionHandling.hpp>
+#include <ExternalLuaRepl.hpp>
 #include <GUI/ConsoleOutputDevice.hpp>
 #include <GUI/GUI.hpp>
 #include <GUI/LiveView.hpp>
@@ -369,6 +370,8 @@ namespace RC
 
     UE4SSProgram::~UE4SSProgram()
     {
+        ExternalLuaRepl::stop();
+
         // Shut down the event loop
         m_processing_events = false;
 
@@ -1100,6 +1103,7 @@ namespace RC
             LuaMod::on_program_start();
             fire_program_start_for_cpp_mods();
             start_lua_mods();
+            ExternalLuaRepl::start(m_working_directory);
         });
 
         if (settings_manager.General.EnableDebugKeyBindings)
