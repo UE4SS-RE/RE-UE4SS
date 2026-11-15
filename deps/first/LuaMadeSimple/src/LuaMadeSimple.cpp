@@ -542,7 +542,7 @@ namespace RC::LuaMadeSimple
             if (lua.is_userdata(-2))
             {
                 // Get the global table that corresponds to this metatable
-                if (lua_getiuservalue(lua.get_lua_state(), -2, 3) == LUA_TNIL)
+                if (lua_getiuservalue(lua.get_lua_state(), -2, 3) != LUA_TTABLE)
                 {
                     lua_pop(lua.get_lua_state(), 1);
                     luaL_traceback(lua.get_lua_state(), lua.get_lua_state(), nullptr, 0);
