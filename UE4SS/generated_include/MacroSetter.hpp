@@ -53,6 +53,12 @@ if (auto val = parser.get_int64(STR("UScriptStruct::ICppStructOps"), STR("FakeVP
     Unreal::UScriptStruct::ICppStructOps::MemberOffsets.emplace(STR("FakeVPtr"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("UScriptStruct::ICppStructOps"), STR("UEP_TotalSize"), -1); val != -1)
     Unreal::UScriptStruct::ICppStructOps::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UE::CoreUObject::Private::FStructOpsFakeVTable"), STR("Flags"), -1); val != -1)
+    Unreal::UE::CoreUObject::Private::FStructOpsFakeVTable::MemberOffsets.emplace(STR("Flags"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UE::CoreUObject::Private::FStructOpsFakeVTable"), STR("Capabilities"), -1); val != -1)
+    Unreal::UE::CoreUObject::Private::FStructOpsFakeVTable::MemberOffsets.emplace(STR("Capabilities"), static_cast<int32_t>(val));
+if (auto val = parser.get_int64(STR("UE::CoreUObject::Private::FStructOpsFakeVTable"), STR("UEP_TotalSize"), -1); val != -1)
+    Unreal::UE::CoreUObject::Private::FStructOpsFakeVTable::MemberOffsets.emplace(STR("UEP_TotalSize"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FOutputDevice"), STR("bSuppressEventTag"), -1); val != -1)
     Unreal::FOutputDevice::MemberOffsets.emplace(STR("bSuppressEventTag"), static_cast<int32_t>(val));
 if (auto val = parser.get_int64(STR("FOutputDevice"), STR("bAutoEmitLineTerminator"), -1); val != -1)

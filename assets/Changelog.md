@@ -57,6 +57,7 @@ TBD
 ### UHT Dumper
 
 ### Lua API
+Fixed `DataTable:AddRow` and copying a `UScriptStruct` failing on UE 5.7+ with "Virtual UScriptStruct::ICppStructOps::Copy is unavailable". ([UE4SS #1501](https://github.com/UE4SS-RE/RE-UE4SS/issues/1501))  
 
 ### C++ API
 

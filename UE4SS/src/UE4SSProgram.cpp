@@ -105,6 +105,7 @@ namespace RC
         Output::send(STR("\n##### MEMBER OFFSETS START ({}) #####\n\n"), is_coalesced == IsCoalesced::No ? STR("MemberVariableLayout") : STR("Coalesced"));
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UObjectBase);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct::ICppStructOps);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UE::CoreUObject::Private::FStructOpsFakeVTable);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UClass);
