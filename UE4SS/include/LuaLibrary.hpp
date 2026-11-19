@@ -2,6 +2,7 @@
 
 #include <Common.hpp>
 #include <cstdint>
+#include <string_view>
 
 #include <String/StringType.hpp>
 
@@ -32,6 +33,18 @@ namespace RC::LuaLibrary
     // Global Lua functions are meant to be called with intact Lua stack
     auto global_print(const LuaMadeSimple::Lua&) -> int;
     auto global_println(const LuaMadeSimple::Lua&) -> int;
+
+    // Receives the text of every print/println call made on the thread that installed it, in addition to the log.
+    // The text is each argument as tostring gives it, joined by a tab, without the "[Lua] " prefix or a trailing
+    // newline. It is the Lua string's bytes as they are, so it need not be valid UTF-8.
+    class PrintCapture
+    {
+      public:
+        virtual ~PrintCapture() = default;
+        virtual auto on_print(std::string_view text) -> void = 0;
+    };
+    // Installs a capture for the calling thread and returns the previous one; nullptr removes it.
+    auto set_print_capture(PrintCapture* capture) -> PrintCapture*;
     auto load_export(const LuaMadeSimple::Lua&) -> int;
 
     // Used exclusively for the scripts inside the 'UE4SS_Signatures' folder
