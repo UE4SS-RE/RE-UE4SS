@@ -12,6 +12,8 @@ TBD
 
 ### General
 
+Added custom game configuration for STAR WARS Galactic Racer ([UE4SS #1502](https://github.com/UE4SS-RE/RE-UE4SS/pull/1502))
+
 ### Live View
 
 ### Lua Debugger
