@@ -6,9 +6,20 @@ project(${TARGET})
 option(UE4SS_${TARGET}_BUILD_SHARED "Build as a shared lib" OFF)
 
 set(${TARGET}_Sources
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/FileType/WinFile.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/File.cpp"
         )
+
+if (WIN32)
+    list(APPEND ${TARGET}_Sources
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/FileType/WinFile.cpp"
+            )
+elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND ${TARGET}_Sources
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/FileType/LinuxFile.cpp"
+            )
+else ()
+    message(FATAL_ERROR "Unsupported platform for File: ${CMAKE_SYSTEM_NAME}")
+endif ()
 
 string(REGEX REPLACE "(.)([A-Z])" "\\1_\\2" MODULE_NAME ${TARGET})
 string(TOUPPER ${MODULE_NAME} MODULE_NAME)
