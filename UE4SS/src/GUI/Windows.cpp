@@ -37,7 +37,7 @@ namespace RC::GUI
 
     auto Backend_Windows::create_window(int loc_x, int loc_y, int size_x, int size_y) -> void
     {
-        StringType title_bar_text{STR("UE4SS Debugging Tools")};
+        StringType title_bar_text{fmt::format(STR("UE4SS Debugging Tools (v{}.{}.{} - {})"), UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX, ensure_str(UE4SS_LIB_BUILD_GITSHA))};
         if (dynamic_cast<Backend_DX11*>(m_gfx_backend))
         {
             title_bar_text.append(STR(" (DX11)"));
@@ -57,7 +57,7 @@ namespace RC::GUI
         // wc.hbrBackground = NULL;
         s_wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
         s_wc.lpszMenuName = NULL;
-        s_wc.lpszClassName = FromCharTypePtr<wchar_t>(title_bar_text.c_str());
+        s_wc.lpszClassName = STR("UE4SSMainGUIWindow");
         s_wc.hIconSm = NULL;
         ::RegisterClassEx(&s_wc);
         s_hwnd = ::CreateWindow(s_wc.lpszClassName,

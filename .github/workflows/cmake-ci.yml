@@ -32,7 +32,7 @@ jobs:
   # Dynamically calculate which modes to build from CMake configuration
   calculate-matrix:
     name: Calculate job matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.calculate-modes.outputs.matrix }}
     steps:
@@ -122,7 +122,7 @@ jobs:
   report-artifacts:
     if: ${{ always() && contains(needs.calculate-matrix.result, 'success') && github.event_name == 'pull_request' }}
     needs: [calculate-matrix, build, build-clang]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "Report Artifacts"
         uses: bitonality/PRtifact@v0.1.0

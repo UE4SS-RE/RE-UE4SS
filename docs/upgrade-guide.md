@@ -4,8 +4,8 @@ This document provides detailed guidance for upgrading between versions of RE-UE
 
 ## Version 3.x to 4.x
 
-> **Released:** [TBD]  
-> **PR:** [Link to PR when available]
+> **Released:** 2026-11-12  
+> **Diff:** https://github.com/UE4SS-RE/RE-UE4SS/compare/v3.0.1...v4.0.0
 
 ### Breaking Changes
 
@@ -60,7 +60,38 @@ explicit FName(const CharType* StrName, EFindName FindType = FNAME_Add, void* Fu
 - This can have performance implications if you're frequently creating FNames with strings that may not exist
 - When working with Unreal Engine internals, be cautious as creating new names unintentionally could lead to unexpected behavior
 
+#### FName Default Alignment Change
 
+**What Changed:**  
+The default alignment for `FName` has changed from `8` to `4`.  
+This change was done in October 2024, so it's not likely to affect many people, but you should be aware of it.
+
+**Before (v3.x):**
+```cpp
+// We only define WITH_CASE_PRESERVING_NAME when using a CasePreserving target, i.e. CasePreserving__Shipping__Win64
+// As a result, in v3.x, FName alignment was 8 for most builds.
+#ifdef WITH_CASE_PRESERVING_NAME
+    struct alignas(4) RC_UE_API FName
+#else
+    struct alignas(8) RC_UE_API FName
+#endif
+```
+
+**After (v4.x):**
+```cpp
+// We only define FNAME_ALIGN8 when using a LessEqual421 target, i.e. LessEqual421__Shipping__Win64
+// This means FName alignment is now 4 for most builds. 
+#ifndef FNAME_ALIGN8
+    class alignas(4) RC_UE_API FName
+#else
+    class alignas(8) RC_UE_API FName
+#endif
+```
+
+**Migration Steps:**
+
+If you rely on the alignment of FName being 8, you will need to build UE4SS from source and define `FNAME_ALIGN8`.  
+If your game usees UE version 4.21 or earlier, you can build UE4SS using one of the LessEqual421 targets instead.
 
 #### TObjectPtr Implementation Change
 **What Changed:**  
@@ -218,8 +249,8 @@ Path.SubPathString = NewSubPath;
 ```cpp
 FSoftObjectPath Path = ...;
 FName AssetName = Path.GetAssetPathName();
-FString& SubPath = Path.GetSubPathString();
-Path.GetSubPathString() = NewSubPath;
+FString SubPath = Path.GetSubPathString();
+Path.SetSubPathString(NewSubPath);
 
 // New: package/asset name pair, works on every engine version
 FTopLevelAssetPath AssetPath = Path.GetAssetPath();
@@ -228,12 +259,13 @@ FTopLevelAssetPath AssetPath = Path.GetAssetPath();
 **Migration Steps:**
 
 1. Replace `Path.AssetPathName` with `Path.GetAssetPathName()`.
-2. Replace `Path.SubPathString` with `Path.GetSubPathString()`. A non-const overload exists, so reads, writes, and passing by reference all work.
+2. Replace reads of `Path.SubPathString` with `Path.GetSubPathString()` and writes with `Path.SetSubPathString()`. `GetSubPathString()` returns a copy, so changing the returned string does not change the path.
 3. If you need the package and asset names separately, prefer `GetAssetPath()`, which returns an `FTopLevelAssetPath` in every engine version (synthesized by splitting the path on pre-5.1).
 
 **Important Notes:**
 - On 5.1+ engines there is no single-FName representation in memory, so `GetAssetPathName()` creates the combined `/Package/Path.Asset` FName on demand (with `FNAME_Add`).
 - Writing the asset path goes through `SetPath()` or `operator=(const FString&)`, unchanged from before.
+- UE 5.6 stores the sub path as UTF-8. `GetSubPathString()` and `SetSubPathString()` convert to and from `FString` on every engine version, which is why the getter cannot return a reference.
 - `TArray<FSoftObjectPath>` now strides by the runtime size (`FSoftObjectPath::StaticSize()`), fixing element access on 5.1+ and case-preserving builds.
 - The Lua API (`GetAssetPathName()`, `GetSubPathString()`) is unchanged; Lua mods are unaffected.
 
@@ -514,6 +546,83 @@ enum EFieldIterationFlags : uint8
 **Important Notes:**
 - The old `ForEachProperty()` methods are **deprecated** and may be removed in the future
 - Use `TFieldIterator`/`TFieldRange` for better performance and when matching Epic's patterns
+
+#### FTransform default constructor change
+
+**What Changed:**  
+We previously zero'd out FTransform in the default constructor.  
+We no longer do that, and instead try to match the expected behavior from UE.
+
+**Before (v3.x):**
+```cpp
+FTransform() = default;
+```
+
+**After (v4.x):**
+```cpp
+FTransform()
+    : FTransform(FQuat(0, 0, 0, 1), FVector(0, 0, 0), FVector(1, 1, 1))
+{
+}
+```
+
+**Migration Steps:**
+
+If you rely on a default constructor FTransform to be zero'd, you need to change to explicit construction.
+
+#### Changes to `RegisterProcessConsoleExecPreHook`/`RegisterProcessConsoleExecPostHook` callback parameters
+
+**What Changed:**  
+Previously, the second parameter would contain a table of all command arguments, but not the command itself.  
+Now, the first entry in the second parameter table is the name of the command.
+
+**Before (v3.x):**
+```cpp
+// Entered into console: test 1 2 3
+// Contents of the second param Lua table:
+// [1] 1
+// [2] 2
+// [3] 3
+```
+
+**After (v4.x):**
+```cpp
+// Entered into console: test 1 2 3
+// Contents of the second param Lua table:
+// [1] test
+// [2] 1
+// [3] 2
+// [4] 3
+```
+
+#### Changes to `AActor.GetWorld` and `AActor.GetLevel` return values
+
+**What Changed:**  
+Previously, GetWorld and GetLevel returned nil if the world or actor couldn't be found.  
+Now, these functions always return an object that's testable via a call to IsValid.  
+This means that relying on a `nil` will no longer work.
+
+**Migration Steps:**
+
+If you call GetWorld or GetActor, make sure to call IsValid on them.  
+Code that still checks nil is fine as long as it also calls IsValid.
+
+```lua
+-- Old
+local World = LiveActor:GetWorld()
+if World then
+   -- World may be invalid still because IsValid was not call.
+   print(string.format("GameState: %s\n", World.GameState:GetFullName()))
+end
+
+-- New
+local World = LiveActor:GetWorld()
+-- World is already guaranteed to be non-nil, so we only need to check validity.
+if World:IsValid() then
+   -- World is guaranteed to be valid.
+   print(string.format("GameState: %s\n", World.GameState:GetFullName()))
+end
+```
 
 ### Deprecations
 

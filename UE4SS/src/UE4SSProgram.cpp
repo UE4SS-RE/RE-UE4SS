@@ -105,6 +105,7 @@ namespace RC
         Output::send(STR("\n##### MEMBER OFFSETS START ({}) #####\n\n"), is_coalesced == IsCoalesced::No ? STR("MemberVariableLayout") : STR("Coalesced"));
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UObjectBase);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct::ICppStructOps);
+        OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UE::CoreUObject::Private::FStructOpsFakeVTable);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UScriptStruct);
         OUTPUT_MEMBER_OFFSETS_FOR_STRUCT(UClass);
@@ -262,10 +263,7 @@ namespace RC
                          UE4SS_LIB_VERSION_MINOR,
                          UE4SS_LIB_VERSION_HOTFIX,
                          fmt::format(STR("{}"), UE4SS_LIB_VERSION_PRERELEASE == 0 ? STR("") : fmt::format(STR(" PreRelease #{}"), UE4SS_LIB_VERSION_PRERELEASE)),
-                         fmt::format(STR("{}"),
-                                     UE4SS_LIB_BETA_STARTED == 0
-                                             ? STR("")
-                                             : (UE4SS_LIB_IS_BETA == 0 ? STR(" Beta #?") : fmt::format(STR(" Beta #{}"), UE4SS_LIB_VERSION_BETA))),
+                         fmt::format(STR("{}"), UE4SS_LIB_BETA_STARTED == 0 ? STR("") : STR(" Experimental")),
                          ensure_str(UE4SS_LIB_BUILD_GITSHA));
             bool use_local_time = true;
 #ifdef _WIN32
@@ -1203,20 +1201,22 @@ namespace RC
                 ProfilerScopeNamed("event processing");
 
                 static constexpr size_t max_events_executed_per_frame = 5;
-                size_t num_events_executed{};
-                std::lock_guard<std::mutex> guard(m_event_queue_mutex);
-                m_queued_events.erase(std::remove_if(m_queued_events.begin(),
-                                                     m_queued_events.end(),
-                                                     [&](EventCallable& event) -> bool {
-                                                         if (num_events_executed >= max_events_executed_per_frame)
-                                                         {
-                                                             return false;
-                                                         }
-                                                         ++num_events_executed;
-                                                         event();
-                                                         return true;
-                                                     }),
-                                      m_queued_events.end());
+                // Run the events outside m_event_queue_mutex. An event can wait for another thread: a Lua mod's
+                // uninstall waits for LuaMod::m_thread_actions_mutex, which the game thread holds while it runs
+                // RegisterHook and NotifyOnNewObject callbacks. If such a callback queues an event (for example
+                // with RestartCurrentMod), queue_event must not be waiting for this lock in turn.
+                std::vector<EventCallable> events_to_execute{};
+                {
+                    std::lock_guard<std::mutex> guard(m_event_queue_mutex);
+                    const auto num_events_taken = std::min(m_queued_events.size(), max_events_executed_per_frame);
+                    const auto taken_end = m_queued_events.begin() + static_cast<std::ptrdiff_t>(num_events_taken);
+                    events_to_execute.assign(std::make_move_iterator(m_queued_events.begin()), std::make_move_iterator(taken_end));
+                    m_queued_events.erase(m_queued_events.begin(), taken_end);
+                }
+                for (auto& event : events_to_execute)
+                {
+                    event();
+                }
             }
 
             // Commented out because this system (turn off hotkeys when in-game console is open) it doesn't work properly.
@@ -1303,6 +1303,8 @@ namespace RC
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("NameProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_nameproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("TextProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_textproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("StrProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_strproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("Utf8StrProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_utf8strproperty);
+        LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("AnsiStrProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_ansistrproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftObjectProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_softobjectproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("SoftClassProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_softobjectproperty);
         LuaType::StaticState::m_property_value_pushers.emplace(FName(STR("InterfaceProperty"), Unreal::FNAME_Find).GetComparisonIndex(), &LuaType::push_interfaceproperty);

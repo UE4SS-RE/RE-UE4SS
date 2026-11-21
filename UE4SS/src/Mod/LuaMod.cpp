@@ -1651,6 +1651,7 @@ Overloads:
                 Input::Key key_to_register = static_cast<Input::Key>(key_from_lua);
 
                 const auto lua_keybind_callback_lambda = [](const LuaMadeSimple::Lua& lua, const int callback_register_index) -> void {
+                    std::lock_guard<std::recursive_mutex> execution_guard{LuaMod::m_game_thread_execution_mutex};
                     std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
                     try
                     {
@@ -2653,7 +2654,7 @@ Overloads:
 #1: IterateGameDirectories())"};
 
             std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-            auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+            static const auto game_content_dir = Unreal::UObjectGlobals::GetProjectContentDirectory();
             if (!std::filesystem::exists(game_content_dir))
             {
                 Output::send<LogLevel::Warning>(STR("IterateGameDirectories: Could not locate the root directory because the directory structure is unknown "
@@ -2662,8 +2663,8 @@ Overloads:
                 return 1;
             }
 
-            auto game_name = game_executable_directory.parent_path().parent_path().filename();
-            auto game_root_directory = game_executable_directory.parent_path().parent_path().parent_path();
+            const auto game_name = Unreal::UObjectGlobals::GetGameName();
+            const auto game_root_directory = Unreal::UObjectGlobals::RootDir();
 
             // A C function only gets LUA_MINSTACK (20) free slots and each level below holds two of them until
             // fuse_pair() runs, so a deep tree pushes past the end of the stack. api_incr_top's check is compiled
@@ -2846,35 +2847,23 @@ Overloads:
                                                 // Path doesn't exist, try to reconstruct it
                                                 if (path_str.find("LogicMods") != std::string::npos)
                                                 {
-                                                    // Get the game executable directory
-                                                    std::filesystem::path game_exec_dir = UE4SSProgram::get_program().get_game_executable_directory();
+                                                    auto logic_mods_dir = game_content_dir / "Paks/LogicMods";
 
-                                                    // Navigate to content directory
-                                                    std::filesystem::path content_dir = game_exec_dir;
-                                                    content_dir = content_dir.parent_path(); // Up to Binaries
-                                                    content_dir = content_dir.parent_path(); // Up to Game
-                                                    content_dir /= "Content";
-
-                                                    if (std::filesystem::exists(content_dir))
+                                                    // Check if it exists or try to create it
+                                                    if (!std::filesystem::exists(logic_mods_dir))
                                                     {
-                                                        auto logic_mods_dir = content_dir / "Paks/LogicMods";
-
-                                                        // Check if it exists or try to create it
-                                                        if (!std::filesystem::exists(logic_mods_dir))
+                                                        std::error_code dir_ec;
+                                                        auto paks_dir = game_content_dir / "Paks";
+                                                        if (!std::filesystem::exists(paks_dir))
                                                         {
-                                                            std::error_code dir_ec;
-                                                            auto paks_dir = content_dir / "Paks";
-                                                            if (!std::filesystem::exists(paks_dir))
-                                                            {
-                                                                std::filesystem::create_directory(paks_dir, dir_ec);
-                                                            }
-                                                            std::filesystem::create_directory(logic_mods_dir, dir_ec);
+                                                            std::filesystem::create_directory(paks_dir, dir_ec);
                                                         }
+                                                        std::filesystem::create_directory(logic_mods_dir, dir_ec);
+                                                    }
 
-                                                        if (std::filesystem::exists(logic_mods_dir))
-                                                        {
-                                                            path_wstr = logic_mods_dir.wstring();
-                                                        }
+                                                    if (std::filesystem::exists(logic_mods_dir))
+                                                    {
+                                                        path_wstr = logic_mods_dir.wstring();
                                                     }
                                                 }
                                             }
@@ -2988,7 +2977,17 @@ Overloads:
             try
             {
                 std::filesystem::path game_executable_directory = UE4SSProgram::get_program().get_game_executable_directory();
-                auto game_content_dir = game_executable_directory.parent_path().parent_path() / "Content";
+                static const auto game_content_dir = [game_executable_directory]() -> std::filesystem::path {
+                    static auto function_exists = Unreal::UObjectGlobals::StaticFindObject(nullptr, nullptr, STR("/Script/Engine.KismetSystemLibrary:GetProjectContentDirectory"));
+                    if (function_exists)
+                    {
+                        return *Unreal::UKismetSystemLibrary::GetProjectContentDirectory();
+                    }
+                    else
+                    {
+                        return game_executable_directory.parent_path().parent_path() / "Content";
+                    }
+                }();
                 if (!std::filesystem::exists(game_content_dir))
                 {
                     lua.throw_error("CreateLogicModsDirectory: Could not locate the \"Content\" directory because the directory structure is unknown (not "
@@ -4095,6 +4094,14 @@ Overloads:
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
     {
+        // Only tried, not waited for: this hook can run inside script_hook or a NotifyOnNewObject callback, which hold m_thread_actions_mutex, and waiting
+        // there would reverse the lock order.
+        // ProcessEvent runs constantly, so actions skipped now run on a later call.
+        std::unique_lock<std::recursive_mutex> execution_guard{LuaMod::m_game_thread_execution_mutex, std::try_to_lock};
+        if (!execution_guard.owns_lock())
+        {
+            return;
+        }
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             LuaMod::m_is_processing_actions = true;
@@ -4132,6 +4139,7 @@ Overloads:
                                  [[maybe_unused]] float DeltaSeconds,
                                  [[maybe_unused]] bool bIdle) -> void
     {
+        std::lock_guard<std::recursive_mutex> execution_guard{LuaMod::m_game_thread_execution_mutex};
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
             LuaMod::m_is_processing_actions = true;
@@ -6137,6 +6145,10 @@ Overloads:
             m_async_thread.request_stop();
             m_async_thread.join();
         }
+
+        // Wait for any batch of game-thread actions the game thread has already taken, and keep it from taking another until the Lua state is closed.
+        // Taken after the join and before m_thread_actions_mutex, like the hooks take it, so neither thread can hold one lock while waiting for the other.
+        std::lock_guard<std::recursive_mutex> execution_guard{LuaMod::m_game_thread_execution_mutex};
 
         // Now acquire mutex to safely modify shared data structures
         std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};

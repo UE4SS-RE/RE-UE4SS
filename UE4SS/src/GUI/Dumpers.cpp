@@ -699,6 +699,12 @@ namespace RC::GUI::Dumpers
         ImGui::SameLine();
         ImGui::BeginGroup();
         ImGui::Checkbox("Include Blueprint-generated types", &s_include_blueprint_types);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Preserves property indices and integer storage when an enum reference is missing.\n"
+                              "Enum identity and symbolic names are lost. Each substitution is logged.\n"
+                              "Does not modify game objects. Disabled by default.");
+        }
         ImGui::Checkbox("Skip property values (.jmap, smaller output)", &s_skip_property_values);
         ImGui::Checkbox("Load all assets first", &s_load_all_assets_first);
         if (ImGui::IsItemHovered())

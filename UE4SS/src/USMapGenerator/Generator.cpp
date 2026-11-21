@@ -3,6 +3,7 @@
 // writer.h is missing includes and I'd like to keep it unchanged so I'll include the missing files here instead.
 #include <Unreal/Common.hpp>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 #include <DynamicOutput/DynamicOutput.hpp>
@@ -238,7 +239,55 @@ namespace RC::OutTheShade
         std::vector<UEnum*> Enums;
         std::vector<UStruct*> Structs; // TODO: a better way than making this completely dynamic
 
+        UStruct* CurrentStruct = nullptr;
+        size_t UnresolvedEnumCount = 0;
+        auto RejectProperty = [&](FProperty* Property, const std::string& Reason) {
+            throw std::runtime_error{"Mappings generation aborted: " + to_string(CurrentStruct->GetPathName()) + ":" +
+                                     to_string(Property->GetFName().ToString()) + " - " + Reason + ". No mappings file was written by this attempt."};
+        };
+
         std::function<void(class FProperty*, EPropertyType)> WriteProperty = [&](FProperty* Prop, EPropertyType Type) {
+            if (Type == EPropertyType::EnumProperty && Prop->GetClass().HasAnyCastFlags(CASTCLASS_FEnumProperty))
+            {
+                auto EnumProp = static_cast<FEnumProperty*>(Prop);
+                if (!EnumProp->GetEnum())
+                {
+                    auto Inner = EnumProp->GetUnderlyingProp();
+                    if (!Inner || Inner == Prop)
+                    {
+                        RejectProperty(Prop, "unresolved enum has no usable underlying numeric property");
+                    }
+                    auto InnerType = GetPropertyType(Inner);
+                    switch (InnerType)
+                    {
+                    case EPropertyType::ByteProperty:
+                    case EPropertyType::Int8Property:
+                    case EPropertyType::Int16Property:
+                    case EPropertyType::IntProperty:
+                    case EPropertyType::Int64Property:
+                    case EPropertyType::UInt16Property:
+                    case EPropertyType::UInt32Property:
+                    case EPropertyType::UInt64Property:
+                        break;
+                    default:
+                        RejectProperty(Prop,
+                                       fmt::format("unresolved enum underlying type is not a plain integer, type: {}", to_string(Inner->GetClass().GetName())));
+                    }
+                    if (Prop->GetElementSize() != Inner->GetElementSize())
+                    {
+                        RejectProperty(Prop,
+                                       fmt::format("unresolved enum and underlying integer sizes differ, {} != {}", Prop->GetElementSize(), Inner->GetElementSize()));
+                    }
+                    Output::send<LogLevel::Warning>(STR("[USMAP] Lossy enum substitution: {}:{} -> integer type {} ({} bytes); enum names unavailable.\n"),
+                                                    CurrentStruct->GetPathName(),
+                                                    Prop->GetFName().ToString(),
+                                                    Inner->GetClass().GetName(),
+                                                    Inner->GetElementSize());
+                    ++UnresolvedEnumCount;
+                    Buffer.Write(InnerType);
+                    return;
+                }
+            }
             Buffer.Write(Type);
 
             switch (Type)
@@ -248,10 +297,24 @@ namespace RC::OutTheShade
                 if (Prop->GetClass().HasAnyCastFlags(CASTCLASS_FEnumProperty))
                 {
                     auto EnumProp = static_cast<FEnumProperty*>(Prop);
+                    auto Enum = EnumProp->GetEnum();
                     auto Inner = EnumProp->GetUnderlyingProp();
+                    if (!Enum)
+                    {
+                        RejectProperty(Prop, "FEnumProperty has a null Enum reference");
+                    }
+                    if (!Inner)
+                    {
+                        RejectProperty(Prop, "FEnumProperty has a null UnderlyingProp reference");
+                    }
                     auto InnerType = GetPropertyType(Inner);
                     WriteProperty(Inner, InnerType);
-                    Buffer.Write(NameMap[EnumProp->GetEnum()->GetNamePrivate()]);
+                    auto Name = NameMap.find(Enum->GetNamePrivate());
+                    if (Name == NameMap.end())
+                    {
+                        RejectProperty(Prop, "enum name is absent from the serialized name table");
+                    }
+                    Buffer.Write(Name->second);
                 }
                 // For ByteProperty with Enum
                 else if (Prop->GetClass().HasAnyCastFlags(CASTCLASS_FByteProperty))
@@ -413,6 +476,7 @@ namespace RC::OutTheShade
 
         for (auto Struct : Structs)
         {
+            CurrentStruct = Struct;
             Buffer.Write(NameMap[Struct->GetNamePrivate()]);
             Buffer.Write<int32_t>(Struct->GetSuperStruct() ? NameMap[Struct->GetSuperStruct()->GetNamePrivate()] : static_cast<int32_t>(0xffffffff));
 
@@ -566,6 +630,10 @@ namespace RC::OutTheShade
         FileOutput.Write(UsmapData.data(), UsmapData.size());
 
         Output::send(STR("Mappings Generation Completed Successfully!\n"));
+        if (UnresolvedEnumCount != 0)
+        {
+            Output::send<LogLevel::Warning>(STR("[USMAP] Lossy output: {} unresolved enum occurrences written as integers; indices and array dimensions retained.\n"), UnresolvedEnumCount);
+        }
         Output::send(STR("Output file: {}\n"), usmap_filename);
     }
 } // namespace RC::OutTheShade

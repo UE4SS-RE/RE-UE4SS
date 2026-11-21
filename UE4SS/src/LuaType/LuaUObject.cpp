@@ -115,7 +115,7 @@ namespace RC::LuaType
         if (lua.is_userdata())
         {
             auto& lua_object2 = lua.get_userdata<LuaType::UE4SSBaseObject>(1, true);
-            if (!is_first_userdata_function && lua_object2.derives_from_function())
+            if (!is_first_userdata_function && lua_object2.derives_from_ufunction())
             {
                 func = lua.get_userdata<LuaType::UFunction>(1).get_remote_cpp_object();
             }
@@ -917,7 +917,7 @@ namespace RC::LuaType
                     }
 
                     params.lua.insert_value(-2);
-                    array->AddZeroed(1, inner->GetSize(), inner->GetMinAlignment());
+                    Unreal::FScriptArrayHelper::CreateHelperFormInnerProperty(inner, array).AddValue();
                     const PusherParams pusher_params{.operation = Operation::Set,
                                                      .lua = params.lua,
                                                      .base = static_cast<Unreal::UObject*>(array->GetData()), // Base is the start of the params struct
@@ -974,7 +974,7 @@ namespace RC::LuaType
                 int32_t num_elements = source_array->Num();
                 if (num_elements > 0)
                 {
-                    dest_array->AddZeroed(num_elements, inner->GetSize(), inner->GetMinAlignment());
+                    Unreal::FScriptArrayHelper::CreateHelperFormInnerProperty(inner, dest_array).AddValues(num_elements);
                     
                     for (int32_t i = 0; i < num_elements; i++)
                     {

@@ -1,0 +1,38 @@
+#include <winres.h>
+
+#define FILENAME "UE4SS.dll"
+#define FILE_VERSION UE4SS_LIB_VERSION_MAJOR,UE4SS_LIB_VERSION_MINOR,UE4SS_LIB_VERSION_HOTFIX,0
+#define PRODUCT_VERSION FILE_VERSION
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION FILE_VERSION
+ PRODUCTVERSION PRODUCT_VERSION
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+#ifdef UE_BUILD_DEBUG
+ FILEFLAGS VS_FF_DEBUG
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_DLL
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040004b0"
+        BEGIN
+            VALUE "CompanyName", ""
+            VALUE "FileDescription", ""
+            VALUE "FileVersion", FILE_VERSION
+            VALUE "InternalName", FILENAME
+            VALUE "LegalCopyright", ""
+            VALUE "OriginalFilename", FILENAME
+            VALUE "ProductName", "RE-UE4SS"
+            VALUE "ProductVersion", UE4SS_LIB_BUILD_GITSHA
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x400, 1200
+    END
+END

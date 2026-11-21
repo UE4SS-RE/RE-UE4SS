@@ -1,8 +1,86 @@
-v4.0.0-rc1
+v4.1.0
+==============
+TBD
+
+**Important:** There is currently no important information for this release.
+
+> [!NOTE]
+> One of our maintainers, Narknon, is developing a modding friendly sandbox adventure game in UE 5.8.
+> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/?utm_source=ue4ss&utm_medium=github&utm_campaign=release_notes) or following [Noro Softworks](https://linktr.ee/norosoftworks).
+
+## New
+
+### General
+
+### Live View
+
+### Lua Debugger
+
+### UHT Dumper
+
+### Static Mesh Dumper
+
+### Lua API
+
+### C++ API
+
+### BPModLoader
+
+### Experimental
+
+
+## Changes
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+
+### C++ API
+
+### BPModLoader
+
+### ConsoleEnablerMod
+
+### Repo & Build Process
+
+
+## Fixes
+
+### General
+
+### Live View
+
+### UHT Dumper
+
+### Lua API
+Fixed `DataTable:AddRow` and copying a `UScriptStruct` failing on UE 5.7+ with "Virtual UScriptStruct::ICppStructOps::Copy is unavailable". ([UE4SS #1501](https://github.com/UE4SS-RE/RE-UE4SS/issues/1501))  
+
+### C++ API
+
+### BPModLoader
+
+### EventViewerMod
+
+## Settings
+
+### Added
+
+### Removed
+
+
+v4.0.0
 ==============
 TBD
 
 **Important:** The default installation layout has changed. All UE4SS files (including UE4SS.dll, settings, and mods) now reside in a `ue4ss` subfolder next to your game executable. Only the proxy DLL (dwmapi.dll) remains in the game's Win64 directory. This keeps your game folder cleaner and makes it easier to manage UE4SS installations. Existing installations in the old location will continue to work for backwards compatibility if the UE4SS dll is replaced directly.
+
+> [!NOTE]
+> One of our maintainers, Narknon, is developing a modding friendly sandbox adventure game in UE 5.8.
+> If you'd like to support them, consider checking out and/or wishlisting [Noro on Steam](https://store.steampowered.com/app/5363190/Noro/?utm_source=ue4ss&utm_medium=github&utm_campaign=release_notes) or following [Noro Softworks](https://linktr.ee/norosoftworks).
 
 ## New
 
@@ -55,7 +133,7 @@ Added new build definition "LessEqual421".  Using this definition for games on U
 
 **BREAKING:** `FSoftObjectPath` no longer exposes the `AssetPathName` and `SubPathString` member variables. The struct layout now adapts at runtime to the running engine (5.1+ replaced the FName with an FTopLevelAssetPath), which fixes silent memory corruption when accessing soft object paths on 5.1+ games. C++ mods must migrate:
 - `path.AssetPathName` -> `path.GetAssetPathName()` (on 5.1+ this returns the combined `/Package/Path.Asset` name; use `path.GetAssetPath()` for the package/asset name pair)
-- `path.SubPathString` -> `path.GetSubPathString()` (non-const overload available for assignment)
+- `path.SubPathString` -> `path.GetSubPathString()` for reads (returns a copy), `path.SetSubPathString(value)` for writes
 - Lua mods are unaffected; the Lua API is unchanged
 
 **BREAKING:** `FSoftObjectPtr` (and its `TPersistentObjectPtr<FSoftObjectPath>` base) no longer exposes the `ObjectID` and `TagAtLastTest` member variables. Soft object and class pointers now resolve their layout at runtime, accounting for UE 5.3 removing `TagAtLastTest`. C++ mods must migrate:
@@ -95,6 +173,8 @@ Added custom game configurations for Whiskerwood ([UE4SS #1079](https://github.c
 Added custom game configurations for StarRupture ([UE4SS #1150](https://github.com/UE4SS-RE/RE-UE4SS/pull/1150))
 
 Added custom game configuration for The Talos Principle 2 ([UE4SS #1458](https://github.com/UE4SS-RE/RE-UE4SS/pull/1458))
+
+Added custom game configuration for Phantom Blade Zero ([UE4SS #1484](https://github.com/UE4SS-RE/RE-UE4SS/pull/1484))
 
 The GUI can now be rendered in the game thread if `RenderMode` in UE4SS-settings.ini is set to
 `EngineTick` or `GameViewportClientTick` ([UE4SS #768](https://github.com/UE4SS-RE/RE-UE4SS/pull/768), [UE4SS #794](https://github.com/UE4SS-RE/RE-UE4SS/pull/794)).
@@ -355,6 +435,12 @@ Added registration functions for C++ mod events. ([UE4SS #1431](https://github.c
 - They are intended to replace the virtual functions for ABI reasons, but the virtual functions will also be maintained for now.
 - No new virtual functions will be added to CppUserModBase, and no existing virtual functions will be removed.
 
+Added directory getter functions ([Unreal 1990823](https://github.com/Re-UE4SS/UEPseudo/commit/1990823), [Unreal aed71f1](https://github.com/Re-UE4SS/UEPseudo/commit/aed71f1), [Unreal 96376b8](https://github.com/Re-UE4SS/UEPseudo/commit/96376b8))
+- `UObjectGlobals::GetGameExeDirectory`
+- `UObjectGlobals::GetProjectContentDirectory`
+- `UObjectGlobals::GetGameName`
+- `UObjectGlobals::RootDir`
+
 ### BPModLoader 
 
 ### Experimental 
@@ -460,6 +546,11 @@ Fixed proxy injection incorrectly running UE4SS initialization inside the loader
 
 Fixed a crash in `FUObjectArray::AllocateSerialNumber` when assigning an object without a serial number to an `FWeakObjectPtr` on UE 5.3+ (reported on UE 5.4.3). Soft pointer copies now use the runtime `ObjectID` offset, including in Kismet object/class reference conversions and Lua soft-property access. ([UE4SS #1433](https://github.com/UE4SS-RE/RE-UE4SS/issues/1433))
 
+Fixed a deadlock when a Lua `RegisterHook` or `NotifyOnNewObject` callback calls `RestartCurrentMod` (or anything else that queues work for the event loop) while the event loop is uninstalling a mod. Queued events now run outside the event queue lock. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))
+
+Fixed the GUI freezing while mods are being reinstalled with the Lua Debugger tab open. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))  
+The tab now shows a short note for those frames instead of waiting, and still shows the pause controls when Lua is paused at a breakpoint.
+
 Fixed BPModLoaderMod not working in games made in UE 5.2+ - ([UE4SS #503](https://github.com/UE4SS-RE/RE-UE4SS/pull/503)) 
 
 Fixed adding elements to TArray in Lua incorrectly resizing and zeroing out previous values ([UE4SS #436](https://github.com/UE4SS-RE/RE-UE4SS/pull/436)) - dnchattan 
@@ -482,6 +573,8 @@ Fixed the GUI not closing properly with CTRL + O when OpenGL is enabled in
 Fixed PalServer crashing when debug console is enabled in `UE4SS-settings.ini` ([UE4SS #1160](https://github.com/UE4SS-RE/RE-UE4SS/pull/1160)) - Okaetsu
 
 Fixed PalServer console having broken text when running under Proton/Wine ([UE4SS #1160](https://github.com/UE4SS-RE/RE-UE4SS/pull/1160)) - Okaetsu
+
+Fixed crash after zero-constructing elements that are not zero-constructible. ([UE4SS 5c8583b1](https://github.com/UE4SS-RE/RE-UE4SS/commit/5c8583b1))
 
 ### Live View 
 Fixed the "Write to file" checkbox not working for functions in the `Watches` tab ([UE4SS #419](https://github.com/UE4SS-RE/RE-UE4SS/pull/419)) 
@@ -581,6 +674,21 @@ Fixed the `RegisterCustomProperty` sometimes not working because of an unknown p
 Fixed a memory leak when calling a UFunction with an 'Out' parameter from Lua: every call left a registry reference to the 'Out' table behind, so the table and everything in it were never garbage collected. ([UE4SS #1446](https://github.com/UE4SS-RE/RE-UE4SS/issues/1446))
 
 Fixed a crash when calling UFunctions with params taking >512 bytes. ([UE4SS #1462](https://github.com/UE4SS-RE/RE-UE4SS/issues/1462))
+ 
+Fixed `IterateGameDirectories` not working on some games with special directory structures. ([UE4SS bbeecc8](https://github.com/UE4SS-RE/RE-UE4SS/commit/bbeecc8))
+
+Fixed `CallFunction` in `UObject` not working. ([UE4SS 20abc5b7](https://github.com/UE4SS-RE/RE-UE4SS/commit/20abc5b7))
+
+Fixed a freeze or crash when a Lua mod is restarted or uninstalled while the game thread is running one of its actions from `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, `LoopInGameThreadWithDelay` or a similar function. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))  
+The game thread moves a batch of actions out of the queue before it runs them, so uninstall could not see that batch and closed the mod's Lua state under it.  
+Uninstall now waits for a running batch first.
+
+Fixed a freeze when a Lua mod is restarted or uninstalled while another thread is running Lua. ([UE4SS #1445](https://github.com/UE4SS-RE/RE-UE4SS/issues/1445))  
+Closing a mod's Lua state deleted the lock that every Lua state in the process shares while still holding it.  
+That is undefined behavior; the observed result was a thread waiting on that lock forever. Closing a state now releases the lock instead.
+
+Fixed a crash and garbled output on UE 5.6+ when copying a soft object path or calling `GetSubPathString`. ([UE4SS #1486](https://github.com/UE4SS-RE/RE-UE4SS/issues/1486))  
+UE 5.6 stores the sub path as UTF-8, but it was read as a UTF-16 `FString`, which ran past the end of the buffer.
 
 ### C++ API 
 Fixed a crash caused by a race condition enabled by C++ mods using `UE4SS_ENABLE_IMGUI` in their constructor ([UE4SS #481](https://github.com/UE4SS-RE/RE-UE4SS/pull/481)) 

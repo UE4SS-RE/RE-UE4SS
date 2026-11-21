@@ -81,6 +81,9 @@ set(CMAKE_C_FLAGS_INIT "-vctoolsdir=${XWIN_CACHE_DIR}/crt -winsdkdir=${XWIN_CACH
 # C++ flags - just the essentials for cross-compilation
 set(CMAKE_CXX_FLAGS_INIT "-vctoolsdir=${XWIN_CACHE_DIR}/crt -winsdkdir=${XWIN_CACHE_DIR}/sdk ${SYSTEM_INCLUDE_FLAGS} /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
 
+# RC flags
+set(CMAKE_RC_FLAGS "-vctoolsdir=${XWIN_CACHE_DIR}/crt -winsdkdir=${XWIN_CACHE_DIR}/sdk ${SYSTEM_INCLUDE_FLAGS} /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
+
 # Explicitly add library paths for the linker
 set(LINKER_FLAGS "/LIBPATH:${XWIN_CACHE_DIR}/crt/lib/x86_64 /LIBPATH:${XWIN_CACHE_DIR}/sdk/lib/um/x86_64 /LIBPATH:${XWIN_CACHE_DIR}/sdk/lib/ucrt/x86_64 /MANIFEST:NO")
 

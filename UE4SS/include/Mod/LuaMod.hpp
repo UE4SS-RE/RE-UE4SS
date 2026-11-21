@@ -180,6 +180,13 @@ namespace RC
         static inline bool m_is_currently_executing_game_action{};
         static inline std::recursive_mutex m_thread_actions_mutex{};
 
+        // Held by the game-thread hooks while they take queued actions and run them, and by LuaMod::uninstall while it tears a mod down.
+        // A batch is moved out of the queues before it runs, so uninstall cannot erase it; this lock is what keeps uninstall from closing a Lua state under a
+        // batch still running on it. It is separate from m_thread_actions_mutex because a batch can run for a long time and must not block the threads that
+        // only queue work, such as loading threads in the StaticConstructObject hook. Lock order: this lock, then m_thread_actions_mutex. Key-bind callbacks
+        // take both, in that order, because they can reach uninstall (RestartMod) while holding m_thread_actions_mutex.
+        static inline std::recursive_mutex m_game_thread_execution_mutex{};
+
       private:
         std::jthread m_async_thread;
         std::thread::id m_main_thread_id{};

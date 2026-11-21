@@ -20,13 +20,6 @@ shutil.rmtree(out_dir, ignore_errors=True)
 shutil.copytree(template_repo, out_dir)
 os.mkdir(versions_out_dir)
 
-def copy_transform(src, dst, transformer):
-    with open(src, 'r') as file:
-        content = file.read()
-    content = transformer(content)
-    with open(dst, 'w') as file:
-        file.write(content)
-
 def deduplicate_summary(summary_path):
     """Remove duplicate file references from SUMMARY.md"""
     if not os.path.exists(summary_path):
@@ -85,18 +78,51 @@ def export_version(ref, name):
     summary_path = os.path.join(src_dir, 'SUMMARY.md')
     deduplicate_summary(summary_path)
 
-    # copy README.md to <version>/src/
+    # take README.md from the exported ref so each version shows its own instructions
     # rewrite absolute URLs to relative mdBook URLs
-    copy_transform('README.md', os.path.join(src_dir, 'README.md'), lambda content: re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', content))
+    readme = subprocess.check_output(['git', 'show', f'{ref}:README.md']).decode('utf-8')
+    readme = re.sub(r'\(https://docs.ue4ss.com/dev/([^)#]+)\.html(#[^)]*)?\)', r'(\1.md\2)', readme)
+    lines = readme.splitlines(keepends=True)
 
-    # insert banner
-    if name != 'release':
-        readme_path = os.path.join(src_dir, 'README.md')
-        with open(readme_path, 'r') as file:
-            lines = file.readlines()
-        lines.insert(2, '\n> [!WARNING]\n> WARNING: This is the dev version of the UE4SS docs. The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.\n\n')
-        with open(readme_path, 'w') as file:
-            file.writelines(lines)
+    # the release docs fall back to the main branch when no tag has docs
+    # only a tag has a release page to link to and a ref worth pinning
+    is_tag = ref in tags
+    tag_link = f'[{ref}](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/{ref})'
+
+    # insert banner depending on version
+    banner = None
+    if name == 'dev':
+        banner = '> [!WARNING]\n> This is the dev version of the UE4SS docs, which reflects the experimental version (which is the main branch of the repository). The API and features are subject to change at any time. If you are developing mods for UE4SS, you should reference the [latest release](../release) instead.'
+    elif is_tag and ref == tags[-1]:
+        # also covers the latest tag's own versioned page
+        banner = f'> [!NOTE]\n> This is the stable release version of the UE4SS docs, which reflects state at release tag {tag_link}, which is recommended for developing mods on. If you prefer to build against the experimental version (which is the main branch of the repository), you should reference the [dev documentation](../dev) instead.'
+    elif is_tag:
+        banner = f'> [!WARNING]\n> This is an old version of the UE4SS docs, which reflects the release tag of {tag_link}. The API and features may have changed in a newer version, so you may want to consider updating. The stable version of the UE4SS docs can be found [here](../release).'
+    if banner:
+        lines.insert(2, f'\n{banner}\n\n')
+
+    # for tagged versions, make the build instructions clone the matching tag instead of the main branch
+    if is_tag:
+        for i, line in enumerate(lines):
+            if line.strip().startswith('1. Clone the repo.'):
+                lines[i] = f'1. Clone the repo from the tag `{ref}` using one of the following methods:\n\n' \
+                           f'   1. Clone the main branch and check out the tag:\n' \
+                           f'      ```\n' \
+                           f'      git clone https://github.com/UE4SS-RE/RE-UE4SS.git\n' \
+                           f'      cd RE-UE4SS\n' \
+                           f'      git checkout {ref}\n' \
+                           f'      ```\n' \
+                           f'   2. Clone the tag directly:\n' \
+                           f'      ```\n' \
+                           f'      git clone --branch {ref} https://github.com/UE4SS-RE/RE-UE4SS.git\n' \
+                           f'      ```\n\n'
+                break
+        else:
+            # shows up as an annotation on the docs deploy run
+            print(f'::warning::No "1. Clone the repo." step found in README.md at {ref}, clone instructions were left unchanged')
+
+    with open(os.path.join(src_dir, 'README.md'), 'w', encoding='utf-8') as file:
+        file.writelines(lines)
 
     # copy template files
     shutil.copy(os.path.join('docs-export', 'book.toml'), version_out_dir)

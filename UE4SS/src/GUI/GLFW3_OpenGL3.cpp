@@ -34,7 +34,7 @@ namespace RC::GUI
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
 
         // Create window with graphics context
-        auto window_title = fmt::format("UE4SS Debugging Tools (OpenGL 3) - {}", render_mode_to_string(UE4SSProgram::settings_manager.Debug.RenderMode));
+        auto window_title = fmt::format("UE4SS Debugging Tools (v{}.{}.{} - {}) (OpenGL 3) - {}", UE4SS_LIB_VERSION_MAJOR, UE4SS_LIB_VERSION_MINOR, UE4SS_LIB_VERSION_HOTFIX, UE4SS_LIB_BUILD_GITSHA, render_mode_to_string(UE4SSProgram::settings_manager.Debug.RenderMode));
         m_window = glfwCreateWindow(1280, 800, window_title.c_str(), NULL, NULL);
         if (m_window == NULL)
         {

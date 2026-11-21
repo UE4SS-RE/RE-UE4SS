@@ -796,7 +796,13 @@
 #define lua_lock(L) LuaLock(L)
 #define lua_unlock(L) LuaUnlock(L)
 #define luai_userstateopen(L) LuaLockInitial(L)
-#define luai_userstateclose(L) LuaLockFinal(L)
+/*
+** All our lua states use a single critical section, and luai_userstateclose is called every time a lua state is closed.
+** This means we must avoid deleting the critical section here.
+** Instead, just unlock it so that it's free for the next user.
+** Do note that we never explicitly delete this critical section, we probably should though.
+*/
+#define luai_userstateclose(L) LuaUnlock(L)
 #define luai_userstatethread(L,L1) LuaLockInitial(L1)
 
 
