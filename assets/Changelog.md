@@ -65,6 +65,8 @@ The `StaticConstructObject` hook takes no lock when no `NotifyOnNewObject` callb
 
 Fixed a `NotifyOnNewObject` callback that returned `true` running again for other objects created off the game thread in the same frame.  
 
+Fixed a crash some time after a mod unregistered the hook or `NotifyOnNewObject` callback it registered first: unregistering released the Lua thread that the mod's other hooks and game-thread actions still run on.  
+
 ### C++ API
 
 ### BPModLoader

@@ -764,19 +764,17 @@ namespace RC
         property_type_table.make_local();
     }
 
-    // Private helper: Ensures hook thread exists and returns the registry reference (or LUA_REFNIL if already exists)
-    static int ensure_hook_thread_exists(LuaMod* mod)
+    // Private helper: Ensures the hook thread exists.
+    // Every hook and action of the mod shares this thread, so its registry reference belongs to the mod and is never handed out.
+    // lua_close releases it together with the rest of the Lua state.
+    static void ensure_hook_thread_exists(LuaMod* mod)
     {
         if (mod->m_hook_lua == nullptr)
         {
             // First use - create new thread and anchor it in the registry
             mod->m_hook_lua = &mod->lua().new_thread();
-            int thread_ref = luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
-            return thread_ref;
+            luaL_ref(mod->lua().get_lua_state(), LUA_REGISTRYINDEX);
         }
-
-        // Thread already exists and is already anchored
-        return LUA_REFNIL;
     }
 
     // Returns the hook lua thread for immediate use (doesn't need registry reference management)
@@ -786,12 +784,14 @@ namespace RC
         return mod->m_hook_lua;
     }
 
-    // Returns hook state with registry reference (for persistent hooks that need cleanup)
+    // Returns the hook thread and a thread reference for the caller to store.
+    // The reference is always LUA_REFNIL, which luaL_unref ignores.
+    // A caller that unregisters must not be able to release the thread the other hooks still run on.
     // auto static make_hook_state(Mod* mod, const LuaMadeSimple::Lua& lua)->std::shared_ptr<LuaMadeSimple::Lua>
     auto static make_hook_state(LuaMod* mod) -> std::pair<LuaMadeSimple::Lua*, int>
     {
-        int thread_ref = ensure_hook_thread_exists(mod);
-        return {mod->m_hook_lua, thread_ref};
+        ensure_hook_thread_exists(mod);
+        return {mod->m_hook_lua, LUA_REFNIL};
 
         // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
         // This is needed because otherwise it will be GCd when we don't want it to.
