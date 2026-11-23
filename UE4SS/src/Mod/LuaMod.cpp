@@ -3911,6 +3911,13 @@ Overloads:
                     continue;
                 }
 
+                // A callback that returned true is unregistered.
+                // It must not run again for the other objects in this batch.
+                if (callbacks_to_remove.contains(exec.callback_id))
+                {
+                    continue;
+                }
+
                 TRY([&]() {
                     exec.lua->registry().get_function_ref(exec.lua_callback_function_ref);
                     LuaType::auto_construct_object(*exec.lua, exec.constructed_object);

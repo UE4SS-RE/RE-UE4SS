@@ -63,6 +63,8 @@ Fixed a freeze when a Lua `RegisterHook` callback on a Blueprint function calls 
 
 The `StaticConstructObject` hook takes no lock when no `NotifyOnNewObject` callback is registered, and the `ProcessEvent` hook no longer runs queued game-thread actions on other threads. ([UE4SS #1504](https://github.com/UE4SS-RE/RE-UE4SS/issues/1504))  
 
+Fixed a `NotifyOnNewObject` callback that returned `true` running again for other objects created off the game thread in the same frame.  
+
 ### C++ API
 
 ### BPModLoader
