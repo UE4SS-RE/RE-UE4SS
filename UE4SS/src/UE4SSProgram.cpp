@@ -1831,6 +1831,7 @@ namespace RC
         {
             std::lock_guard<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
             LuaMod::m_static_construct_object_lua_callbacks.clear();
+            LuaMod::m_new_object_callback_count.store(0, std::memory_order_release);
         }
 
         // Start processing events again as everything is now properly setup

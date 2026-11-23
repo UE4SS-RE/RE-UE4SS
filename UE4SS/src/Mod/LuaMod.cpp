@@ -2363,6 +2363,7 @@ Overloads:
                     func_ref,
                     thread_ref
                 });
+                LuaMod::m_new_object_callback_count.store(LuaMod::m_static_construct_object_lua_callbacks.size(), std::memory_order_release);
             }
 
             Output::send<LogLevel::Verbose>(STR("[NotifyOnNewObject] Registered notification for {}\n"), class_name);
@@ -3947,6 +3948,7 @@ Overloads:
                 std::erase_if(LuaMod::m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
                     return callbacks_to_remove.contains(callback.callback_id);
                 });
+                LuaMod::m_new_object_callback_count.store(LuaMod::m_static_construct_object_lua_callbacks.size(), std::memory_order_release);
             }
         }
     }
@@ -4101,6 +4103,14 @@ Overloads:
                                    [[maybe_unused]] Unreal::UFunction* Function,
                                    [[maybe_unused]] void* Parms) -> void
     {
+        // ProcessEvent can run on other threads, such as loading and worker threads.
+        // The queued actions are game-thread work, and waiting for m_thread_actions_mutex there can deadlock.
+        // The game thread id is only known after the first engine tick, so nothing is skipped before that.
+        if (Unreal::IsGameThreadInitialized() && !Unreal::IsInGameThreadRaw())
+        {
+            return;
+        }
+
         // Only tried, not waited for: this hook can run inside script_hook or a NotifyOnNewObject callback, which hold m_thread_actions_mutex, and waiting
         // there would reverse the lock order.
         // ProcessEvent runs constantly, so actions skipped now run on a later call.
@@ -6166,6 +6176,7 @@ Overloads:
         {
             std::lock_guard<std::mutex> callbacks_guard{m_new_object_callbacks_mutex};
             erase_from_container(this, m_static_construct_object_lua_callbacks);
+            m_new_object_callback_count.store(m_static_construct_object_lua_callbacks.size(), std::memory_order_release);
             m_pending_notify_on_new_object_callbacks.clear();
         }
         erase_from_container(this, m_process_console_exec_pre_callbacks);
@@ -6678,6 +6689,13 @@ Overloads:
 
         Unreal::Hook::RegisterStaticConstructObjectPostCallback([](const Unreal::FStaticConstructObjectParameters&, Unreal::UObject* constructed_object) {
             return TRY([&] {
+                // This hook runs for every constructed object on every thread.
+                // Take no lock when no NotifyOnNewObject callback is registered.
+                if (LuaMod::m_new_object_callback_count.load(std::memory_order_acquire) == 0)
+                {
+                    return constructed_object;
+                }
+
                 // IMPORTANT: StaticConstructObject can be called from outside of the game thread (loading threads, etc.)
                 // Lua is NOT thread-safe. If we're on the game thread, we can call Lua directly.
                 // If we're on another thread, we must queue the callback for later processing.
@@ -6757,6 +6775,7 @@ Overloads:
                             std::erase_if(m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
                                 return callbacks_to_remove.contains(callback.callback_id);
                             });
+                            m_new_object_callback_count.store(m_static_construct_object_lua_callbacks.size(), std::memory_order_release);
                         }
                     }
                     else

@@ -61,6 +61,8 @@ Fixed `DataTable:AddRow` and copying a `UScriptStruct` failing on UE 5.7+ with "
 
 Fixed a freeze when a Lua `RegisterHook` callback on a Blueprint function calls `LoadAsset` while the async loading thread is on: the `StaticConstructObject` hook no longer waits for `m_thread_actions_mutex` on other threads. ([UE4SS #1504](https://github.com/UE4SS-RE/RE-UE4SS/issues/1504))  
 
+The `StaticConstructObject` hook takes no lock when no `NotifyOnNewObject` callback is registered, and the `ProcessEvent` hook no longer runs queued game-thread actions on other threads. ([UE4SS #1504](https://github.com/UE4SS-RE/RE-UE4SS/issues/1504))  
+
 ### C++ API
 
 ### BPModLoader
