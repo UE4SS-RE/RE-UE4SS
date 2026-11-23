@@ -1828,7 +1828,10 @@ namespace RC
         LuaType::LuaCustomProperty::StaticStorage::property_list.clear();
 
         // Reset the Lua callbacks for the global Lua function 'NotifyOnNewObject'
-        LuaMod::m_static_construct_object_lua_callbacks.clear();
+        {
+            std::lock_guard<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
+            LuaMod::m_static_construct_object_lua_callbacks.clear();
+        }
 
         // Start processing events again as everything is now properly setup
         // Do this before mods are started or else you won't be able to use the hot-reload key bind if there's an error from Lua
