@@ -626,62 +626,40 @@ end
 
 ### Deprecations
 
-#### ExecuteAsync and LoopAsync
+<a id="executeasync-and-loopasync"></a>
 
-**What Changed:**
-`ExecuteAsync` and `LoopAsync` are now deprecated in favor of the new Delayed Action System. While these functions still work, they lack the control and safety features of the new system.
+#### ExecuteAsync, ExecuteWithDelay and LoopAsync
 
-**Why Migrate:**
-- **Cancellation:** Old functions cannot be cancelled once started
-- **Pause/Resume:** No way to pause async loops
-- **Query State:** Cannot check if an action is pending or get remaining time
-- **Mod Isolation:** Old functions don't have ownership tracking
-- **Thread Safety:** New system has better thread safety, particularly when interacting with game objects
+These three functions are deprecated. They still run callbacks on the mod's async worker. The following alternatives schedule callbacks on the Unreal game thread. Keep that work short. Moving blocking I/O or a long computation into a game-thread callback can stall a frame.
 
-**Migration Guide:**
-
-| Old Function | New Function |
+| Deprecated call | For game-thread work |
 |--------------|--------------|
-| `ExecuteAsync(delayMs, callback)` | `ExecuteInGameThreadWithDelay(delayMs, callback)` |
+| `ExecuteAsync(callback)` | `ExecuteInGameThread(callback)` |
+| `ExecuteWithDelay(delayMs, callback)` | `ExecuteInGameThreadWithDelay(delayMs, callback)` |
 | `LoopAsync(delayMs, callback)` | `LoopInGameThreadWithDelay(delayMs, callback)` |
 
+To migrate a loop, replace its `return true` stop condition with a call to `CancelDelayedAction` using the handle returned by `LoopInGameThreadWithDelay`. Declare the handle before assigning it so the callback captures the local variable. This example stops after three calls.
+
 ```lua
--- OLD (deprecated)
-ExecuteAsync(1000, function()
-    print("After 1 second\n")
-end)
-
-LoopAsync(1000, function()
-    print("Every second\n")
-    return false  -- return true to stop
-end)
-
--- NEW (recommended)
-ExecuteInGameThreadWithDelay(1000, function()
-    print("After 1 second\n")
-end)
-
+local remaining = 3
 local loopHandle
 loopHandle = LoopInGameThreadWithDelay(1000, function()
     print("Every second\n")
-    if shouldStop then
+    remaining = remaining - 1
+    if remaining == 0 then
         CancelDelayedAction(loopHandle)
     end
 end)
 ```
 
-**Benefits of Migration:**
-- Cancel loops anytime with `CancelDelayedAction(handle)`
-- Pause/resume with `PauseDelayedAction(handle)` and `UnpauseDelayedAction(handle)`
-- Query state with `IsDelayedActionActive(handle)`, `GetDelayedActionTimeRemaining(handle)`, etc.
-- Use `ClearAllDelayedActions()` to clean up all your mod's timers at once
+For pausing, resuming, or querying a timer, see [Delayed Actions](./lua-api/global-functions/delayedactions.md).
 
 ### New Features
 
 #### Delayed Action System
 
 **What's New:**
-A comprehensive timer/delayed action system has been added to the Lua API. This provides UE-style delayed execution with full control over timing, pausing, cancellation, and looping. **This is the recommended replacement for `ExecuteAsync` and `LoopAsync`.**
+The Lua delayed action system schedules one-shot and repeating timers on the game thread and supports pausing, cancellation, and timing queries.
 
 **New Functions:**
 - `ExecuteInGameThreadWithDelay(delayMs, callback)` - Execute callback after delay, returns handle

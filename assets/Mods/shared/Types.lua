@@ -727,11 +727,13 @@ function RegisterConsoleCommandHandler(CommandName, Callback) end
 ---@param Callback fun(Cmd: string, CommandParts: table, Ar: FOutputDevice): boolean?
 function RegisterConsoleCommandGlobalHandler(CommandName, Callback) end
 
----Asynchronously executes the specified function
+---Runs the callback on the mod's async worker. Use ExecuteInGameThread for game-thread work.
+---@deprecated
 ---@param Callback fun()
 function ExecuteAsync(Callback) end
 
----Asynchronously executes the specified function after the specified delay
+---Runs the callback on the mod's async worker after a delay. Use ExecuteInGameThreadWithDelay for game-thread work.
+---@deprecated
 ---@param DelayInMilliseconds integer
 ---@param Callback fun()
 function ExecuteWithDelay(DelayInMilliseconds, Callback) end
@@ -772,7 +774,8 @@ function FindObject(InClass, InOuter, Name, ExactClass) end
 ---@return UObject[]
 function FindObjects(NumObjectsToFind, ClassName, ObjectShortName, RequiredFlags, BannedFlags, bExactClass) end
 
----Starts a loop that sleeps for the supplied number of milliseconds and stops when the callback returns true.
+---Repeats on the mod's async worker until the callback returns true. For game-thread work, use LoopInGameThreadWithDelay and cancel its handle with CancelDelayedAction.
+---@deprecated
 ---@param DelayInMilliseconds integer
 ---@param Callback fun(): boolean
 function LoopAsync(DelayInMilliseconds, Callback) end

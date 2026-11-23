@@ -133,7 +133,7 @@ local _time_elapsed = {}
 local _number_of_calls = {}
 -- list of internal profiler functions
 local _internal_funcs = {}
-local running
+local profiled_thread
 local non_lua, line_calls, started = {}, 0, 0
 local call_tree = {}
 local taken = 0
@@ -267,14 +267,23 @@ function jsb_profi.vm_hook(event, line, info)
 end
 
 --- Starts collecting data.
-function jsb_profi.start_collect(name)
-  if not running then
+function jsb_profi.start_collect(name, delay_ms)
+  if not profiled_thread then
+    jsb_profi.reset()
     non_lua, line_calls = {}, 0
     call_tree = {}
     started = os.clock()
-    running = true
     jsb.write(string.format("%s: Profiler started for session: %s\n", os.date(), name or "logging"), log_file_name)
+    profiled_thread = coroutine.running()
     debug.sethook(jsb_profi.vm_hook, "cr")
+    if delay_ms then
+      local ok, err = pcall(ExecuteInGameThreadWithDelay, delay_ms, jsb_profi.stop_collect)
+      if not ok then
+        debug.sethook(profiled_thread)
+        profiled_thread = nil
+        error(err, 0)
+      end
+    end
   else
     jsb.write(string.format("%s: Error! Profiler already started!\n", os.date()), log_file_name)
   end
@@ -282,7 +291,6 @@ end
 
 --- Stops collecting data.
 function jsb_profi.stop()
-  debug.sethook()
   jsb_profi.call_tree(true)
   taken = jsb_profi.clock() - started
   for f in pairs(_time_called) do
@@ -401,9 +409,10 @@ function jsb_profi.report()
 end
 
 function jsb_profi.stop_collect()
-  if not running then return end
+  if not profiled_thread then return end
+  debug.sethook(profiled_thread)
+  profiled_thread = nil
   _log("Profiler stopped!")
-  running = false
   jsb_profi.stop()
   local rep = jsb_profi.report()
   _log(rep)
@@ -416,10 +425,7 @@ end
 -- can only be active in one state at a time, no async or multi sessions (can be made into a class if this is required)
 -- will automatically report the trace results to the log file
 function jsb.profile(n, name)
-  jsb_profi.reset()
-  jsb_profi.start_collect(name)
-  -- only auto stop if implicit
-  if n then ExecuteWithDelay(n * 1000, jsb_profi.stop_collect) end
+  jsb_profi.start_collect(name, n and math.floor(n * 1000))
 end
 
 -- can manually call to stop and report

@@ -39,6 +39,8 @@ TBD
 
 ### Lua API
 
+`ExecuteAsync`, `ExecuteWithDelay`, and `LoopAsync` are deprecated. Each logs a warning on its first use per process. Existing callbacks still run on the mod's async worker. For game-thread work, use `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, and `LoopInGameThreadWithDelay`, respectively.
+
 ### C++ API
 
 ### BPModLoader

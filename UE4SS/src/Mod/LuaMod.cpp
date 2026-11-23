@@ -6,6 +6,7 @@
 #include <format>
 #include <limits>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -3071,6 +3072,11 @@ Overloads:
             mod->m_pending_actions.emplace_back(LuaMod::AsyncAction{lua_function_ref, LuaMod::ActionType::Immediate});
             mod->actions_unlock();
 
+            static std::once_flag warning;
+            std::call_once(warning, [mod] {
+                Output::send<LogLevel::Warning>(STR("[{}] ExecuteAsync is deprecated. For game-thread work, use ExecuteInGameThread.\n"), mod->get_name());
+            });
+
             return 0;
         });
 
@@ -3102,6 +3108,11 @@ Overloads:
                     delay,
             });
             mod->actions_unlock();
+
+            static std::once_flag warning;
+            std::call_once(warning, [mod] {
+                Output::send<LogLevel::Warning>(STR("[{}] ExecuteWithDelay is deprecated. For game-thread work, use ExecuteInGameThreadWithDelay.\n"), mod->get_name());
+            });
             return 0;
         });
 
@@ -3133,6 +3144,11 @@ Overloads:
                     delay,
             });
             mod->actions_unlock();
+
+            static std::once_flag warning;
+            std::call_once(warning, [mod] {
+                Output::send<LogLevel::Warning>(STR("[{}] LoopAsync is deprecated. For game-thread work, use LoopInGameThreadWithDelay and stop it with CancelDelayedAction.\n"), mod->get_name());
+            });
 
             return 0;
         });

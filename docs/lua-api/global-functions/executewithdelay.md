@@ -1,6 +1,8 @@
 # ExecuteWithDelay
 
-The `ExecuteWithDelay` function asynchronously executes the supplied callback after the supplied delay is over.
+> **Deprecated.** For a short callback that can run on the game thread after a delay, use [`ExecuteInGameThreadWithDelay`](./delayedactions.md#executeingamethreadwithdelay). See the [migration guide](../../upgrade-guide.md#executeasync-executewithdelay-and-loopasync).
+
+`ExecuteWithDelay` runs the callback on the mod's async worker after the delay elapses.
 
 ## Parameters
 
@@ -13,5 +15,13 @@ The `ExecuteWithDelay` function asynchronously executes the supplied callback af
 ```lua
 ExecuteWithDelay(2000, function()
     print("Executed asynchronously after a 2 second delay\n")
+end)
+```
+
+## Recommended Alternative
+
+```lua
+ExecuteInGameThreadWithDelay(2000, function()
+    print("Executed on the game thread after a 2 second delay\n")
 end)
 ```

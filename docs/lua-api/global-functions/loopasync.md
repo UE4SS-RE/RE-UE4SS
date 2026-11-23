@@ -1,8 +1,8 @@
 # LoopAsync
 
-> **Deprecated:** This function is deprecated in favor of [`LoopInGameThreadWithDelay`](./delayedactions.md#loopingamethreadwithdelay). The new function provides cancellation, pause/resume, and state querying capabilities. See the [migration guide](../../upgrade-guide.md#executeasync-and-loopasync) for details.
+> **Deprecated.** For a short repeating callback that can run on the game thread, use [`LoopInGameThreadWithDelay`](./delayedactions.md#loopingamethreadwithdelay) and stop it with `CancelDelayedAction(handle)`. See the [migration guide](../../upgrade-guide.md#executeasync-executewithdelay-and-loopasync).
 
-Starts a loop that sleeps for the supplied number of milliseconds and stops when the callback returns true.
+Runs the callback repeatedly on the mod's async worker after the specified delay. Returning `true` stops the loop.
 
 ## Parameters
 
@@ -23,19 +23,13 @@ end)
 ## Recommended Alternative
 
 ```lua
--- Use LoopInGameThreadWithDelay for better control
+local remaining = 3
 local loopHandle
 loopHandle = LoopInGameThreadWithDelay(1000, function()
     print("Hello World!")
-    -- Can cancel from anywhere using the handle
-    if shouldStop then
+    remaining = remaining - 1
+    if remaining == 0 then
         CancelDelayedAction(loopHandle)
     end
 end)
-
--- Benefits:
--- Cancel anytime: CancelDelayedAction(loopHandle)
--- Pause: PauseDelayedAction(loopHandle)
--- Resume: UnpauseDelayedAction(loopHandle)
--- Check state: IsDelayedActionActive(loopHandle)
 ```
