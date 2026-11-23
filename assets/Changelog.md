@@ -59,6 +59,8 @@ TBD
 ### Lua API
 Fixed `DataTable:AddRow` and copying a `UScriptStruct` failing on UE 5.7+ with "Virtual UScriptStruct::ICppStructOps::Copy is unavailable". ([UE4SS #1501](https://github.com/UE4SS-RE/RE-UE4SS/issues/1501))  
 
+Fixed a freeze when a Lua `RegisterHook` callback on a Blueprint function calls `LoadAsset` while the async loading thread is on: the `StaticConstructObject` hook no longer waits for `m_thread_actions_mutex` on other threads. ([UE4SS #1504](https://github.com/UE4SS-RE/RE-UE4SS/issues/1504))  
+
 ### C++ API
 
 ### BPModLoader

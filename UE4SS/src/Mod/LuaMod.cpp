@@ -2353,14 +2353,17 @@ Overloads:
                 class_outer_fname = Unreal::FName(name_parts.front(), Unreal::FNAME_Add);
             }
 
-            LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{
-                LuaMod::m_next_static_construct_callback_id++,
-                hook_lua,
-                class_fname,
-                class_outer_fname,
-                func_ref,
-                thread_ref
-            });
+            {
+                std::lock_guard<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
+                LuaMod::m_static_construct_object_lua_callbacks.emplace_back(LuaMod::LuaCancellableCallbackData{
+                    LuaMod::m_next_static_construct_callback_id++,
+                    hook_lua,
+                    class_fname,
+                    class_outer_fname,
+                    func_ref,
+                    thread_ref
+                });
+            }
 
             Output::send<LogLevel::Verbose>(STR("[NotifyOnNewObject] Registered notification for {}\n"), class_name);
 
@@ -3847,6 +3850,7 @@ Overloads:
         std::vector<PendingNotifyExec> to_execute{};
         {
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+            std::unique_lock<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
             if (LuaMod::m_pending_notify_on_new_object_callbacks.empty())
             {
                 return;
@@ -3891,6 +3895,8 @@ Overloads:
                                                        pending.object_index,
                                                        constructed_object});
             }
+            // The callbacks below run Lua, which can register NotifyOnNewObject.
+            callbacks_guard.unlock();
 
             std::unordered_set<uint64_t> callbacks_to_remove{};
             std::vector<std::pair<lua_State*, int32_t>> thread_refs_to_unref{};
@@ -3937,6 +3943,7 @@ Overloads:
 
             if (!callbacks_to_remove.empty())
             {
+                callbacks_guard.lock();
                 std::erase_if(LuaMod::m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
                     return callbacks_to_remove.contains(callback.callback_id);
                 });
@@ -6156,8 +6163,11 @@ Overloads:
         fire_on_lua_stop_for_cpp_mods();
         fire_on_lua_stop_for_self();
 
-        erase_from_container(this, m_static_construct_object_lua_callbacks);
-        m_pending_notify_on_new_object_callbacks.clear();
+        {
+            std::lock_guard<std::mutex> callbacks_guard{m_new_object_callbacks_mutex};
+            erase_from_container(this, m_static_construct_object_lua_callbacks);
+            m_pending_notify_on_new_object_callbacks.clear();
+        }
         erase_from_container(this, m_process_console_exec_pre_callbacks);
         erase_from_container(this, m_process_console_exec_post_callbacks);
         erase_from_container(this, m_global_command_lua_callbacks);
@@ -6671,39 +6681,54 @@ Overloads:
                 // IMPORTANT: StaticConstructObject can be called from outside of the game thread (loading threads, etc.)
                 // Lua is NOT thread-safe. If we're on the game thread, we can call Lua directly.
                 // If we're on another thread, we must queue the callback for later processing.
-                std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
+                // Other threads take only m_new_object_callbacks_mutex: a loading thread that waits for m_thread_actions_mutex deadlocks when the game
+                // thread holds it in a Lua callback (script_hook) that waits for this load (LoadAsset).
+                const bool is_game_thread = Unreal::IsInGameThreadRaw();
+                std::unique_lock<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex, std::defer_lock};
+                if (is_game_thread)
+                {
+                    guard.lock();
+                }
 
                 Unreal::UStruct* object_class = constructed_object->GetClassPrivate();
                 while (object_class)
                 {
-                    if (Unreal::IsInGameThreadRaw())
+                    if (is_game_thread)
                     {
                         // On game thread call Lua directly, but avoid iterator invalidation:
                         // collect IDs first, then resolve each callback by ID when executing.
                         std::vector<uint64_t> callbacks_to_execute{};
-                        callbacks_to_execute.reserve(m_static_construct_object_lua_callbacks.size());
-                        for (const auto& callback_data : m_static_construct_object_lua_callbacks)
                         {
-                            if (object_class->GetNamePrivate().Equals(callback_data.instance_class_name) && object_class->GetOuterPrivate()->GetNamePrivate().Equals(callback_data.instance_class_outer_name))
+                            std::lock_guard<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
+                            callbacks_to_execute.reserve(m_static_construct_object_lua_callbacks.size());
+                            for (const auto& callback_data : m_static_construct_object_lua_callbacks)
                             {
-                                callbacks_to_execute.push_back(callback_data.callback_id);
+                                if (object_class->GetNamePrivate().Equals(callback_data.instance_class_name) && object_class->GetOuterPrivate()->GetNamePrivate().Equals(callback_data.instance_class_outer_name))
+                                {
+                                    callbacks_to_execute.push_back(callback_data.callback_id);
+                                }
                             }
                         }
 
                         std::unordered_set<uint64_t> callbacks_to_remove{};
                         for (uint64_t callback_id : callbacks_to_execute)
                         {
-                            auto callback_it = std::find_if(
-                                m_static_construct_object_lua_callbacks.begin(),
-                                m_static_construct_object_lua_callbacks.end(),
-                                [&](const LuaMod::LuaCancellableCallbackData& callback) { return callback.callback_id == callback_id; }
-                            );
-                            if (callback_it == m_static_construct_object_lua_callbacks.end())
+                            // A copy, so that Lua runs without m_new_object_callbacks_mutex and a NotifyOnNewObject call cannot move it.
+                            LuaMod::LuaCancellableCallbackData callback_data{};
                             {
-                                continue;
+                                std::lock_guard<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
+                                auto callback_it = std::find_if(
+                                    m_static_construct_object_lua_callbacks.begin(),
+                                    m_static_construct_object_lua_callbacks.end(),
+                                    [&](const LuaMod::LuaCancellableCallbackData& callback) { return callback.callback_id == callback_id; }
+                                );
+                                if (callback_it == m_static_construct_object_lua_callbacks.end())
+                                {
+                                    continue;
+                                }
+                                callback_data = *callback_it;
                             }
 
-                            auto& callback_data = *callback_it;
                             callback_data.lua->registry().get_function_ref(callback_data.lua_callback_function_ref);
                             LuaType::auto_construct_object(*callback_data.lua, constructed_object);
                             callback_data.lua->call_function(1, 1);
@@ -6728,6 +6753,7 @@ Overloads:
 
                         if (!callbacks_to_remove.empty())
                         {
+                            std::lock_guard<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
                             std::erase_if(m_static_construct_object_lua_callbacks, [&](const LuaMod::LuaCancellableCallbackData& callback) {
                                 return callbacks_to_remove.contains(callback.callback_id);
                             });
@@ -6736,6 +6762,7 @@ Overloads:
                     else
                     {
                         // NOT on game thread - queue callbacks for later processing
+                        std::lock_guard<std::mutex> callbacks_guard{LuaMod::m_new_object_callbacks_mutex};
                         for (const auto& callback_data : m_static_construct_object_lua_callbacks)
                         {
                             if (object_class->GetNamePrivate().Equals(callback_data.instance_class_name) && object_class->GetOuterPrivate()->GetNamePrivate().Equals(callback_data.instance_class_outer_name))

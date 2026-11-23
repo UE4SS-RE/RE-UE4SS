@@ -162,6 +162,10 @@ namespace RC
         static inline std::vector<DelayedGameThreadAction> m_pending_delayed_game_thread_actions{};
         // Pending NotifyOnNewObject callbacks to be processed on game thread
         static inline std::vector<PendingNotifyOnNewObjectCallback> m_pending_notify_on_new_object_callbacks{};
+        // Guards m_static_construct_object_lua_callbacks and m_pending_notify_on_new_object_callbacks, and nothing else.
+        // Loading threads take only this lock in the StaticConstructObject hook. They must not wait for m_thread_actions_mutex: the game thread holds it
+        // while Lua runs, and Lua can wait for those threads (LoadAsset). Leaf lock: take no other lock and call no Lua function while holding it.
+        static inline std::mutex m_new_object_callbacks_mutex{};
         // Flag to track if we're currently iterating over action vectors
         static inline bool m_is_processing_actions{};
         static inline GameThreadExecutionMethod m_default_game_thread_method{GameThreadExecutionMethod::EngineTick};
