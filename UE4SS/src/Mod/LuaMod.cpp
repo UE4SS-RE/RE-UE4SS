@@ -814,29 +814,17 @@ namespace RC
         //}
     }
 
-    auto static make_async_state(LuaMod* mod, const LuaMadeSimple::Lua& lua) -> void
+    // Native mod lifecycle callbacks receive this legacy coroutine as a separate Lua stack.
+    // Pin it even if a script overwrites the historical AsyncThread global.
+    auto static make_legacy_async_state(LuaMod* mod, const LuaMadeSimple::Lua& lua) -> void
     {
         if (!mod->m_async_lua)
         {
             mod->m_async_lua = &lua.new_thread();
-
-            // Make the hook thread (which is just a separate Lua stack) be a global in its parent.
-            // This is needed because otherwise it will be GCd when we don't want it to.
-            lua_setglobal(lua.get_lua_state(), "AsyncThread");
-
-            // Commenting out until we switch to lua_newstate instead of lua_newthread.
-            // For the switch to happen, we need to be able to move or copy Lua types across lua_states which we can't do yet.
-            /*
-            mod->m_hook_lua->register_function("RegisterHook", [](const LuaMadeSimple::Lua& lua) -> int {
-                lua.throw_error("'RegisterHook' is not allowed from the game thread");
-                return 0;
-            });
-
-            mod->m_hook_lua->register_function("NotifyOnNewObject", [](const LuaMadeSimple::Lua& lua) -> int {
-                lua.throw_error("'NotifyOnNewObject' is not allowed in the game thread");
-                return 0;
-            });
-            //*/
+            lua_State* L = lua.get_lua_state();
+            lua_pushvalue(L, -1);
+            luaL_ref(L, LUA_REGISTRYINDEX);
+            lua_setglobal(L, "AsyncThread");
         }
     }
 
@@ -3055,102 +3043,18 @@ Overloads:
         });
 
         lua.register_function("ExecuteAsync", [](const LuaMadeSimple::Lua& lua) -> int {
-            std::string error_overload_not_found{R"(
-No overload found for function 'ExecuteAsync'.
-Overloads:
-#1: ExecuteAsync(LuaFunction Callback))"};
-
-            auto mod = get_mod_ref(lua);
-
-            if (!lua.is_function())
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
-            const int32_t lua_function_ref = lua.registry().make_ref();
-
-            mod->actions_lock();
-            mod->m_pending_actions.emplace_back(LuaMod::AsyncAction{lua_function_ref, LuaMod::ActionType::Immediate});
-            mod->actions_unlock();
-
-            static std::once_flag warning;
-            std::call_once(warning, [mod] {
-                Output::send<LogLevel::Warning>(STR("[{}] ExecuteAsync is deprecated. For game-thread work, use ExecuteInGameThread.\n"), mod->get_name());
-            });
-
-            return 0;
+            return luaL_error(lua.get_lua_state(), "ExecuteAsync was removed with the Lua async worker. For game-thread work, use ExecuteInGameThread.");
         });
 
         lua.register_function("ExecuteWithDelay", [](const LuaMadeSimple::Lua& lua) -> int {
-            std::string error_overload_not_found{R"(
-No overload found for function 'ExecuteWithDelay'.
-Overloads:
-#1: ExecuteWithDelay(integer DelayInMilliseconds, LuaFunction Callback))"};
-
-            if (!lua.is_integer())
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
-            int64_t delay = lua.get_integer();
-
-            if (!lua.is_function())
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
-            const int32_t lua_function_ref = lua.registry().make_ref();
-
-            auto mod = get_mod_ref(lua);
-
-            mod->actions_lock();
-            mod->m_pending_actions.emplace_back(LuaMod::AsyncAction{
-                    lua_function_ref,
-                    LuaMod::ActionType::Delayed,
-                    std::chrono::steady_clock::now(),
-                    delay,
-            });
-            mod->actions_unlock();
-
-            static std::once_flag warning;
-            std::call_once(warning, [mod] {
-                Output::send<LogLevel::Warning>(STR("[{}] ExecuteWithDelay is deprecated. For game-thread work, use ExecuteInGameThreadWithDelay.\n"), mod->get_name());
-            });
-            return 0;
+            return luaL_error(lua.get_lua_state(),
+                              "ExecuteWithDelay was removed with the Lua async worker. For game-thread work, use ExecuteInGameThreadWithDelay.");
         });
 
         lua.register_function("LoopAsync", [](const LuaMadeSimple::Lua& lua) -> int {
-            std::string error_overload_not_found{R"(
-No overload found for function 'LoopAsync'.
-Overloads:
-#1: LoopAsync(integer DelayInMilliseconds, LuaFunction Callback))"};
-
-            if (!lua.is_integer())
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
-            int64_t delay = lua.get_integer();
-
-            if (!lua.is_function())
-            {
-                throw std::runtime_error{error_overload_not_found};
-            }
-            const int32_t lua_function_ref = lua.registry().make_ref();
-
-            auto mod = get_mod_ref(lua);
-
-            mod->actions_lock();
-            mod->m_pending_actions.emplace_back(LuaMod::AsyncAction{
-                    lua_function_ref,
-                    LuaMod::ActionType::Loop,
-                    std::chrono::steady_clock::now(),
-                    delay,
-            });
-            mod->actions_unlock();
-
-            static std::once_flag warning;
-            std::call_once(warning, [mod] {
-                Output::send<LogLevel::Warning>(STR("[{}] LoopAsync is deprecated. For game-thread work, use LoopInGameThreadWithDelay and stop it with CancelDelayedAction.\n"), mod->get_name());
-            });
-
-            return 0;
+            return luaL_error(lua.get_lua_state(),
+                              "LoopAsync was removed with the Lua async worker. For game-thread work, use LoopInGameThreadWithDelay "
+                              "and cancel its handle with CancelDelayedAction.");
         });
 
         lua.register_function("RegisterProcessConsoleExecPreHook", [](const LuaMadeSimple::Lua& lua) -> int {
@@ -3745,14 +3649,7 @@ Overloads:
         });
 
         lua.register_function("GetAsyncThreadId", [](const LuaMadeSimple::Lua& lua) -> int {
-            std::string error_overload_not_found{R"(
-No overload found for function 'GetAsyncThreadId'.
-Overloads:
-#1: GetAsyncThreadId())"};
-
-            const auto mod = get_mod_ref(lua);
-            LuaType::ThreadId::construct(lua, mod->get_async_thread_id());
-
+            LuaType::ThreadId::construct(lua, std::thread::id{});
             return 1;
         });
 
@@ -3780,14 +3677,7 @@ Overloads:
         });
 
         lua.register_function("IsInAsyncThread", [](const LuaMadeSimple::Lua& lua) -> int {
-            std::string error_overload_not_found{R"(
-No overload found for function 'IsInAsyncThread'.
-Overloads:
-#1: IsInAsyncThread())"};
-
-            const auto mod = get_mod_ref(lua);
-            lua.set_bool(std::this_thread::get_id() == mod->get_async_thread_id());
-
+            lua.set_bool(false);
             return 1;
         });
 
@@ -4395,8 +4285,7 @@ Overloads:
                 LuaMod::ensure_process_event_hooked(mod);
             }
 
-            // Acquire mutex before ANY Lua state operations to prevent race conditions
-            // when async thread and game thread both access the same hook_lua state
+            // Serialize access to the hook coroutine while queuing the callback.
             std::lock_guard<std::recursive_mutex> guard{LuaMod::m_thread_actions_mutex};
 
             auto [hook_lua, lua_thread_registry_index] = make_hook_state(mod);
@@ -6070,8 +5959,7 @@ Overloads:
             prepare_mod(lua());
             make_main_state(this, lua());
             setup_lua_global_functions_main_state_only();
-            make_async_state(this, lua());
-            start_async_thread();
+            make_legacy_async_state(this, lua());
 
             m_is_started = true;
             fire_on_lua_start_for_cpp_mods();
@@ -6161,16 +6049,8 @@ Overloads:
     {
         Output::send(STR("Stopping mod '{}' for uninstall\n"), m_mod_name);
 
-        // Stop the async thread BEFORE acquiring the mutex to avoid deadlock
-        // (async thread's callbacks may need the mutex when calling ExecuteInGameThread)
-        if (m_async_thread.joinable())
-        {
-            m_async_thread.request_stop();
-            m_async_thread.join();
-        }
-
         // Wait for any batch of game-thread actions the game thread has already taken, and keep it from taking another until the Lua state is closed.
-        // Taken after the join and before m_thread_actions_mutex, like the hooks take it, so neither thread can hold one lock while waiting for the other.
+        // Acquire these locks in the same order as the game-thread hooks.
         std::lock_guard<std::recursive_mutex> execution_guard{LuaMod::m_game_thread_execution_mutex};
 
         // Now acquire mutex to safely modify shared data structures
@@ -6315,8 +6195,6 @@ Overloads:
         std::erase_if(g_hooked_script_function_data, [&](const std::unique_ptr<LuaUnrealScriptFunctionData>& item) {
             return item->mod == this;
         });
-
-        clear_delayed_actions();
     }
 
     auto LuaMod::lua() const -> const LuaMadeSimple::Lua&
@@ -7312,98 +7190,6 @@ Overloads:
             Output::send(STR("Enabling custom events\n"));
             Unreal::Hook::RegisterProcessInternalPostCallback(script_hook, {false, false, STR("UE4SS"), STR("LuaModImplScriptHook")});
         }
-    }
-
-    auto LuaMod::update_async() -> void
-    {
-        for (m_processing_events = true; m_processing_events && !m_async_thread.get_stop_token().stop_requested();)
-        {
-            if (!Unreal::UnrealInitializer::IsInitialized())
-            {
-                m_processing_events = false;
-                break;
-            }
-
-            if (m_pause_events_processing)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-                continue;
-            }
-
-            process_delayed_actions();
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-        m_processing_events = false;
-    }
-
-    auto LuaMod::process_delayed_actions() -> void
-    {
-        auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-
-        actions_lock();
-
-        m_delayed_actions.insert(m_delayed_actions.end(), std::make_move_iterator(m_pending_actions.begin()), std::make_move_iterator(m_pending_actions.end()));
-        m_pending_actions.clear();
-
-        actions_unlock();
-
-        m_delayed_actions.erase(std::remove_if(m_delayed_actions.begin(),
-                                               m_delayed_actions.end(),
-                                               [&](AsyncAction& action) -> bool {
-                                                   auto passed =
-                                                           now -
-                                                           std::chrono::duration_cast<std::chrono::milliseconds>(action.created_at.time_since_epoch()).count();
-                                                   auto duration_since_creation = (action.type == LuaMod::ActionType::Immediate || passed >= action.delay);
-                                                   if (duration_since_creation)
-                                                   {
-                                                       if (!Unreal::UnrealInitializer::IsInitialized())
-                                                       {
-                                                           return true;
-                                                       }
-                                                       bool result = true;
-                                                       try
-                                                       {
-                                                           async_lua()->registry().get_function_ref(action.lua_action_function_ref);
-                                                           if (action.type == LuaMod::ActionType::Loop)
-                                                           {
-                                                               async_lua()->call_function(0, 1);
-                                                               result = async_lua()->is_bool() && async_lua()->get_bool();
-                                                               action.created_at = std::chrono::steady_clock::now();
-                                                           }
-                                                           else
-                                                           {
-                                                               async_lua()->call_function(0, 0);
-                                                           }
-                                                       }
-                                                       catch (std::exception& e)
-                                                       {
-                                                           Output::send(STR("[{}] {}\n"),
-                                                                        ensure_str(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"),
-                                                                        ensure_str(e.what()));
-                                                       }
-                                                       catch (...)
-                                                       {
-                                                           Output::send(STR("[{}] Unknown exception\n"),
-                                                                        ensure_str(action.type == LuaMod::ActionType::Loop ? "LoopAsync" : "DelayedAction"));
-                                                       }
-
-                                                       return result;
-                                                   }
-                                                   else
-                                                   {
-                                                       return false;
-                                                   }
-                                               }),
-                                m_delayed_actions.end());
-    }
-
-    auto LuaMod::clear_delayed_actions() -> void
-    {
-        actions_lock();
-        m_pending_actions.clear();
-        m_delayed_actions.clear();
-        actions_unlock();
     }
 
     auto LuaMod::set_on_unload_callback(int32_t ref) -> void

@@ -12,13 +12,9 @@
 
 ```lua
 -- Output: false
-print(string.format("IsInAsyncThread: %s\n", IsInGameThread()))
+print(string.format("IsInGameThread: %s\n", IsInGameThread()))
 ExecuteInGameThread(function()
     -- Output: true
-    print(string.format("IsInGameThread: %s\n", IsInGameThread()))
-end)
-ExecuteAsync(function()
-    -- Output: false
     print(string.format("IsInGameThread: %s\n", IsInGameThread()))
 end)
 ```

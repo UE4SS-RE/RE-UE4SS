@@ -533,7 +533,8 @@ function GetCurrentThreadId() end
 ---@return ThreadId
 function GetMainModThreadId() end
 
----Returns a ThreadId object representing the id of the async thread for the Lua mod, i.e. where callbacks registered via ExecuteAsync, LoopAsync, etc is executed.
+---Returns an empty thread ID.
+---@deprecated
 ---@return ThreadId
 function GetAsyncThreadId() end
 
@@ -545,7 +546,8 @@ function GetGameThreadId() end
 ---@return boolean
 function IsInMainModThread() end
 
----Returns whether the current execution context is within the async Lua thread.
+---Always returns false.
+---@deprecated
 ---@return boolean
 function IsInAsyncThread() end
 
@@ -727,12 +729,12 @@ function RegisterConsoleCommandHandler(CommandName, Callback) end
 ---@param Callback fun(Cmd: string, CommandParts: table, Ar: FOutputDevice): boolean?
 function RegisterConsoleCommandGlobalHandler(CommandName, Callback) end
 
----Runs the callback on the mod's async worker. Use ExecuteInGameThread for game-thread work.
+---Raises a Lua error. Use ExecuteInGameThread for short game-thread callbacks.
 ---@deprecated
 ---@param Callback fun()
 function ExecuteAsync(Callback) end
 
----Runs the callback on the mod's async worker after a delay. Use ExecuteInGameThreadWithDelay for game-thread work.
+---Raises a Lua error. Use ExecuteInGameThreadWithDelay for delayed game-thread callbacks.
 ---@deprecated
 ---@param DelayInMilliseconds integer
 ---@param Callback fun()
@@ -774,7 +776,7 @@ function FindObject(InClass, InOuter, Name, ExactClass) end
 ---@return UObject[]
 function FindObjects(NumObjectsToFind, ClassName, ObjectShortName, RequiredFlags, BannedFlags, bExactClass) end
 
----Repeats on the mod's async worker until the callback returns true. For game-thread work, use LoopInGameThreadWithDelay and cancel its handle with CancelDelayedAction.
+---Raises a Lua error. Use LoopInGameThreadWithDelay for repeating game-thread callbacks and stop the loop with CancelDelayedAction.
 ---@deprecated
 ---@param DelayInMilliseconds integer
 ---@param Callback fun(): boolean

@@ -41,13 +41,6 @@ namespace RC
         LuaMadeSimple::Lua* m_async_lua{};
 
       public:
-        enum class ActionType
-        {
-            Immediate,
-            Delayed,
-            Loop
-        };
-
         struct SimpleLuaAction
         {
             const LuaMadeSimple::Lua* lua;
@@ -84,19 +77,6 @@ namespace RC
         };
 
         static inline int64_t m_next_delayed_action_handle{1};
-
-        struct AsyncAction
-        {
-            // TODO: Use LuaMadeSimple instead of lua_State*
-            // Not doing it now because the copy constructor gets implicitly deleted which is needed for erase & remove_if
-            // lua_State* lua_state;
-            int32_t lua_action_function_ref{};
-            ActionType type{};
-            std::chrono::time_point<std::chrono::steady_clock> created_at{};
-            int64_t delay{};
-        };
-        std::vector<AsyncAction> m_pending_actions{};
-        std::vector<AsyncAction> m_delayed_actions{};
 
         struct SharedLuaVariable
         {
@@ -192,24 +172,14 @@ namespace RC
         static inline std::recursive_mutex m_game_thread_execution_mutex{};
 
       private:
-        std::jthread m_async_thread;
         std::thread::id m_main_thread_id{};
-        bool m_processing_events{};
-        bool m_pause_events_processing{};
         bool m_is_process_event_hooked{};
         static inline bool m_is_engine_tick_hooked{};
-        std::mutex m_actions_lock{};
         int32_t m_on_unload_lua_function_ref{LUA_NOREF};
 
       public:
         LuaMod(UE4SSProgram&, StringType&& mod_name, StringType&& mod_path);
         ~LuaMod() override = default;
-
-      private:
-        auto start_async_thread() -> void
-        {
-            m_async_thread = std::jthread{&Mod::update_async, this};
-        }
 
       private:
         static auto ensure_engine_tick_hooked() -> void;
@@ -239,18 +209,9 @@ namespace RC
 
         RC_UE4SS_API auto get_scripts_path() const -> const std::filesystem::path& { return m_scripts_path; }
 
-        RC_UE4SS_API auto actions_lock() -> void
-        {
-            m_actions_lock.lock();
-        }
-        RC_UE4SS_API auto actions_unlock() -> void
-        {
-            m_actions_lock.unlock();
-        }
-
         [[nodiscard]] RC_UE4SS_API auto get_async_thread_id() const -> std::thread::id
         {
-            return m_async_thread.get_id();
+            return {};
         }
 
         [[nodiscard]] RC_UE4SS_API auto get_main_thread_id() const -> std::thread::id
@@ -264,12 +225,6 @@ namespace RC
 
         auto static global_uninstall() -> void;
 
-        // Async update
-        // Used when the main update function would block other mods from executing their scripts
-        auto update_async() -> void override;
-
-        auto process_delayed_actions() -> void;
-        auto clear_delayed_actions() -> void;
         auto set_on_unload_callback(int32_t) -> void;
 
       public:

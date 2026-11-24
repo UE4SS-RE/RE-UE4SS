@@ -281,10 +281,10 @@ This is an overall list of API definitions available in UE4SS. For more readable
         - If the callback returns true, no further handlers will be called for this command.
 
     ExecuteAsync(function Callback)
-        - Deprecated. Runs the callback on the mod's async worker. Use ExecuteInGameThread for game-thread work.
+        - Raises a Lua error. Use ExecuteInGameThread for short game-thread callbacks.
 
     ExecuteWithDelay(integer DelayInMilliseconds, function Callback)
-        - Deprecated. Runs the callback on the mod's async worker after a delay. Use ExecuteInGameThreadWithDelay for game-thread work.
+        - Raises a Lua error. Use ExecuteInGameThreadWithDelay for delayed game-thread callbacks.
 
     RegisterConsoleCommandHandler(string CommandName, function Callback)
         - Executes the provided Lua function whenever the CommandName is entered into the UE console.
@@ -311,7 +311,7 @@ This is an overall list of API definitions available in UE4SS. For more readable
         - Returns a table of UObject derivatives
 
     LoopAsync(integer DelayInMilliseconds, function Callback)
-        - Deprecated. Repeats on the mod's async worker until the callback returns true. For game-thread work, use LoopInGameThreadWithDelay and cancel its handle with CancelDelayedAction.
+        - Raises a Lua error. Use LoopInGameThreadWithDelay for repeating game-thread callbacks and stop the loop with CancelDelayedAction.
     
     IterateGameDirectories() -> table
         - Returns a table of all game directories.

@@ -2,7 +2,7 @@ v4.1.0
 ==============
 TBD
 
-**Important:** There is currently no important information for this release.
+**Breaking Lua API change.** UE4SS no longer starts an async worker for each Lua mod. Mods that call `ExecuteAsync`, `ExecuteWithDelay`, or `LoopAsync` must migrate.
 
 > [!NOTE]
 > One of our maintainers, Narknon, is developing a modding friendly sandbox adventure game in UE 5.8.
@@ -39,9 +39,11 @@ TBD
 
 ### Lua API
 
-`ExecuteAsync`, `ExecuteWithDelay`, and `LoopAsync` are deprecated. Each logs a warning on its first use per process. Existing callbacks still run on the mod's async worker. For game-thread work, use `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, and `LoopInGameThreadWithDelay`, respectively.
+The former async scheduling functions raise a Lua error naming the replacement. For short game-thread callbacks, use `ExecuteInGameThread`, `ExecuteInGameThreadWithDelay`, and `LoopInGameThreadWithDelay`, respectively. Use `CancelDelayedAction(handle)` to stop a repeating timer. `IsInAsyncThread()` always returns `false` and `GetAsyncThreadId()` returns an empty thread ID.
 
 ### C++ API
+
+Native Lua lifecycle callbacks keep their `async_lua` parameter as a separate coroutine. Native mods that access `LuaMod` internals should rebuild against this version. The legacy action queues and their lock methods have been removed.
 
 ### BPModLoader
 

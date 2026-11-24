@@ -630,9 +630,9 @@ end
 
 #### ExecuteAsync, ExecuteWithDelay and LoopAsync
 
-These three functions are deprecated. They still run callbacks on the mod's async worker. The following alternatives schedule callbacks on the Unreal game thread. Keep that work short. Moving blocking I/O or a long computation into a game-thread callback can stall a frame.
+UE4SS no longer starts a worker thread for each Lua mod. Calling any of these three functions raises a Lua error naming the replacement. An unhandled error in `main.lua` stops the rest of that script from loading. The following alternatives schedule callbacks on the Unreal game thread. Keep that work short. Moving blocking I/O or a long computation into a game-thread callback can stall a frame.
 
-| Deprecated call | For game-thread work |
+| Removed worker call | For game-thread work |
 |--------------|--------------|
 | `ExecuteAsync(callback)` | `ExecuteInGameThread(callback)` |
 | `ExecuteWithDelay(delayMs, callback)` | `ExecuteInGameThreadWithDelay(delayMs, callback)` |
@@ -651,6 +651,8 @@ loopHandle = LoopInGameThreadWithDelay(1000, function()
     end
 end)
 ```
+
+`IsInAsyncThread()` always returns `false`, and `GetAsyncThreadId()` returns an empty thread ID. Native Lua start and stop callbacks still receive a separate Lua coroutine in the `async_lua` parameter.
 
 For pausing, resuming, or querying a timer, see [Delayed Actions](./lua-api/global-functions/delayedactions.md).
 

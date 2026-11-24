@@ -1630,7 +1630,7 @@ namespace RC::GUI
         }
         if (lua_mod && lua_mod->m_async_lua && lua_mod->m_async_lua->get_lua_state() == L)
         {
-            return to_string(lua_mod->get_name()) + " (async)";
+            return to_string(lua_mod->get_name()) + " (legacy async coroutine)";
         }
 
         return "<unknown>";
@@ -1806,7 +1806,7 @@ namespace RC::GUI
                 }
                 if (lua_mod->m_async_lua)
                 {
-                    all_states.emplace_back(std::tuple{lua_mod->m_async_lua->get_lua_state(), LuaStateType::Async, mod_name}, mod_name + " [async]");
+                    all_states.emplace_back(std::tuple{lua_mod->m_async_lua->get_lua_state(), LuaStateType::Async, mod_name}, mod_name + " [legacy async coroutine]");
                 }
             }
         }
