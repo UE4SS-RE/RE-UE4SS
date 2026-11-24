@@ -781,7 +781,7 @@ namespace RC::LuaType
             if (params.lua.is_userdata(params.stored_at_index))
             {
                 // StructData as userdata
-                auto& lua_scriptstruct = params.lua.get_userdata<UScriptStruct>().get_local_cpp_object();
+                auto& lua_scriptstruct = params.lua.get_userdata<UScriptStruct>(params.stored_at_index).get_local_cpp_object();
                 if (lua_scriptstruct.script_struct == script_struct)
                 {
                     struct_property->CopyCompleteValue(params.data, lua_scriptstruct.get_data_ptr());
