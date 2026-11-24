@@ -152,6 +152,27 @@ namespace RC::File
         }
     }
 
+    // Compare file identities rather than paths to prevent accidental
+    // truncation or modification of the source file during serialization.
+    static auto check_serialization_destination(const BY_HANDLE_FILE_INFORMATION& source_info, HANDLE destination) -> unsigned long long
+    {
+        BY_HANDLE_FILE_INFORMATION destination_info{};
+        if (!GetFileInformationByHandle(destination, &destination_info))
+        {
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::check_serialization_destination] Unable to retrieve destination file information: {}",
+                                                  to_string(SysError(GetLastError())).c_str()))
+        }
+
+        if (source_info.dwVolumeSerialNumber == destination_info.dwVolumeSerialNumber &&
+            source_info.nFileIndexLow == destination_info.nFileIndexLow &&
+            source_info.nFileIndexHigh == destination_info.nFileIndexHigh)
+        {
+            THROW_INTERNAL_FILE_ERROR("[WinFile::check_serialization_destination] Source and serialization file must be distinct")
+        }
+
+        return (static_cast<unsigned long long>(destination_info.nFileSizeHigh) << 32) | destination_info.nFileSizeLow;
+    }
+
     // Serialization Format (Windows):
     // volume_serial_number
     // file_index_low
@@ -180,25 +201,36 @@ namespace RC::File
                                                   to_string(SysError(GetLastError())).c_str()))
         }
 
-        // Replace any existing cache before writing a fresh header.
-        auto cache_file = open(m_serialization_file_path_and_name, OpenFor::Writing, OverwriteExistingFile::Yes);
-        cache_file.close();
+        // Open without truncation and check the destination before modifying it.
+        auto cache_file = open(m_serialization_file_path_and_name, OpenFor::Writing, OverwriteExistingFile::No, CreateIfNonExistent::Yes);
+        check_serialization_destination(file_info, cache_file.get_raw_handle());
+
+        LARGE_INTEGER beginning{};
+        if (!SetFilePointerEx(cache_file.get_raw_handle(), beginning, nullptr, FILE_BEGIN) ||
+            !SetEndOfFile(cache_file.get_raw_handle()))
+        {
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::serialize_identifying_properties] Unable to truncate serialization file: {}",
+                                                  to_string(SysError(GetLastError())).c_str()))
+        }
 
         reset_serialization_state();
 
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.dwVolumeSerialNumber}, true);
+        const unsigned long header[]{
+                file_info.dwVolumeSerialNumber,
+                file_info.nFileIndexLow,
+                file_info.nFileIndexHigh,
+                file_info.ftCreationTime.dwLowDateTime,
+                file_info.ftCreationTime.dwHighDateTime,
+                file_info.ftLastWriteTime.dwLowDateTime,
+                file_info.ftLastWriteTime.dwHighDateTime,
+                file_info.nFileSizeLow,
+                file_info.nFileSizeHigh,
+        };
+        static_assert(sizeof(header) == sizeof(IdentifyingProperties));
+        static_assert(sizeof(header) <= cache_data_size);
 
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.nFileIndexLow}, true);
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.nFileIndexHigh}, true);
-
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.ftCreationTime.dwLowDateTime}, true);
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.ftCreationTime.dwHighDateTime}, true);
-
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.ftLastWriteTime.dwLowDateTime}, true);
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.ftLastWriteTime.dwHighDateTime}, true);
-
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.nFileSizeLow}, true);
-        serialize_item(GenericItemData{.data_type = GenericDataType::UnsignedLong, .data_ulong = file_info.nFileSizeHigh}, true);
+        write_to_file(cache_file.get_underlying_type(), header, sizeof(header));
+        cache_file.close();
     }
 
     auto WinFile::deserialize_identifying_properties() -> void
@@ -230,9 +262,14 @@ namespace RC::File
     {
         if (!m_has_cached_identifying_properties)
         {
-            // A missing or truncated cache doesn't match, as on Linux.
-            if (!std::filesystem::exists(m_serialization_file_path_and_name) ||
-                std::filesystem::file_size(m_serialization_file_path_and_name) < sizeof(IdentifyingProperties))
+            // Missing, truncated or oversized caches are invalid and may be regenerated.
+            if (!std::filesystem::exists(m_serialization_file_path_and_name))
+            {
+                return false;
+            }
+
+            const auto cache_bytes = std::filesystem::file_size(m_serialization_file_path_and_name);
+            if (cache_bytes < sizeof(IdentifyingProperties) || cache_bytes > cache_data_size)
             {
                 return false;
             }
@@ -302,12 +339,6 @@ namespace RC::File
         }
     }
 
-    template <typename DataType>
-    auto serialize_typed_item(DataType data, Handle& output_file) -> void
-    {
-        write_to_file(output_file.get_underlying_type(), &data, sizeof(DataType));
-    }
-
     auto WinFile::serialize_item(const GenericItemData& data, bool is_internal_item) -> void
     {
         if (m_serialization_file_path_and_name.empty())
@@ -316,33 +347,56 @@ namespace RC::File
                     "[WinFile::serialize_item]: Path & file name for serialization file is empty, please call 'set_serialization_output_file'")
         }
 
+        const void* value{};
+        DWORD data_size{};
+        switch (data.data_type)
+        {
+        case GenericDataType::UnsignedLong:
+            value = &data.data_ulong;
+            data_size = sizeof(data.data_ulong);
+            break;
+        case GenericDataType::SignedLong:
+            value = &data.data_long;
+            data_size = sizeof(data.data_long);
+            break;
+        case GenericDataType::UnsignedLongLong:
+            value = &data.data_ulonglong;
+            data_size = sizeof(data.data_ulonglong);
+            break;
+        case GenericDataType::SignedLongLong:
+            value = &data.data_longlong;
+            data_size = sizeof(data.data_longlong);
+            break;
+        default:
+            THROW_INTERNAL_FILE_ERROR("[WinFile::serialize_item] Unsupported integer type")
+        }
+
         if (!serialization_file_exists() && !is_internal_item)
         {
-            // If the serialization cache file doesn't exist & this is not an identifying property item,
-            // then we need to serialize the identifying properties before continuing
+            // Create the identifying header before appending the first user record.
             serialize_identifying_properties();
+        }
+
+        BY_HANDLE_FILE_INFORMATION source_info{};
+        if (!GetFileInformationByHandle(m_file, &source_info))
+        {
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::serialize_item] Unable to retrieve source file information: {}",
+                                                  to_string(SysError(GetLastError())).c_str()))
+        }
+
+        Handle serialization_file = open(m_serialization_file_path_and_name, OpenFor::Appending, OverwriteExistingFile::No, CreateIfNonExistent::Yes);
+        const auto cache_bytes = check_serialization_destination(source_info, serialization_file.get_raw_handle());
+
+        // Include the identifying header in the capacity limit and reject
+        // records that would exceed the reader's usable cache space.
+        if (cache_bytes > cache_data_size || data_size > cache_data_size - cache_bytes)
+        {
+            THROW_INTERNAL_FILE_ERROR("[WinFile::serialize_item] Serialization cache capacity exceeded")
         }
 
         // Reload on the next read so the appended item is visible; keep the cursor and header.
         m_has_cache_in_memory = false;
-        Handle serialization_file = open(m_serialization_file_path_and_name, OpenFor::Appending, OverwriteExistingFile::No, CreateIfNonExistent::Yes);
-
-        switch (data.data_type)
-        {
-        case GenericDataType::UnsignedLong:
-            serialize_typed_item<unsigned long>(data.data_ulong, serialization_file);
-            break;
-        case GenericDataType::SignedLong:
-            serialize_typed_item<signed long>(data.data_long, serialization_file);
-            break;
-        case GenericDataType::UnsignedLongLong:
-            serialize_typed_item<unsigned long long>(data.data_ulonglong, serialization_file);
-            break;
-        case GenericDataType::SignedLongLong:
-            serialize_typed_item<signed long long>(data.data_longlong, serialization_file);
-            break;
-        }
-
+        write_to_file(serialization_file.get_underlying_type(), value, data_size);
         serialization_file.close();
     }
 
@@ -358,7 +412,7 @@ namespace RC::File
 
             Handle cache_file = open(m_serialization_file_path_and_name);
 
-            // A cache that fills the buffer may have been cut short, so reject it rather than read part of it.
+            // Read up to the cache capacity, then check for excess data.
             DWORD bytes_read{};
             auto res = ReadFile(cache_file.get_raw_handle(), &m_cache, cache_data_size, &bytes_read, nullptr);
             if (res == 0)
@@ -368,7 +422,18 @@ namespace RC::File
             }
             if (bytes_read == cache_data_size)
             {
-                THROW_INTERNAL_FILE_ERROR("[WinFile::get_serialized_item] Serialization cache is too large")
+                unsigned char extra_byte{};
+                DWORD extra_bytes_read{};
+                if (!ReadFile(cache_file.get_raw_handle(), &extra_byte, sizeof(extra_byte), &extra_bytes_read, nullptr))
+                {
+                    THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::get_serialized_item] Unable to check cache size: {}",
+                                                          to_string(SysError(GetLastError())).c_str()))
+                }
+
+                if (extra_bytes_read != 0)
+                {
+                    THROW_INTERNAL_FILE_ERROR("[WinFile::get_serialized_item] Serialization cache is too large")
+                }
             }
 
             cache_file.close();
@@ -502,6 +567,12 @@ namespace RC::File
         {
             write_to_file(*this, string_to_write.data(), 0);
             return;
+        }
+
+        // WideCharToMultiByte accepts an int-sized input length.
+        if (string_to_write.size() > static_cast<size_t>(std::numeric_limits<int>::max()))
+        {
+            THROW_INTERNAL_FILE_ERROR("[WinFile::write_string_to_file] String exceeds UTF-8 conversion input limit")
         }
 
         int string_size =
@@ -717,6 +788,12 @@ namespace RC::File
                                           to_string(SysError(GetLastError())).c_str()))
             }
 
+            if (file_size.QuadPart <= 0 ||
+                static_cast<unsigned long long>(file_size.QuadPart) > std::numeric_limits<size_t>::max())
+            {
+                THROW_INTERNAL_FILE_ERROR("[WinFile::memory_map] File size is outside the supported mapping range.")
+            }
+
             // Allocate metadata before acquiring the Windows mapping handle.
             // Allocation failure must not leave native resources stranded.
             auto mapping_state = std::make_unique<WinFileMappingState>();
@@ -733,7 +810,7 @@ namespace RC::File
         }
 
         auto* mapping_state = reinterpret_cast<WinFileMappingState*>(m_memory_map);
-        mapping_state->view = static_cast<uint8_t*>(MapViewOfFile(m_map_handle, mapping_desired_access, 0, 0, 0));
+        mapping_state->view = static_cast<uint8_t*>(MapViewOfFile(m_map_handle, mapping_desired_access, 0, 0, mapping_state->size));
         if (!mapping_state->view)
         {
             THROW_INTERNAL_FILE_ERROR(fmt::format("[WinFile::memory_map] Tried to memory map file but 'MapViewOfFile' returned {}",
@@ -791,6 +868,10 @@ namespace RC::File
 
         WinFile file{};
 
+        // Initialise potentially throwing C++ state before acquiring the native handle.
+        file.m_file_path_and_name = file_name_and_path;
+        file.m_open_properties = open_properties;
+
         // This very badly named API may create a new file or it may not but it will always open a file (unless there's an error)
         if constexpr (sizeof(CharType) > 1)
         {
@@ -821,9 +902,7 @@ namespace RC::File
                                                   open_type, file_name_and_path.string(), to_string(SysError(GetLastError())).c_str()))
         }
 
-        file.m_file_path_and_name = file_name_and_path;
         file.set_is_file_open(true);
-        file.m_open_properties = open_properties;
 
         return file;
     }

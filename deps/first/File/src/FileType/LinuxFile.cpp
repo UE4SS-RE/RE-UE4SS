@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -30,9 +31,7 @@ namespace RC::File
     // calls without losing the error reported by an earlier failure.
     static auto errno_string(int error_code = errno) -> std::string
     {
-        char buf[256]{};
-        // GNU strerror_r may return a pointer to a static string instead of filling buf
-        return std::string{strerror_r(error_code, buf, sizeof(buf))};
+        return std::error_code{error_code, std::generic_category()}.message();
     }
 
     // Reads exactly byte_count bytes. Returns false if EOF is reached early.
@@ -258,7 +257,8 @@ namespace RC::File
             THROW_INTERNAL_FILE_ERROR("[LinuxFile::load_serialization_cache] Serialization file path is empty")
         }
 
-        const int raw_fd = ::open(m_serialization_file_path_and_name.c_str(), O_RDONLY | O_CLOEXEC);
+        // Avoid blocking on a FIFO before validating the file type.
+        const int raw_fd = ::open(m_serialization_file_path_and_name.c_str(), O_RDONLY | O_CLOEXEC | O_NONBLOCK);
         if (raw_fd < 0)
         {
             if (errno == ENOENT)
@@ -349,8 +349,20 @@ namespace RC::File
                                                static_cast<std::int64_t>(file_info.st_mtim.tv_sec),
                                                static_cast<std::int64_t>(file_info.st_mtim.tv_nsec),
                                                static_cast<std::int64_t>(file_info.st_size)};
+        auto output = open(m_serialization_file_path_and_name, OpenFor::Writing, OverwriteExistingFile::No, CreateIfNonExistent::Yes);
+        // Compare file identities rather than paths to prevent accidental
+        // truncation or modification of the source file during serialization.
+        if (is_same_as(output.get_underlying_type()))
+        {
+            THROW_INTERNAL_FILE_ERROR("[LinuxFile::serialize_identifying_properties] Source and serialization file must be distinct")
+        }
+
         reset_serialization_state();
-        auto output = open(m_serialization_file_path_and_name, OpenFor::Writing, OverwriteExistingFile::Yes);
+        if (::ftruncate(output.get_underlying_type().get_file(), 0) != 0)
+        {
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[LinuxFile::serialize_identifying_properties] ftruncate failed: {}", errno_string()))
+        }
+
         write_to_file(output.get_underlying_type(), &properties, sizeof(properties));
         output.close();
     }
@@ -436,6 +448,11 @@ namespace RC::File
         auto cache_bytes = std::exchange(m_cache_bytes, {});
         const auto cached_properties = std::exchange(m_cached_properties, std::nullopt);
         auto output = open(m_serialization_file_path_and_name, OpenFor::Appending);
+        if (is_same_as(output.get_underlying_type()))
+        {
+            THROW_INTERNAL_FILE_ERROR("[LinuxFile::serialize_item] Source and serialization file must be distinct")
+        }
+
         write_to_file(output.get_underlying_type(), value, sizeof(std::uint64_t));
         struct stat file_info{};
         const bool size_known = ::fstat(output.get_underlying_type().get_file(), &file_info) == 0;
@@ -670,8 +687,9 @@ namespace RC::File
         // the existing view rather than creating another mapping and
         // losing the address required by munmap() during close.
         //
-        // The mapping remains valid until the file is closed. It does not
-        // automatically resize if the underlying file changes.
+        // The mapping is retained until the file is closed and does not
+        // automatically resize. Truncating the backing file can cause
+        // SIGBUS when accessing pages beyond its new end.
         if (m_memory_map)
         {
             return std::span(m_memory_map, m_map_size);
@@ -754,26 +772,34 @@ namespace RC::File
         // afterwards, which would introduce a descriptor-inheritance race.
         flags |= O_CLOEXEC;
 
-        if (open_properties.overwrite_existing_file == OverwriteExistingFile::Yes)
-        {
-            create_all_directories(file_name_and_path);
-            flags |= O_CREAT | O_TRUNC;
-        }
-        else if (open_properties.create_if_non_existent == CreateIfNonExistent::Yes)
-        {
-            create_all_directories(file_name_and_path);
-            flags |= O_CREAT;
-        }
-
         LinuxFile file{};
+
+        // Anchor the pathname so later operations are independent of changes
+        // to the working directory. Preserve symbolic link semantics.
+        std::error_code path_error;
+        file.m_file_path_and_name = std::filesystem::absolute(file_name_and_path, path_error);
+        if (path_error)
+        {
+            THROW_INTERNAL_FILE_ERROR(fmt::format("[LinuxFile::open_file] Unable to resolve absolute path: {}", path_error.message()))
+        }
 
         // Initialise potentially throwing C++ state before acquiring the
         // descriptor. Once open() succeeds, only non-throwing operations
         // and the non-throwing move constructor remain.
-        file.m_file_path_and_name = file_name_and_path;
         file.m_open_properties = open_properties;
 
-        file.set_file(::open(file_name_and_path.c_str(), flags, 0644));
+        if (open_properties.overwrite_existing_file == OverwriteExistingFile::Yes)
+        {
+            create_all_directories(file.m_file_path_and_name);
+            flags |= O_CREAT | O_TRUNC;
+        }
+        else if (open_properties.create_if_non_existent == CreateIfNonExistent::Yes)
+        {
+            create_all_directories(file.m_file_path_and_name);
+            flags |= O_CREAT;
+        }
+
+        file.set_file(::open(file.m_file_path_and_name.c_str(), flags, 0644));
 
         if (file.get_file() < 0)
         {
