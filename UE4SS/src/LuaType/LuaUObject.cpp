@@ -1994,10 +1994,11 @@ namespace RC::LuaType
                 Unreal::UObject* obj = nullptr;
                 if (params.lua.is_userdata(-1))
                 {
-                    const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(-1);
+                    // Keep the value on the stack, so that discard_value(-1) below pops it whether or not it was a userdata
+                    const auto& lua_object = params.lua.get_userdata<LuaType::UObject>(-1, true);
                     obj = lua_object.get_remote_cpp_object();
                 }
-                params.lua.discard_value();
+                params.lua.discard_value(-1);
 
                 lua_pushstring(params.lua.get_lua_state(), "FunctionName");
                 lua_rawget(params.lua.get_lua_state(), adjusted_index);
@@ -2005,10 +2006,11 @@ namespace RC::LuaType
                 Unreal::FName fname = NAME_None;
                 if (params.lua.is_userdata(-1))
                 {
-                    auto& lua_fname = params.lua.get_userdata<LuaType::FName>(-1);
+                    // Kept on the stack for the same reason as Object above
+                    auto& lua_fname = params.lua.get_userdata<LuaType::FName>(-1, true);
                     fname = lua_fname.get_local_cpp_object();
                 }
-                params.lua.discard_value();
+                params.lua.discard_value(-1);
 
                 // Bind the delegate - this modifies the existing FWeakObjectPtr which calls
                 // the engine's assignment operator that will allocate serial numbers
