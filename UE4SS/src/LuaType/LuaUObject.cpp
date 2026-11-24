@@ -900,8 +900,11 @@ namespace RC::LuaType
 
             size_t array_element_size = inner->GetElementSize();
 
+            // The table is at stored_at_index, which is the top of the stack for a struct's field, not index 1
+            int table_index = lua_absindex(params.lua.get_lua_state(), params.stored_at_index);
+
             auto array = new (params.data) Unreal::FScriptArray{};
-            size_t table_length = lua_rawlen(params.lua.get_lua_state(), 1);
+            size_t table_length = lua_rawlen(params.lua.get_lua_state(), table_index);
             bool has_elements = table_length > 0;
 
             size_t element_index{0};
@@ -909,7 +912,7 @@ namespace RC::LuaType
             if (has_elements)
             {
 
-                params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+                params.lua.for_each_in_table(table_index, [&](LuaMadeSimple::LuaTableReference table) -> bool {
                     // Skip this table entry if the key wasn't numerical, who knows what the user put in their script
                     if (!table.key.is_integer())
                     {
@@ -946,13 +949,10 @@ namespace RC::LuaType
                 // to_array->SetArrayMax(0);
             }
 
-            // Remove the table from the stack to remain consistent to the pusher system, if there were no elements
-            // Otherwise it get removed in the end of for_each_in_table loop
+            // Remove the table from the stack, as every pusher must do with its value
+            // The for_each_in_table overload used above leaves it there
             // Other systems might rely on this behavior
-            if (!has_elements)
-            {
-                params.lua.discard_value();
-            }
+            params.lua.discard_value(table_index);
         };
 
         auto lua_to_memory = [&]() {
@@ -1111,10 +1111,10 @@ namespace RC::LuaType
                 }
             };
             
-            // The table is at params.stored_at_index
-            // We need to ensure it's accessible for iteration
-            
-            params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+            // The table is at stored_at_index, which is the top of the stack for a struct's field, not index 1
+            int table_index = lua_absindex(params.lua.get_lua_state(), params.stored_at_index);
+
+            params.lua.for_each_in_table(table_index, [&](LuaMadeSimple::LuaTableReference table) -> bool {
                 // Prepare temporary storage for the element
                 Unreal::TArray<Unreal::uint8> element_data{};
                 element_data.Init(0, info.layout.Size);
@@ -1152,7 +1152,11 @@ namespace RC::LuaType
                         
                 return false;
             });
-            
+
+            // Remove the table from the stack, as every pusher must do with its value
+            // The for_each_in_table overload used above leaves it there
+            params.lua.discard_value(table_index);
+
             // Rehash the set for better performance
             set->Rehash(info.layout,
                        [&](const void* src) -> Unreal::uint32 {
@@ -1321,7 +1325,10 @@ namespace RC::LuaType
 
             auto map = new(params.data) Unreal::FScriptMap{};
 
-            params.lua.for_each_in_table([&](LuaMadeSimple::LuaTableReference table) -> bool {
+            // The table is at stored_at_index, which is the top of the stack for a struct's field, not index 1
+            int table_index = lua_absindex(params.lua.get_lua_state(), params.stored_at_index);
+
+            params.lua.for_each_in_table(table_index, [&](LuaMadeSimple::LuaTableReference table) -> bool {
                 params.lua.insert_value(-2);
                 params.lua.insert_value(-1);
 
@@ -1347,6 +1354,10 @@ namespace RC::LuaType
 
                 return false;
             });
+
+            // Remove the table from the stack, as every pusher must do with its value
+            // The for_each_in_table overload used above leaves it there
+            params.lua.discard_value(table_index);
 
             map->Rehash(info.layout,
                         [&](const void* src) -> Unreal::uint32 {

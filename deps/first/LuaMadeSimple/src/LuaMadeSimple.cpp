@@ -850,37 +850,51 @@ namespace RC::LuaMadeSimple
     {
         ++m_num_tables_being_iterated;
 
-        // If there are other values on the stack after the table then everything break
-        // So lets make sure the table is at the top of the stack
-        // 1: table (original table)
+        // This overload isn't told where its table is
+        // It assumes index 1, or index -2 when called from inside another of its own iterations
+        bool is_nested = m_num_tables_being_iterated > 1;
+        for_each_in_table(is_nested ? -2 : 1, callable);
+        if (!is_nested)
+        {
+            lua_remove(get_lua_state(), 1);
+        }
 
-        // If we're already iterating at able then the table will be at index -2 instead of at index 1
-        lua_pushvalue(get_lua_state(), m_num_tables_being_iterated > 1 ? -2 : 1);
-        // 1: table (original table)
-        // 2: table  (original table, dupe)
+        --m_num_tables_being_iterated;
+    }
+
+    auto Lua::for_each_in_table(int32_t table_index, const Lua::ForEachInTableCallable& callable) const -> void
+    {
+        // Make the index absolute before anything is pushed, so a negative index keeps pointing at the caller's table
+        table_index = lua_absindex(get_lua_state(), table_index);
+
+        // Copy the table to the top of the stack, so lua_next can use it at index -2
+        // table_index: table (original table)
+        lua_pushvalue(get_lua_state(), table_index);
+        // table_index: table (original table)
+        // -1: table (original table, dupe)
 
         // Put nil on the top of the stack for lua_next
         lua_pushnil(get_lua_state());
-        // 1: table (original table)
-        // 2: table (original table, dupe)
-        // 3: nil (key)
+        // table_index: table (original table)
+        // -2: table (original table, dupe)
+        // -1: nil (key)
 
         // Stack index -2 = table
         while (lua_next(get_lua_state(), -2) != 0)
         {
-            // 1: table (original table)
-            // 2: table  (original table, dupe)
-            // 3: number (key)
-            // 4: table (value)
+            // table_index: table (original table)
+            // -3: table (original table, dupe)
+            // -2: number (key)
+            // -1: table (value)
 
             // Put the table key at the top of the stack
             // This is to prevent lua_next from getting confused if the key is a number
             lua_pushvalue(get_lua_state(), -2);
-            // 1: table (original table)
-            // 2: table  (original table, dupe)
-            // 3: number (key)
-            // 4: table (value)
-            // 5: number (key)
+            // table_index: table (original table)
+            // -4: table (original table, dupe)
+            // -3: number (key)
+            // -2: table (value)
+            // -1: number (key)
 
             // No we have access to the table key at index -1 and the table value at -2
             // It's up to the 'callable' to fetch the key/value from the stack
@@ -890,29 +904,21 @@ namespace RC::LuaMadeSimple
             if (callable(table))
             {
                 lua_pop(get_lua_state(), 3);
-                // 1: table (original table)
-                // 2: table  (original table, dupe)
+                // table_index: table (original table)
+                // -1: table (original table, dupe)
                 break;
             }
             else
             {
                 lua_pop(get_lua_state(), 2);
-                // 1: table (original table)
-                // 2: table  (original table, dupe)
-                // 3: number (key)
+                // table_index: table (original table)
+                // -2: table (original table, dupe)
+                // -1: number (key)
             }
         }
 
         lua_pop(get_lua_state(), 1);
-        // 1: table (original table)
-        if (m_num_tables_being_iterated <= 1)
-        {
-            lua_remove(get_lua_state(), 1);
-        }
-
-        // 1: stack empty
-
-        --m_num_tables_being_iterated;
+        // table_index: table (original table)
     }
 
     auto Lua::is_function(int32_t force_index) const -> bool

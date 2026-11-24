@@ -562,6 +562,10 @@ namespace RC::LuaMadeSimple
         // If you don't then it will be improperly copied and things, including nested for_each calls, will break
         RC_LMS_API auto for_each_in_table(const ForEachInTableCallable& callable) const -> void;
 
+        // Iterates the table at 'table_index', wherever it is on the stack
+        // Unlike the overload above, it leaves the table on the stack for the caller to remove
+        RC_LMS_API auto for_each_in_table(int32_t table_index, const ForEachInTableCallable& callable) const -> void;
+
         [[nodiscard]] RC_LMS_API auto is_function(int32_t force_index = 1) const -> bool;
         [[nodiscard]] RC_LMS_API auto is_global_function(std::string_view global_function_name) const -> bool;
         // Use the get_<type>() functions to retrieve return values
