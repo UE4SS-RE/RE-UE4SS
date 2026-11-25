@@ -171,6 +171,17 @@ set UE4SS_MODS_PATHS=C:\SharedMods;D:\GameMods;E:\TestMods
 
 Environment variable paths are processed in reverse order (first entry has highest priority). Both INI and environment variable paths support relative and absolute paths, including symlinks.
 
+### Sharing Mods Between Games
+
+When a game has its own `working directory` inside the `root directory`, mods are loaded from `<working directory>/Mods` and the `Mods` folder in the `root directory` is ignored. To load both, set this in the game's `UE4SS-settings.ini`:
+
+```ini
+[Overrides]
+LoadRootMods = 1
+```
+
+If both folders contain a mod with the same name, the one in the `working directory` is loaded. Each folder's `mods.txt` is still parsed, so set `ControllingModsTxt` if you want the game to have its own mod list.
+
 ### Controlling Mods List
 
 By default, UE4SS parses the `mods.txt` file from each mods directory. You can override this to use a single controlling `mods.txt` file:

@@ -514,6 +514,12 @@ namespace RC
 
         insert_mods_directory(default_mods_path, 0);
 
+        // Mods in later directories win, so the root goes first.
+        if (m_has_game_specific_config && settings_manager.LoadRootMods)
+        {
+            insert_mods_directory(make_compatible_path(m_root_directory / "Mods"), 0);
+        }
+
         for (const auto& path : m_mods_directories_to_remove)
         {
             std::erase(m_mods_directories, path);

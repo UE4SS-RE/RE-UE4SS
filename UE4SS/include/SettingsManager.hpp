@@ -136,6 +136,10 @@ namespace RC
         {
         } Experimental;
 
+        // Read from the Overrides section.
+        // Kept last so that native mods built against older headers still find the other settings.
+        bool LoadRootMods{};
+
       public:
         SettingsManager() = default;
 

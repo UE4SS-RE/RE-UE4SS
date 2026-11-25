@@ -12,6 +12,8 @@ TBD
 
 ### General
 
+Added option `LoadRootMods` in the `Overrides` section of UE4SS-settings.ini, which also loads mods from the root directory when the game has its own working directory.  
+
 ### Live View
 
 ### Lua Debugger
@@ -74,6 +76,14 @@ Fixed `require` only searching the `shared` folder of the first mods directory.
 ## Settings
 
 ### Added
+```ini
+[Overrides]
+; Whether to also load mods from <dll_directory>/Mods when the game has its own working directory.
+; If both directories contain mods with the same name, the one in the game's directory is loaded.
+; Has no effect when there is no game-specific working directory.
+; Default: 0
+LoadRootMods = 0
+```
 
 ### Removed
 
