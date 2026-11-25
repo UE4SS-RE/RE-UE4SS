@@ -1125,11 +1125,11 @@ namespace RC
             {
                 if (dynamic_cast<CppMod*>(mod.get()))
                 {
-                    filesystem_watcher.add_dir(std::filesystem::path{get_mods_directory()} / mod->get_name() / "dlls");
+                    filesystem_watcher.add_dir(mod->get_path() / "dlls");
                 }
                 else if (dynamic_cast<LuaMod*>(mod.get()))
                 {
-                    filesystem_watcher.add_dir(std::filesystem::path{get_mods_directory()} / mod->get_name() / "Scripts");
+                    filesystem_watcher.add_dir(mod->get_path() / "Scripts");
                 }
             }
             filesystem_watcher.start_async_polling([&](const std::filesystem::path& file, bool match_all) {

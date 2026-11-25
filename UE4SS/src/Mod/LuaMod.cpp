@@ -6,6 +6,7 @@
 #include <format>
 #include <limits>
 #include <memory>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -950,6 +951,22 @@ namespace RC
         lua_pop(L, 2); // Clean up stack: searchers, package
     }
 
+    // The folder that holds the mod is searched first.
+    // The others follow in the order that decides which copy of a mod is loaded.
+    static auto get_shared_directories(const Mod& mod) -> std::vector<std::filesystem::path>
+    {
+        std::vector<std::filesystem::path> directories{mod.get_path().parent_path() / "shared"};
+        for (const auto& mods_directory : std::ranges::reverse_view(UE4SSProgram::get_program().get_mods_directories()))
+        {
+            auto directory = mods_directory / "shared";
+            if (std::ranges::find(directories, directory) == directories.end())
+            {
+                directories.emplace_back(std::move(directory));
+            }
+        }
+        return directories;
+    }
+
     // Static C function for the module searcher
     int LuaMod::custom_module_searcher(lua_State* L)
     {
@@ -969,20 +986,20 @@ namespace RC
         }
         
         // Get paths directly from the C++ object and convert to UTF-8 strings for Lua
-        const auto& mods_dir = lua_mod->get_program().get_mods_directory();
-        const auto& mod_name = lua_mod->get_name();
         const auto& scripts_path = lua_mod->get_scripts_path();
         
-        std::string mods_path_str = normalize_path_for_lua(mods_dir);
-        std::string mod_name_str = to_utf8_string(mod_name);
         std::string scripts_path_str = normalize_path_for_lua(scripts_path);
         
         // Try different path combinations
         std::vector<std::string> paths_to_try = {
-            scripts_path_str + "/" + module_name + ".lua",
-            mods_path_str + "/shared/" + module_name + ".lua",
-            mods_path_str + "/shared/" + module_name + "/" + module_name + ".lua"
+            scripts_path_str + "/" + module_name + ".lua"
         };
+        for (const auto& directory : get_shared_directories(*lua_mod))
+        {
+            const auto shared_path_str = normalize_path_for_lua(directory);
+            paths_to_try.emplace_back(shared_path_str + "/" + module_name + ".lua");
+            paths_to_try.emplace_back(shared_path_str + "/" + module_name + "/" + module_name + ".lua");
+        }
         
         // Try each path
         std::string attempted_paths_str;
@@ -1091,22 +1108,18 @@ namespace RC
             std::string current_paths = lua_tostring(lua_state, -1);
             lua_pop(lua_state, 1);
 
-            auto mods_dir = m_program.get_mods_directory();
-            auto mod_name = get_name();
-
             // Create normalized UTF-8 paths with forward slashes
-            std::string mods_dir_utf8 = normalize_path_for_lua(mods_dir);
-            std::string mod_name_utf8 = to_utf8_string(mod_name);
+            std::string mod_path_utf8 = normalize_path_for_lua(get_path());
             std::string scripts_path_utf8 = normalize_path_for_lua(m_scripts_path);
 
             // Create path strings with forward slashes for Lua
             std::string script_path = fmt::format(";{}/?.lua", scripts_path_utf8);
-            std::string shared_path = fmt::format(";{}/shared/?.lua", mods_dir_utf8);
-            std::string shared_nested_path = fmt::format(";{}/shared/?/?.lua", mods_dir_utf8);
 
             current_paths.append(script_path);
-            current_paths.append(shared_path);
-            current_paths.append(shared_nested_path);
+            for (const auto& directory : get_shared_directories(*this))
+            {
+                current_paths.append(fmt::format(";{0}/?.lua;{0}/?/?.lua", normalize_path_for_lua(directory)));
+            }
 
             lua_pushstring(lua_state, current_paths.c_str());
             lua_setfield(lua_state, -2, "path");
@@ -1118,7 +1131,7 @@ namespace RC
 
             // Create cpath strings
             std::string script_dll_path = fmt::format(";{}/?.dll", scripts_path_utf8);
-            std::string mod_dll_path = fmt::format(";{}/{}/?/?.dll", mods_dir_utf8, mod_name_utf8);
+            std::string mod_dll_path = fmt::format(";{}/?/?.dll", mod_path_utf8);
 
             current_cpaths.append(script_dll_path);
             current_cpaths.append(mod_dll_path);
