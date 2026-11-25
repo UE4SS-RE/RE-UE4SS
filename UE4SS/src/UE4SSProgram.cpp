@@ -458,6 +458,7 @@ namespace RC
         // Allow loading of DLLs from the game directory
         AddDllDirectory(game_exe_path.c_str());
 
+        const auto game_directory_name = ensure_str(game_directory_path.parent_path().parent_path().parent_path().filename());
         for (const auto& item : std::filesystem::directory_iterator(m_root_directory))
         {
             if (!item.is_directory())
@@ -465,7 +466,8 @@ namespace RC
                 continue;
             }
 
-            if (item.path().filename() == game_directory_path.parent_path().parent_path().parent_path().filename())
+            const auto item_name = ensure_str(item.path().filename());
+            if (String::iequal(StringViewType{item_name}, StringViewType{game_directory_name}))
             {
                 m_has_game_specific_config = true;
                 m_working_directory = item.path();

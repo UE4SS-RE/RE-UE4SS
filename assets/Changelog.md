@@ -54,6 +54,8 @@ TBD
 
 Fixed `override.txt` not working when the path contains characters outside the system code page.  
 
+Fixed the working directory of a game not being found when its name has different casing than the game directory.  
+
 ### Live View
 
 ### UHT Dumper
