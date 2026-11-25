@@ -78,9 +78,10 @@ Fixed `require` only searching the `shared` folder of the first mods directory.
 ### Added
 ```ini
 [Overrides]
-; Whether to also load mods from <dll_directory>/Mods when the game has its own working directory.
-; If both directories contain mods with the same name, the one in the game's directory is loaded.
-; Has no effect when there is no game-specific working directory.
+; Whether to also load mods from the 'Mods' folder in the root directory when the game has its own working directory.
+; The root directory is the directory that contains UE4SS.dll.
+; If both directories contain mods with the same name, the one in the working directory is loaded.
+; Has no effect when the root directory is also the working directory.
 ; Default: 0
 LoadRootMods = 0
 ```
