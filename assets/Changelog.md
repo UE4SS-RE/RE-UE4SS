@@ -52,6 +52,8 @@ TBD
 
 ### General
 
+Fixed `override.txt` not working when the path contains characters outside the system code page.  
+
 ### Live View
 
 ### UHT Dumper

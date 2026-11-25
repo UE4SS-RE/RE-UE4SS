@@ -58,7 +58,7 @@ There are two main packages you need to look for: basic, and dev. They are in a 
 
 This method allows you to override the location of the `root directory` while proxy injection still works. 
 
-In your `game executable directory` alongside the `dwmapi.dll`, create a file called `override.txt` and inside it you can write either an absolute path or a relative path to your new `UE4SS.dll`. 
+In your `game executable directory` alongside the `dwmapi.dll`, create a file called `override.txt` and inside it you can write either an absolute path or a relative path to your new `UE4SS.dll`. Save the file as UTF-8 if the path contains non-English characters.
 
 For example, possible paths could be:
 - `C:/ue4ss/`
