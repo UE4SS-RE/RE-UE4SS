@@ -98,11 +98,11 @@ namespace RC
     }
 
     auto CppUserModBase::register_keydown_event(Input::Key key,
-                                                const Input::Handler::ModifierKeyArray& callback,
-                                                const Input::EventCallbackCallable& modifier_keys,
+                                                const Input::Handler::ModifierKeyArray& modifier_keys,
+                                                const Input::EventCallbackCallable& callback,
                                                 uint8_t custom_data) -> void
     {
-        UE4SSProgram::get_program().register_keydown_event(key, callback, modifier_keys, 2, new KeyDownEventData{custom_data, this});
+        UE4SSProgram::get_program().register_keydown_event(key, modifier_keys, callback, 2, new KeyDownEventData{custom_data, this});
     }
 
     auto CppUserModBase::register_on_ue4ss_update(ModEvent_OnUE4SSUpdate func) -> void
