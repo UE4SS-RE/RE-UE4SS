@@ -19,11 +19,12 @@ namespace RC::File
         // Returns whether the underlying file handle is valid
         virtual auto is_valid() noexcept -> bool = 0;
 
-        // Invalidate the underlying file type.
-        // This is used in move constructors to stop destruction of the underlying file.
+        // Gives up ownership of the native resources without closing them.
+        // Moves transfer ownership by swapping, not through this.
         virtual auto invalidate_file() noexcept -> void = 0;
 
-        // Closes & deletes the currently opened file
+        // Closes the file and deletes the directory entry identified by its stored path.
+        // The pathname must remain stable while the file is open.
         // Throws std::runtime_error if an error occurred
         virtual auto delete_file() -> void = 0;
 
@@ -33,13 +34,20 @@ namespace RC::File
         auto static delete_file(const std::filesystem::path& file_path_and_name) -> void;
         */
 
-        // Returns a pointer to the raw handle, do not use unless you know what you're doing
+        // Returns the native handle: a HANDLE on Windows, the descriptor value on Linux
+        // (so descriptor 0 is a null pointer). A closed handle is nullptr on Windows and
+        // (void*)-1 on Linux; use is_valid() to test for an open file, not a null check.
+        // Do not use unless you know what you're doing
         virtual auto get_raw_handle() noexcept -> void* = 0;
 
         // Returns the full path to the file
         virtual auto get_file_path() const -> const std::filesystem::path& = 0;
 
-        // Sets the full path and file name for the serialization file associated with this file
+        // Sets the full path and file name for the serialization file associated with this file.
+        // The source and serialization file must be distinct underlying files.
+        // Ordered appends to an existing cache are supported. Concurrent cache creation
+        // and replacement of previously loaded records are not supported.
+        // On Windows, the cache is limited to 1276 bytes, including identifying properties.
         virtual auto set_serialization_output_file(const std::filesystem::path& output_file) noexcept -> void = 0;
 
         // Serialize identifying properties to the serialization file
@@ -84,6 +92,8 @@ namespace RC::File
         // Throws std::runtime_error if an error occurred
         virtual auto read_all() const -> StringType = 0;
 
+        // Returns a mapped view whose size does not automatically track file size changes.
+        // On Linux, truncating the backing file can cause SIGBUS when accessing the view.
         virtual auto memory_map() -> std::span<uint8_t> = 0;
 
         /*
