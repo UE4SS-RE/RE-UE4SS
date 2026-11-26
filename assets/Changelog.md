@@ -61,6 +61,8 @@ Fixed `DataTable:AddRow` and copying a `UScriptStruct` failing on UE 5.7+ with "
 
 Fixed a freeze when a Lua `RegisterHook` callback on a Blueprint function calls `LoadAsset` while the async loading thread is on: the `StaticConstructObject` hook no longer waits for `m_thread_actions_mutex` on other threads. ([UE4SS #1504](https://github.com/UE4SS-RE/RE-UE4SS/issues/1504))  
 
+Fixed setting a struct from a table when the struct has an array, set, or map field: the field was filled from the struct's own table, so `Curve.FloatCurve = { Keys = { ... }, DefaultValue = 7.0 }` wrote no keys and skipped `DefaultValue`. An array of structs that each hold an array field no longer crashes. ([UE4SS #1507](https://github.com/UE4SS-RE/RE-UE4SS/pull/1507))  
+
 ### C++ API
 
 ### BPModLoader
