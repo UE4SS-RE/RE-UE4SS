@@ -64,3 +64,10 @@ On the right side of the watch, there is an option to save the watch which will 
 
 ![save watch](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/8b223d1d-a77f-4222-b287-89da12529c89)
 ![method of watch re-aquisition](https://github.com/UE4SS-RE/RE-UE4SS/assets/84156063/6cea33d9-73ae-416c-9943-e71553a6433d)
+
+### Context Menu
+
+Right-clicking any row in the Watches table brings up a context menu with the following options:
+- **Remove Watch**: Removes the watch entry, unhooks it if it is a function watch, and updates `watches.meta.json` if it was saved to disk.
+- **Clear History**: Clears the recorded value history for that watch.
+
