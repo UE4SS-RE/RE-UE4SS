@@ -63,6 +63,8 @@ Fixed a freeze when a Lua `RegisterHook` callback on a Blueprint function calls 
 
 Fixed a crash when setting a delegate property to a table, such as `PlayerPawn.OnSomeDelegate = { Object = SomeObject, FunctionName = FName("MyCallbackFunction") }`. ([UE4SS #1506](https://github.com/UE4SS-RE/RE-UE4SS/pull/1506))  
 
+Fixed a crash when setting a struct from a table that holds a struct read from another property, such as `Enveloper.VolumeCurve = { EditorCurveData = Curve.FloatCurve }`. ([UE4SS #1508](https://github.com/UE4SS-RE/RE-UE4SS/pull/1508))  
+
 ### C++ API
 
 ### BPModLoader

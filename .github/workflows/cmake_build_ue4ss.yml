@@ -109,10 +109,9 @@ jobs:
 
       # Use pre-installed VS instead of downloading
       - name: Setup MSVC Developer Command Prompt
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: x64
-          vsversion: "18"
 
       # Setup Clang-CL if requested
       - name: Setup Clang-CL
