@@ -15,75 +15,20 @@
 #include <Unreal/UMG/Components/ContentWidget.hpp>
 #include <Unreal/UMG/Components/Border.hpp>
 #include <Unreal/UMG/Components/TextWidgetTypes.hpp>
+#include <Unreal/UMG/Components/TextBlock.hpp>
 #include <Unreal/Slate/Widgets/Layout/Anchors.hpp>
 #include <Unreal/SlateCore/Layout/Margin.hpp>
 #include <Unreal/SlateCore/Styling/SlateColor.hpp>
 #include <Unreal/Core/Math/Color.hpp>
 #include <Unreal/PropertyMacros.hpp>
 #include <Unreal/BPMacros.hpp>
+#include <Unreal/Engine/CharacterMovementComponent.hpp>
+#include <Unreal/Engine/Pawn.hpp>
+#include <Unreal/Engine/Character.hpp>
 #include <Unreal/VersionedContainer/UnrealVirtualImpl/UnrealVirtualBaseVC.hpp>
 
 using namespace RC;
 using namespace RC::Unreal;
-
-class UTextBlock : public UTextLayoutWidget
-{
-  public:
-    void SetText(const FText& InText)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.TextBlock:SetText")
-
-        UE_COPY_PROPERTY(InText, FText)
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
-
-    void SetColorAndOpacity(const FSlateColor& InColorAndOpacity)
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/UMG.TextBlock:SetColorAndOpacity")
-
-        UE_COPY_STRUCT_PROPERTY_BEGIN(InColorAndOpacity)
-        UE_COPY_INNER_STRUCT_PROPERTY_BEGIN(SpecifiedColor, InColorAndOpacity)
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, R, float, InColorAndOpacity.GetSpecifiedColor().GetR(), ARGS(InColorAndOpacity))
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, G, float, InColorAndOpacity.GetSpecifiedColor().GetG(), ARGS(InColorAndOpacity))
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, B, float, InColorAndOpacity.GetSpecifiedColor().GetB(), ARGS(InColorAndOpacity))
-        UE_COPY_STRUCT_INNER_PROPERTY_V2(SpecifiedColor, A, float, InColorAndOpacity.GetSpecifiedColor().GetA(), ARGS(InColorAndOpacity))
-        UE_COPY_STRUCT_INNER_ENUM(InColorAndOpacity, ColorUseRule, float, InColorAndOpacity.GetColorUseRule())
-
-        UE_CALL_FUNCTION()
-
-        UE_END_VOID_FUNCTION()
-    }
-};
-
-class UCharacterMovementComponent : public AActor
-{
-public:
-    RC_INTERNAL_DEFINE_BP_PROPERTY_PRIVATE(float, JumpZVelocity)
-    RC_INTERNAL_DEFINE_BP_PROPERTY_PRIVATE(FVector, Acceleration)
-    RC_INTERNAL_DEFINE_BP_PROPERTY_PRIVATE(FVector, LastUpdateVelocity)
-};
-
-class APawn : public AActor
-{
-public:
-    bool IsPlayerControlled()
-    {
-        UE_BEGIN_NATIVE_FUNCTION_BODY("/Script/Engine.Pawn:IsPlayerControlled")
-
-        UE_CALL_FUNCTION()
-
-        UE_RETURN_PROPERTY(bool)
-    }
-};
-
-class ACharacter : public APawn
-{
-public:
-    RC_INTERNAL_DEFINE_BP_PROPERTY_PRIVATE(UCharacterMovementComponent*, CharacterMovement)
-};
 
 bool IsReadyForWidgetConstruction(class CppWidgetsMod*);
 bool CreateTextWidgetMiddleScreen(class CppWidgetsMod* mod);
@@ -162,7 +107,6 @@ public:
         }, { false, false, STR("CppWidgets"), STR("WidgetCreationHook") });
         bPendingWidgetCreation.store(true);
     }
-
     auto on_update() -> void override
     {
     }
