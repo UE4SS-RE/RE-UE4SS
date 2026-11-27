@@ -61,6 +61,8 @@ Fixed `DataTable:AddRow` and copying a `UScriptStruct` failing on UE 5.7+ with "
 
 Fixed a freeze when a Lua `RegisterHook` callback on a Blueprint function calls `LoadAsset` while the async loading thread is on: the `StaticConstructObject` hook no longer waits for `m_thread_actions_mutex` on other threads. ([UE4SS #1504](https://github.com/UE4SS-RE/RE-UE4SS/issues/1504))  
 
+Fixed a crash when setting a delegate property to a table, such as `PlayerPawn.OnSomeDelegate = { Object = SomeObject, FunctionName = FName("MyCallbackFunction") }`. ([UE4SS #1506](https://github.com/UE4SS-RE/RE-UE4SS/pull/1506))  
+
 Fixed a crash when setting a struct from a table that holds a struct read from another property, such as `Enveloper.VolumeCurve = { EditorCurveData = Curve.FloatCurve }`. ([UE4SS #1508](https://github.com/UE4SS-RE/RE-UE4SS/pull/1508))  
 
 ### C++ API
