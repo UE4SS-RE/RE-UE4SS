@@ -1,3 +1,13 @@
+// TOOD: Test in more games and engine versions.
+//
+//       It's currently been tested and works in:
+//       Palworld
+//       Noro
+//       4.13 test game
+//
+//       It's currently been tested and does NOT work in:
+//       None so far
+
 #include <cstdio>
 #include <concepts>
 #include <atomic>
@@ -29,6 +39,17 @@
 
 using namespace RC;
 using namespace RC::Unreal;
+
+// Helper function to ease toggling logging in tick based functions.
+template <LogLevel::LogLevel LL = LogLevel::Default>
+static void LogTick(const auto ...params)
+{
+    static constexpr bool EnableLogging = false;
+    if constexpr (EnableLogging)
+    {
+        Output::send<LL>(params...);
+    }
+}
 
 bool IsReadyForWidgetConstruction(class CppWidgetsMod*);
 bool CreateTextWidgetMiddleScreen(class CppWidgetsMod* mod);
@@ -75,14 +96,17 @@ public:
                     bPendingWidgetCreation.store(true);
                     return;
                 }
+                Output::send(STR("Widgets created!\n"));
             }
             if (Text)
             {
                 std::vector<UObject*> Characters{};
+                LogTick(STR("Finding Character!\n"));
                 UObjectGlobals::FindAllOf(STR("Character"), Characters);
                 ACharacter* Character{};
                 for (const auto& PotentialCharacter : Characters)
                 {
+                    LogTick(STR("Querying {}...\n"), (void*)PotentialCharacter);
                     if (PotentialCharacter && static_cast<ACharacter*>(PotentialCharacter)->IsPlayerControlled())
                     {
                         Character = static_cast<ACharacter*>(PotentialCharacter);
@@ -91,17 +115,19 @@ public:
                 }
                 if (!Character)
                 {
-                    //Output::send(STR("Player controlled character not found\n"));
+                    LogTick(STR("Player controlled character not found\n"));
                     return;
                 }
-                //Output::send(STR("Character: '{}'\n"), Character->GetFullName());
+                LogTick(STR("Character: '{}'\n"), Character->GetFullName());
                 const auto CharacterMovementComponent = Character->RC_INTERNAL_BP_GetCharacterMovement();
                 if (!CharacterMovementComponent)
                 {
                     Output::send(STR("Player controlled character has no movement component\n"));
                     return;
                 }
+                LogTick(STR("Getting LastUpdateVelocity\n"));
                 const auto LastUpdateVelocity = CharacterMovementComponent->RC_INTERNAL_BP_GetLastUpdateVelocity();
+                LogTick(STR("Setting Text\n"));
                 Text->SetText(FText(fmt::format(STR("{:07.2f}\n{:07.2f}\n{:07.2f}"), LastUpdateVelocity.X(), LastUpdateVelocity.Y(), LastUpdateVelocity.Z())));
             }
         }, { false, false, STR("CppWidgets"), STR("WidgetCreationHook") });
@@ -128,12 +154,14 @@ bool IsReadyForWidgetConstruction(CppWidgetsMod* mod)
 {
     // Note: Executes every frame until it succeeds, and then it executes after the widget has been destructed, and it's signaled to be constructed again.
 
+    Output::send(STR("Finding classes\n"));
     mod->UserWidgetClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/UMG.UserWidget"));
     mod->WidgetTreeClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/UMG.WidgetTree"));
     mod->CanvasPanelClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/UMG.CanvasPanel"));
     mod->BorderClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/UMG.Border"));
     mod->TextBlockClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/UMG.TextBlock"));
     mod->CanvasPanelSlotClass = UObjectGlobals::StaticFindObject<UClass*>(nullptr, nullptr, STR("/Script/UMG.CanvasPanelSlot"));
+    Output::send(STR("Classes found\n"));
 
     if (!mod->UserWidgetClass ||
         !mod->WidgetTreeClass ||
@@ -152,18 +180,22 @@ bool IsReadyForWidgetConstruction(CppWidgetsMod* mod)
 
 bool CreateTextWidgetMiddleScreen(CppWidgetsMod* mod)
 {
+    Output::send(STR("Finding GameInstance\n"));
     const auto GameInstance = UObjectGlobals::FindFirstOf(STR("GameInstance"));
 
     // Hierarchy: UserWidget -> WidgetTree -> CanvasPanel -> Border -> TextBlock
 
     FStaticConstructObjectParameters HUDParams{mod->UserWidgetClass, GameInstance};
+    Output::send(STR("Constructing TestHUD name\n"));
     HUDParams.Name = FName(STR("TestHUD"));
+    Output::send(STR("Constructing TestHUD\n"));
     const auto HUD = static_cast<UUserWidget*>(UObjectGlobals::StaticConstructObject(HUDParams));
     if (!HUD)
     {
         Output::send<LogLevel::Error>(STR("[CppWidgets] Unable to construct HUD\n"));
         return false;
     }
+    Output::send(STR("TestHUD constructed\n"));
 
     FStaticConstructObjectParameters TreeParams{mod->WidgetTreeClass, HUD};
     TreeParams.Name = FName(STR("TestTree"));
@@ -199,8 +231,10 @@ bool CreateTextWidgetMiddleScreen(CppWidgetsMod* mod)
         Output::send<LogLevel::Error>(STR("[CppWidgets] Unable to construct Border\n"));
         return false;
     }
+    Output::send(STR("Setting BrushColor and Padding\n"));
     Border->SetBrushColor({0.f, 0.f, 0.f, 0.5f});
     Border->SetPadding({12.f, 6.f, 12.f, 6.f});
+    Output::send(STR("BrushColor and Padding set\n"));
 
     FStaticConstructObjectParameters TextParams{mod->TextBlockClass, Tree};
     TextParams.Name = FName(STR("TestText"));
